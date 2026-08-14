@@ -13009,7 +13009,7 @@ g.copy_plr_avatar = function(Player)
         return notify("Warning", "Do not copy the owner of Flames Hub's avatar!", 10)
     end
 
-    if Player:GetAttribute("bio") == "`~ Flames Hub Anti Stealer Is Enabled ~`" then return g.notify("Warning", "This Player has Flames Hub | Anti Stealer enabled!", 5) end
+    if Player:GetAttribute("bio") == "`~ Flames Hub Anti Stealer Is Enabled ~`" then g.notify("Warning", "This Player has Flames Hub | Anti Stealer enabled!", 5) end
     g.clear_avatar()
     fw(0.2)
     local accessories = {}
