@@ -16282,7 +16282,6 @@ Callback = function(state)
     end
 end}, "Tracer_ESP_Toggle_UI")
 
-g.notify("Success", "Welcome back, "..tostring(g.LocalPlayer.DisplayName)..".", 10)
 local function print_bytes(label, s)
     local bytes = {}
     for i = 1, #s do
