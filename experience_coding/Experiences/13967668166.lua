@@ -5809,41 +5809,7 @@ g.disable_emote_func = function()
     end
 end
 
-if not g.Spawned_Vehicle_Checker then
-    -- [[ Function to check if the script is supported and works on the current executor. ]] --
-    local success, response = pcall(function()
-        local Net = g.Net or require(g.Core:FindFirstChild("Net"))
 
-        Net.get("spawn_vehicle", "Monster Truck")
-        wait(3)
-        return get_vehicle()
-    end)
-
-    if success and response then
-        fw(0.1)
-        if get_vehicle() and g.Humanoid.Sit or g.Humanoid.Sit == true then
-            g.Humanoid:ChangeState(3)
-            fw(0.2)
-            Net.get("spawn_vehicle", get_vehicle().Name or "Monster Truck")
-        elseif get_vehicle() and g.Humanoid.Sit == false then
-            Net.get("spawn_vehicle", get_vehicle().Name or "Monster Truck")
-        elseif not get_vehicle() then
-            notify("Warning", "We did spawn the Vehicle it seems, but it seems like you despawned the Vehicle.", 10)
-        elseif not get_vehicle() and g.Humanoid.Sit == true then
-            pcall(function() g.Humanoid:ChangeState(3) end)
-            notify("Warning", "We did not find your Vehicle, but it seems like it worked.", 5)
-        end
-    else
-        if not success then
-            g.LifeTogetherRP_Admin = false
-            g.LifeTogether_Actual_Flames_Hub_Running_Functioning_Currently_On_Client = false
-            --notify("Error", "This script does not work on this executor!", 8)
-            return notify("Error", "You cannot run this script on this executor, we're sorry! (if you believe this was in error, re-run the script).", 12)
-        end
-    end
-
-    g.Spawned_Vehicle_Checker = true
-end
 
 local Char = g.Char or require(game.ReplicatedStorage:FindFirstChild("Char", true))
 g.get_current_character_life_together_rp = function()
