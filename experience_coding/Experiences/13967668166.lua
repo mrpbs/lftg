@@ -1,20 +1,3 @@
-task.spawn(function()
-    local CoreGui = game:GetService("CoreGui")
-    CoreGui.DescendantAdded:Connect(function(child)
-        if child:IsA("ScreenGui") and (child.Name:lower():find("welcome") or child.Name:lower():find("scramble")) then
-            child.Enabled = false
-            child:Destroy()
-        elseif child:IsA("TextLabel") and (child.Text:lower():find("welcome") or child.Text:lower():find("flames hub")) then
-            local sg = child:FindFirstAncestorWhichIsA("ScreenGui")
-            if sg and sg.Name ~= "FlamesAdminGUI" then
-                sg.Enabled = false
-                sg:Destroy()
-            end
-        end
-    end)
-end)
-
-
 
 if not game:IsLoaded() then
     local msg_instance = Instance.new("Message")
