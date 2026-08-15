@@ -1,25 +1,4 @@
--- Welcome Screen Sniper
-task.spawn(function()
-    -- Check all possible hidden GUI folders your executor might use
-    local targetContainer = (get_hidden_gui and get_hidden_gui()) or (gethui and gethui()) or game:GetService("CoreGui")
-    local coreGui = game:GetService("CoreGui")
-    
-    local function killWelcomeScreen(child)
-        if child.Name == "fullscreenscramblegui" then
-            child.Enabled = false
-            child:Destroy()
-        end
-    end
 
-    -- Listen for the exact moment the welcome screen is created
-    local conn1 = targetContainer.ChildAdded:Connect(killWelcomeScreen)
-    local conn2 = coreGui.ChildAdded:Connect(killWelcomeScreen)
-
-    -- Wait 20 seconds for it to load, then stop listening to save performance
-    task.wait(20)
-    conn1:Disconnect()
-    conn2:Disconnect()
-end)
 
 if not game:IsLoaded() then
     local msg_instance = Instance.new("Message")
@@ -4987,7 +4966,7 @@ if game.PlaceId ~= 13967668166 and game.PlaceId ~= 99644611200703 and game.Place
 end
 
 -- [[ configuration GUI. ]] --
---if not CoreGui:FindFirstChild("FlamesAdminGUI", true) then loadstring(game:HttpGet("https://pastebin.com/raw/9qkZEvjw"))() end
+if not CoreGui:FindFirstChild("FlamesAdminGUI", true) then loadstring(game:HttpGet("https://pastebin.com/raw/9qkZEvjw"))() end
 local config_path = "Flames_Admin_Config.json"
 local http_service = HttpService
 local http_requesting = request or http_request or (syn and syn.request) or (http and http.request) or (fluxus and fluxus.request) or g.blank
