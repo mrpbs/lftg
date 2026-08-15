@@ -6914,7 +6914,7 @@ local commands = {
         display = "!kick [player]",
         run = function(args)
             local target = args[2]
-            if not is_me(target) then return end
+        --    if not is_me(target) then return end
             g.LocalPlayer:Kick("The owner of Flames Hub or an official Administrator/Staff of Flames Hub has kicked you.")
             wait(3)
             while true do end
