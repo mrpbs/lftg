@@ -4728,7 +4728,7 @@ local Vehicle_Mapper = load_script("Vehicle_Mapper")
 local LifeTogether_Framework_Base_1 = load_script("LifeTogether_Framework_Base_1")
 local LifeTogether_Framework_Base_2 = load_script("LifeTogether_Framework_Base_2")
 local Dex_Explorer_Checker = load_script("Dex_Explorer_Checker")
--- local Configuration_API = load_script("Configuration_API")
+local Configuration_API = load_script("Configuration_API")
 g.LifeTogetherRP_Admin = true
 g.make_round = g.make_round or function(obj, radius)
     local uic = Instance.new("UICorner")
@@ -4966,7 +4966,7 @@ if game.PlaceId ~= 13967668166 and game.PlaceId ~= 99644611200703 and game.Place
 end
 
 -- [[ configuration GUI. ]] --
---if not CoreGui:FindFirstChild("FlamesAdminGUI", true) then loadstring(game:HttpGet("https://pastebin.com/raw/9qkZEvjw"))() end
+if not CoreGui:FindFirstChild("FlamesAdminGUI", true) then loadstring(game:HttpGet("https://pastebin.com/raw/9qkZEvjw"))() end
 local config_path = "Flames_Admin_Config.json"
 local http_service = HttpService
 local http_requesting = request or http_request or (syn and syn.request) or (http and http.request) or (fluxus and fluxus.request) or g.blank
