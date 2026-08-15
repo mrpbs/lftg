@@ -5664,17 +5664,8 @@ local some_vehicles = {
     "F150",
     "Police SUV",
 }
-fw(0.1)
-if not g.Spawned_Vehicle_Checker then
-    local Net = find_module_s("Net") or require(g.Core:FindFirstChild("Net"))
-    g.notify("Success", "Spoofing Vehicle spawner...", 10)
 
-    for _, car in ipairs(some_vehicles) do
-        fw(0.2)
-        Net.get("spawn_vehicle", tostring(car))
-    end
-end
-fw(0.2)
+
 g.find_placed_models_folder = function()
     local cached_folder = getgenv().cached_placed_models_folder
 
