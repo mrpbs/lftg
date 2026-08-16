@@ -5,6 +5,7 @@ local Workspace = game:GetService("Workspace")
 local MarketplaceService = game:GetService("MarketplaceService")
 local InsertService = game:GetService("InsertService")
 local HttpService = game:GetService("HttpService")
+local UserInputService = game:GetService("UserInputService")
 
 -- Prevent duplicate GUIs
 if LocalPlayer:WaitForChild("PlayerGui"):FindFirstChild("DeepMetadataScanner") then
@@ -138,15 +139,63 @@ AssetListLayout.Padding = UDim.new(0, 6)
 AssetListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
     AssetScroll.CanvasSize = UDim2.new(0, 0, 0, AssetListLayout.AbsoluteContentSize.Y + 10)
 end)
+-- Resize Handle (Bottom Right Corner)
+local ResizeHandle = Instance.new("TextButton")
+ResizeHandle.Name = "ResizeHandle"
+ResizeHandle.Size = UDim2.new(0, 15, 0, 15)
+ResizeHandle.Position = UDim2.new(1, -15, 1, -15)
+ResizeHandle.BackgroundColor3 = Color3.fromRGB(0, 255, 150)
+ResizeHandle.Text = "↘"
+ResizeHandle.TextColor3 = Color3.fromRGB(15, 15, 18)
+ResizeHandle.Font = Enum.Font.SourceSansBold
+ResizeHandle.TextSize = 14
+ResizeHandle.BorderSizePixel = 0
+ResizeHandle.ZIndex = 10
+ResizeHandle.Parent = MainFrame
+
+-- Resizing Logic
+local isResizing = false
+local dragStart
+local startSize
+local minWidth = 320
+local minHeight = 250
+
+ResizeHandle.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        isResizing = true
+        dragStart = input.Position
+        startSize = MainFrame.AbsoluteSize
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if isResizing and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - dragStart
+        local newWidth = math.max(minWidth, startSize.X + delta.X)
+        local newHeight = math.max(minHeight, startSize.Y + delta.Y)
+        MainFrame.Size = UDim2.new(0, newWidth, 0, newHeight)
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        isResizing = false
+    end
+end)
 
 -- Window Controls Logic
 local minimized = false
+local savedSize = MainFrame.Size
+
 MinBtn.MouseButton1Click:Connect(function()
     minimized = not minimized
     if minimized then
-        MainFrame.Size = UDim2.new(0, 360, 0, 35)
+        savedSize = MainFrame.Size -- Save current custom size
+        MainFrame.Size = UDim2.new(0, MainFrame.AbsoluteSize.X, 0, 35)
+        ResizeHandle.Visible = false
     else
-        MainFrame.Size = UDim2.new(0, 360, 0, 450)
+        MainFrame.Size = savedSize -- Restore custom size
+        ResizeHandle.Visible = true
     end
 end)
 
