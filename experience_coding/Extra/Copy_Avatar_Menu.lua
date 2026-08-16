@@ -550,23 +550,37 @@ local function populatePlayerList()
         PlayerBtn.Text = ""
         PlayerBtn.Parent = PlayerScroll
 
-        local AvatarImg = Instance.new("ImageLabel")
-        AvatarImg.Size = UDim2.new(0, 40, 0, 40)
-        AvatarImg.Position = UDim2.new(0, 5, 0, 5)
-        AvatarImg.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
-        AvatarImg.Parent = PlayerBtn
--- Try to get the player's current in-game avatar thumbnail
+    local AvatarImg = Instance.new("ImageLabel")
+AvatarImg.Size = UDim2.new(0, 40, 0, 40)
+AvatarImg.Position = UDim2.new(0, 5, 0, 5)
+AvatarImg.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
+AvatarImg.Parent = PlayerBtn
+
+-- Create ViewportFrame to render character instead of using thumbnail
 task.spawn(function()
     local char = player.Character
     if char then
-        local ok, thumb = pcall(function()
-            return Players:GetUserThumbnailAsync(player.UserId, Enum.ThumbnailType.AvatarBust, Enum.ThumbnailSize.Size150x150)
-        end)
-        if ok and thumb then
-            AvatarImg.Image = thumb
-        else
-            AvatarImg.Image = "rbxthumb://type=AvatarHeadShot&id=" .. player.UserId .. "&w=150&h=150"
+        -- Create a ViewportFrame
+        local viewportFrame = Instance.new("ViewportFrame")
+        viewportFrame.Size = UDim2.new(0, 40, 0, 40)
+        viewportFrame.Position = UDim2.new(0, 5, 0, 5)
+        viewportFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
+        viewportFrame.BorderSizePixel = 0
+        viewportFrame.Parent = PlayerBtn
+
+        -- Clone the character for preview
+        local charClone = char:Clone()
+        charClone.Parent = viewportFrame
+
+        -- Position camera
+        local camera = Instance.new("Camera")
+        camera.Parent = viewportFrame
+        local humanoidRootPart = charClone:FindFirstChild("HumanoidRootPart")
+        if humanoidRootPart then
+            camera.Focus = humanoidRootPart.CFrame * CFrame.new(0, 0, 5)
+            camera.CFrame = humanoidRootPart.CFrame * CFrame.new(0, 0, 8)
         end
+        viewportFrame.CurrentCamera = camera
     else
         AvatarImg.Image = "rbxthumb://type=AvatarHeadShot&id=" .. player.UserId .. "&w=150&h=150"
     end
