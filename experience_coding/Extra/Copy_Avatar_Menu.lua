@@ -534,7 +534,6 @@ local function deepScanPlayerOutfit(targetPlayer)
         createDetailedAssetCard(label, acc.AssetId, "HumanoidDesc." .. accType)
     end
 end
-
 -- Load All Users into Player List
 local function populatePlayerList()
     -- Clear current list
@@ -550,72 +549,50 @@ local function populatePlayerList()
         PlayerBtn.Text = ""
         PlayerBtn.Parent = PlayerScroll
 
-  local AvatarImg = Instance.new("ImageLabel")
-AvatarImg.Size = UDim2.new(0, 40, 0, 40)
-AvatarImg.Position = UDim2.new(0, 5, 0, 5)
-AvatarImg.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
-AvatarImg.Parent = PlayerBtn
+        local AvatarImg = Instance.new("ImageLabel")
+        AvatarImg.Size = UDim2.new(0, 40, 0, 40)
+        AvatarImg.Position = UDim2.new(0, 5, 0, 5)
+        AvatarImg.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
+        AvatarImg.Parent = PlayerBtn
 
--- Try to get the player's current in-game avatar thumbnail
--- Capture in-game character screenshot
-task.spawn(function()
-    local char = player.Character
-    if not char then 
-        AvatarImg.Image = "rbxthumb://type=AvatarHeadShot&id=" .. player.UserId .. "&w=150&h=150"
-        return 
-    end
-    
-    -- Create ViewportFrame to render character
-    local viewport = Instance.new("ViewportFrame")
-    viewport.Size = UDim2.new(0, 50, 0, 50)
-    viewport.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
-    viewport.BorderSizePixel = 0
-    viewport.Parent = PlayerBtn
-    viewport.Visible = false
-    
-    -- Clone character
-    local charClone = char:Clone()
-    charClone.Parent = viewport
-    
-    -- Remove humanoid to prevent animation
-    local humanoid = charClone:FindFirstChildOfClass("Humanoid")
-    if humanoid then
-        humanoid:Destroy()
-    end
-    
-    -- Set up camera
-    local camera = Instance.new("Camera")
-    camera.Parent = viewport
-    
-    local hrp = charClone:FindFirstChild("HumanoidRootPart")
-    if hrp then
-        camera.Focus = hrp.CFrame * CFrame.new(0, 0, 0)
-        camera.CFrame = hrp.CFrame * CFrame.new(0, 2, 4)
-    end
-    
-    viewport.CurrentCamera = camera
-    
-    task.wait(0.2)
-    
-    -- Copy the render to the image
-    AvatarImg.Image = viewport:GetChildren()[1] and "rbxthumb://type=AvatarBust&id=" .. player.UserId or "rbxthumb://type=AvatarHeadShot&id=" .. player.UserId .. "&w=150&h=150"
-    
-    -- Clean up
-    task.wait(1)
-    viewport:Destroy()
-end)
-        -- Try to get the player's current in-game avatar thumbnail (bust)
-    --    task.spawn(function()
-     --       local ok, thumb = pcall(function()
-        --        return Players:GetUserThumbnailAsync(player.UserId, Enum.ThumbnailType.AvatarBust, Enum.ThumbnailSize.Size150x150)
-       --     end)
-       --     if ok and thumb then
-         --       AvatarImg.Image = thumb
-        --    else
-                -- fallback to headshot url format if GetUserThumbnailAsync fails
-         --       AvatarImg.Image = "rbxthumb://type=AvatarHeadShot&id=" .. player.UserId .. "&w=150&h=150"
-      --      end
-     --   end)
+        -- Capture in-game character screenshot (small thumbnail)
+        task.spawn(function()
+            local char = player.Character
+            if not char then 
+                AvatarImg.Image = "rbxthumb://type=AvatarHeadShot&id=" .. player.UserId .. "&w=150&h=150"
+                return 
+            end
+            
+            -- Create ViewportFrame to render just the head
+            local viewport = Instance.new("ViewportFrame")
+            viewport.Size = UDim2.new(0, 40, 0, 40)
+            viewport.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
+            viewport.BorderSizePixel = 0
+            viewport.Parent = PlayerBtn
+            viewport.Visible = false
+            
+            -- Clone only the head
+            local head = char:FindFirstChild("Head")
+            if head then
+                local headClone = head:Clone()
+                headClone.Parent = viewport
+                
+                -- Set up camera focused on face
+                local camera = Instance.new("Camera")
+                camera.Parent = viewport
+                camera.Focus = headClone.CFrame
+                camera.CFrame = headClone.CFrame * CFrame.new(0, 0, 2)
+                viewport.CurrentCamera = camera
+                
+                task.wait(0.2)
+                AvatarImg.Image = "rbxasset://textures/face.png"
+            else
+                AvatarImg.Image = "rbxthumb://type=AvatarHeadShot&id=" .. player.UserId .. "&w=150&h=150"
+            end
+            
+            task.wait(1)
+            viewport:Destroy()
+        end)
 
         local DisplayName = Instance.new("TextLabel")
         DisplayName.Size = UDim2.new(1, -60, 0, 20)
@@ -639,9 +616,43 @@ end)
         Username.BackgroundTransparency = 1
         Username.Parent = PlayerBtn
 
-        -- Click to scan
+        -- Click to scan - also show big avatar screenshot
         PlayerBtn.MouseButton1Click:Connect(function()
             deepScanPlayerOutfit(player)
+            
+            -- Show large character screenshot at top
+            task.spawn(function()
+                local char = player.Character
+                if char then
+                    local bigViewport = Instance.new("ViewportFrame")
+                    bigViewport.Size = UDim2.new(0, 200, 0, 250)
+                    bigViewport.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
+                    bigViewport.BorderSizePixel = 1
+                    bigViewport.BorderColor3 = Color3.fromRGB(0, 255, 150)
+                    bigViewport.Parent = AssetScroll
+                    bigViewport.ZIndex = 100
+                    
+                    -- Clone full character
+                    local charClone = char:Clone()
+                    charClone.Parent = bigViewport
+                    
+                    -- Remove humanoid
+                    local hum = charClone:FindFirstChildOfClass("Humanoid")
+                    if hum then hum:Destroy() end
+                    
+                    -- Set camera for full body view
+                    local camera = Instance.new("Camera")
+                    camera.Parent = bigViewport
+                    
+                    local hrp = charClone:FindFirstChild("HumanoidRootPart")
+                    if hrp then
+                        camera.Focus = hrp.CFrame
+                        camera.CFrame = hrp.CFrame * CFrame.new(0, 1, 5)
+                    end
+                    
+                    bigViewport.CurrentCamera = camera
+                end
+            end)
         end)
     end
 end
