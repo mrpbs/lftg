@@ -555,19 +555,34 @@ local function populatePlayerList()
         AvatarImg.Position = UDim2.new(0, 5, 0, 5)
         AvatarImg.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
         AvatarImg.Parent = PlayerBtn
-
-        -- Try to get the player's current in-game avatar thumbnail (bust)
-        task.spawn(function()
-            local ok, thumb = pcall(function()
-                return Players:GetUserThumbnailAsync(player.UserId, Enum.ThumbnailType.AvatarBust, Enum.ThumbnailSize.Size150x150)
-            end)
-            if ok and thumb then
-                AvatarImg.Image = thumb
-            else
-                -- fallback to headshot url format if GetUserThumbnailAsync fails
-                AvatarImg.Image = "rbxthumb://type=AvatarHeadShot&id=" .. player.UserId .. "&w=150&h=150"
-            end
+-- Try to get the player's current in-game avatar thumbnail
+task.spawn(function()
+    local char = player.Character
+    if char then
+        local ok, thumb = pcall(function()
+            return Players:GetUserThumbnailAsync(player.UserId, Enum.ThumbnailType.AvatarBust, Enum.ThumbnailSize.Size150x150)
         end)
+        if ok and thumb then
+            AvatarImg.Image = thumb
+        else
+            AvatarImg.Image = "rbxthumb://type=AvatarHeadShot&id=" .. player.UserId .. "&w=150&h=150"
+        end
+    else
+        AvatarImg.Image = "rbxthumb://type=AvatarHeadShot&id=" .. player.UserId .. "&w=150&h=150"
+    end
+end)
+        -- Try to get the player's current in-game avatar thumbnail (bust)
+    --    task.spawn(function()
+     --       local ok, thumb = pcall(function()
+        --        return Players:GetUserThumbnailAsync(player.UserId, Enum.ThumbnailType.AvatarBust, Enum.ThumbnailSize.Size150x150)
+       --     end)
+       --     if ok and thumb then
+         --       AvatarImg.Image = thumb
+        --    else
+                -- fallback to headshot url format if GetUserThumbnailAsync fails
+         --       AvatarImg.Image = "rbxthumb://type=AvatarHeadShot&id=" .. player.UserId .. "&w=150&h=150"
+      --      end
+     --   end)
 
         local DisplayName = Instance.new("TextLabel")
         DisplayName.Size = UDim2.new(1, -60, 0, 20)
