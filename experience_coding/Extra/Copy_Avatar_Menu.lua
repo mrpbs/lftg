@@ -557,21 +557,52 @@ AvatarImg.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
 AvatarImg.Parent = PlayerBtn
 
 -- Try to get the player's current in-game avatar thumbnail
+-- Capture in-game character screenshot
 task.spawn(function()
     local char = player.Character
-    if char then
-        -- Use character to generate thumbnail
-        local ok, thumb = pcall(function()
-            return Players:GetUserThumbnailAsync(player.UserId, Enum.ThumbnailType.AvatarBust, Enum.ThumbnailSize.Size150x150)
-        end)
-        if ok and thumb then
-            AvatarImg.Image = thumb
-        else
-            AvatarImg.Image = "rbxthumb://type=AvatarHeadShot&id=" .. player.UserId .. "&w=150&h=150"
-        end
-    else
+    if not char then 
         AvatarImg.Image = "rbxthumb://type=AvatarHeadShot&id=" .. player.UserId .. "&w=150&h=150"
+        return 
     end
+    
+    -- Create ViewportFrame to render character
+    local viewport = Instance.new("ViewportFrame")
+    viewport.Size = UDim2.new(0, 50, 0, 50)
+    viewport.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
+    viewport.BorderSizePixel = 0
+    viewport.Parent = PlayerBtn
+    viewport.Visible = false
+    
+    -- Clone character
+    local charClone = char:Clone()
+    charClone.Parent = viewport
+    
+    -- Remove humanoid to prevent animation
+    local humanoid = charClone:FindFirstChildOfClass("Humanoid")
+    if humanoid then
+        humanoid:Destroy()
+    end
+    
+    -- Set up camera
+    local camera = Instance.new("Camera")
+    camera.Parent = viewport
+    
+    local hrp = charClone:FindFirstChild("HumanoidRootPart")
+    if hrp then
+        camera.Focus = hrp.CFrame * CFrame.new(0, 0, 0)
+        camera.CFrame = hrp.CFrame * CFrame.new(0, 2, 4)
+    end
+    
+    viewport.CurrentCamera = camera
+    
+    task.wait(0.2)
+    
+    -- Copy the render to the image
+    AvatarImg.Image = viewport:GetChildren()[1] and "rbxthumb://type=AvatarBust&id=" .. player.UserId or "rbxthumb://type=AvatarHeadShot&id=" .. player.UserId .. "&w=150&h=150"
+    
+    -- Clean up
+    task.wait(1)
+    viewport:Destroy()
 end)
         -- Try to get the player's current in-game avatar thumbnail (bust)
     --    task.spawn(function()
