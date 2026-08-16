@@ -300,6 +300,49 @@ local function deepScanPlayerOutfit(targetPlayer)
 
     local humanoid = liveChar:FindFirstChildOfClass("Humanoid")
     if not humanoid then return end
+    -- === BIG IN-GAME VIEWPORT RENDER ===
+    local avatarFrame = Instance.new("Frame")
+    avatarFrame.Size = UDim2.new(1, -5, 0, 250)
+    avatarFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
+    avatarFrame.BorderSizePixel = 1
+    avatarFrame.BorderColor3 = Color3.fromRGB(0, 255, 150)
+    avatarFrame.Parent = AssetScroll
+
+    local bigViewport = Instance.new("ViewportFrame")
+    bigViewport.Size = UDim2.new(1, 0, 1, 0)
+    bigViewport.BackgroundTransparency = 1
+    bigViewport.Parent = avatarFrame
+
+    task.spawn(function()
+        -- 1. Temporarily allow the character to be cloned
+        local prevArchivable = liveChar.Archivable
+        liveChar.Archivable = true
+        local charClone = liveChar:Clone()
+        liveChar.Archivable = prevArchivable
+
+        if charClone then
+            -- 2. Destroy scripts so they don't run in the UI, but KEEP the Humanoid so clothes render
+            for _, v in pairs(charClone:GetDescendants()) do
+                if v:IsA("Script") or v:IsA("LocalScript") then
+                    v:Destroy()
+                end
+            end
+            
+            charClone.Parent = bigViewport
+            local camera = Instance.new("Camera")
+            camera.Parent = bigViewport
+            
+            local hrp = charClone:FindFirstChild("HumanoidRootPart") or charClone:FindFirstChild("Torso") or charClone:FindFirstChild("UpperTorso")
+            if hrp then
+                -- Position camera directly in front of the avatar looking back at them
+                camera.CFrame = hrp.CFrame * CFrame.new(0, 0.5, -6) * CFrame.Angles(0, math.pi, 0)
+                camera.Focus = hrp.CFrame
+            end
+            
+            bigViewport.CurrentCamera = camera
+        end
+    end)
+    -- ===================================
 
     local success, description = pcall(function()
         return humanoid:GetAppliedDescription()
@@ -550,72 +593,38 @@ local function populatePlayerList()
         PlayerBtn.Text = ""
         PlayerBtn.Parent = PlayerScroll
 
-  local AvatarImg = Instance.new("ImageLabel")
-AvatarImg.Size = UDim2.new(0, 40, 0, 40)
-AvatarImg.Position = UDim2.new(0, 5, 0, 5)
-AvatarImg.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
-AvatarImg.Parent = PlayerBtn
+        -- Use a ViewportFrame directly instead of ImageLabel so it actually renders the 3D model
+        local SmallViewport = Instance.new("ViewportFrame")
+        SmallViewport.Size = UDim2.new(0, 40, 0, 40)
+        SmallViewport.Position = UDim2.new(0, 5, 0, 5)
+        SmallViewport.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
+        SmallViewport.BorderSizePixel = 0
+        SmallViewport.Parent = PlayerBtn
 
--- Try to get the player's current in-game avatar thumbnail
--- Capture in-game character screenshot
-task.spawn(function()
-    local char = player.Character
-    if not char then 
-        AvatarImg.Image = "rbxthumb://type=AvatarHeadShot&id=" .. player.UserId .. "&w=150&h=150"
-        return 
-    end
-    
-    -- Create ViewportFrame to render character
-    local viewport = Instance.new("ViewportFrame")
-    viewport.Size = UDim2.new(0, 50, 0, 50)
-    viewport.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
-    viewport.BorderSizePixel = 0
-    viewport.Parent = PlayerBtn
-    viewport.Visible = false
-    
-    -- Clone character
-    local charClone = char:Clone()
-    charClone.Parent = viewport
-    
-    -- Remove humanoid to prevent animation
-    local humanoid = charClone:FindFirstChildOfClass("Humanoid")
-    if humanoid then
-        humanoid:Destroy()
-    end
-    
-    -- Set up camera
-    local camera = Instance.new("Camera")
-    camera.Parent = viewport
-    
-    local hrp = charClone:FindFirstChild("HumanoidRootPart")
-    if hrp then
-        camera.Focus = hrp.CFrame * CFrame.new(0, 0, 0)
-        camera.CFrame = hrp.CFrame * CFrame.new(0, 2, 4)
-    end
-    
-    viewport.CurrentCamera = camera
-    
-    task.wait(0.2)
-    
-    -- Copy the render to the image
-    AvatarImg.Image = viewport:GetChildren()[1] and "rbxthumb://type=AvatarBust&id=" .. player.UserId or "rbxthumb://type=AvatarHeadShot&id=" .. player.UserId .. "&w=150&h=150"
-    
-    -- Clean up
-    task.wait(1)
-    viewport:Destroy()
-end)
-        -- Try to get the player's current in-game avatar thumbnail (bust)
-    --    task.spawn(function()
-     --       local ok, thumb = pcall(function()
-        --        return Players:GetUserThumbnailAsync(player.UserId, Enum.ThumbnailType.AvatarBust, Enum.ThumbnailSize.Size150x150)
-       --     end)
-       --     if ok and thumb then
-         --       AvatarImg.Image = thumb
-        --    else
-                -- fallback to headshot url format if GetUserThumbnailAsync fails
-         --       AvatarImg.Image = "rbxthumb://type=AvatarHeadShot&id=" .. player.UserId .. "&w=150&h=150"
-      --      end
-     --   end)
+        task.spawn(function()
+            local char = player.Character
+            if char then
+                -- Temporarily make Archivable true so we can clone it
+                local oldArchivable = char.Archivable
+                char.Archivable = true
+                local headClone = char:Clone()
+                char.Archivable = oldArchivable
+
+                if headClone then
+                    headClone.Parent = SmallViewport
+                    local camera = Instance.new("Camera")
+                    camera.Parent = SmallViewport
+                    
+                    local head = headClone:FindFirstChild("Head")
+                    if head then
+                        -- Position camera right in front of the face
+                        camera.CFrame = head.CFrame * CFrame.new(0, 0, -2.5) * CFrame.Angles(0, math.pi, 0)
+                        camera.Focus = head.CFrame
+                    end
+                    SmallViewport.CurrentCamera = camera
+                end
+            end
+        end)
 
         local DisplayName = Instance.new("TextLabel")
         DisplayName.Size = UDim2.new(1, -60, 0, 20)
