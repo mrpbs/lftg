@@ -203,7 +203,7 @@ local function createDetailedAssetCard(categoryName, assetId, rawPropertySource)
     NameLabel.Parent = CardFrame
 
     local CreatorLabel = Instance.new("TextLabel")
-    CreatorLabel.Size = UDim2.new(1, -115, 0, 15)
+    CreatorLabel.Size = UDim2.new(1, -155, 0, 15)
     CreatorLabel.Position = UDim2.new(0, 110, 0, 42)
     CreatorLabel.Text = "Creator: Fetching..."
     CreatorLabel.TextColor3 = Color3.fromRGB(160, 160, 170)
@@ -212,6 +212,13 @@ local function createDetailedAssetCard(categoryName, assetId, rawPropertySource)
     CreatorLabel.TextXAlignment = Enum.TextXAlignment.Left
     CreatorLabel.BackgroundTransparency = 1
     CreatorLabel.Parent = CardFrame
+
+    -- Small creator icon (will be populated if we get a creator id)
+    local CreatorIcon = Instance.new("ImageLabel")
+    CreatorIcon.Size = UDim2.new(0, 28, 0, 28)
+    CreatorIcon.Position = UDim2.new(1, -40, 0, 38)
+    CreatorIcon.BackgroundTransparency = 1
+    CreatorIcon.Parent = CardFrame
 
     local SourceLabel = Instance.new("TextLabel")
     SourceLabel.Size = UDim2.new(1, -115, 0, 15)
@@ -257,6 +264,15 @@ local function createDetailedAssetCard(categoryName, assetId, rawPropertySource)
         if success and info then
             NameLabel.Text = info.Name ~= "" and info.Name or "Unnamed Asset Component"
             CreatorLabel.Text = "By: " .. (info.Creator and info.Creator.Name or "Roblox")
+            -- Try to fetch creator's profile image if Creator.Id exists
+            if info.Creator and info.Creator.Id and type(info.Creator.Id) == "number" then
+                local ok, thumb = pcall(function()
+                    return Players:GetUserThumbnailAsync(info.Creator.Id, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size48x48)
+                end)
+                if ok and thumb then
+                    CreatorIcon.Image = thumb
+                end
+            end
         else
             NameLabel.Text = "Layered Mesh Component"
             CreatorLabel.Text = "Creator: Engine Hidden"
@@ -289,6 +305,65 @@ local function deepScanPlayerOutfit(targetPlayer)
     end)
 
     if not success or not description then return end
+
+    -- Add a top "body info" card showing rig type and scales
+    do
+        local infoFrame = Instance.new("Frame")
+        infoFrame.Size = UDim2.new(1, -5, 0, 80)
+        infoFrame.BackgroundColor3 = Color3.fromRGB(22, 22, 26)
+        infoFrame.BorderSizePixel = 0
+        infoFrame.Parent = AssetScroll
+
+        local infoTitle = Instance.new("TextLabel")
+        infoTitle.Size = UDim2.new(1, -10, 0, 20)
+        infoTitle.Position = UDim2.new(0, 5, 0, 6)
+        infoTitle.Text = "Avatar Info"
+        infoTitle.BackgroundTransparency = 1
+        infoTitle.TextColor3 = Color3.fromRGB(0, 255, 200)
+        infoTitle.Font = Enum.Font.SourceSansBold
+        infoTitle.TextSize = 14
+        infoTitle.TextXAlignment = Enum.TextXAlignment.Left
+        infoTitle.Parent = infoFrame
+
+        local rigLabel = Instance.new("TextLabel")
+        rigLabel.Size = UDim2.new(1, -10, 0, 16)
+        rigLabel.Position = UDim2.new(0, 5, 0, 28)
+        local rigText = "Rig: "
+        pcall(function()
+            rigText = rigText .. tostring(humanoid.RigType and tostring(humanoid.RigType):gsub("Enum.HumanoidRigType.", "") or "Unknown")
+        end)
+        rigLabel.Text = rigText
+        rigLabel.BackgroundTransparency = 1
+        rigLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        rigLabel.Font = Enum.Font.SourceSans
+        rigLabel.TextSize = 12
+        rigLabel.TextXAlignment = Enum.TextXAlignment.Left
+        rigLabel.Parent = infoFrame
+
+        -- show some scales from the HumanoidDescription if available
+        local function safeGet(prop)
+            local ok, val = pcall(function() return description[prop] end)
+            if ok and val ~= nil then return tostring(val) else return "N/A" end
+        end
+
+        local scalesText = "HeadScale: " .. safeGet("HeadScale")
+                        .. "  HeightScale: " .. safeGet("HeightScale")
+                        .. "\nWidthScale: " .. safeGet("WidthScale")
+                        .. "  BodyTypeScale: " .. safeGet("BodyTypeScale")
+                        .. "  ProportionScale: " .. safeGet("ProportionScale")
+
+        local scalesLabel = Instance.new("TextLabel")
+        scalesLabel.Size = UDim2.new(1, -10, 0, 34)
+        scalesLabel.Position = UDim2.new(0, 5, 0, 44)
+        scalesLabel.Text = scalesText
+        scalesLabel.BackgroundTransparency = 1
+        scalesLabel.TextColor3 = Color3.fromRGB(190, 190, 200)
+        scalesLabel.Font = Enum.Font.Code
+        scalesLabel.TextSize = 12
+        scalesLabel.TextXAlignment = Enum.TextXAlignment.Left
+        scalesLabel.TextWrapped = true
+        scalesLabel.Parent = infoFrame
+    end
 
     -- 1. Scan Classic 2D Clothing & Faces
     if description.Shirt ~= 0 then createDetailedAssetCard("Classic Shirt", description.Shirt, "HumanoidDesc.Shirt") end
@@ -324,8 +399,20 @@ local function populatePlayerList()
         AvatarImg.Size = UDim2.new(0, 40, 0, 40)
         AvatarImg.Position = UDim2.new(0, 5, 0, 5)
         AvatarImg.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
-        AvatarImg.Image = "rbxthumb://type=AvatarHeadShot&id=" .. player.UserId .. "&w=150&h=150"
         AvatarImg.Parent = PlayerBtn
+
+        -- Try to get the player's current in-game avatar thumbnail (bust)
+        task.spawn(function()
+            local ok, thumb = pcall(function()
+                return Players:GetUserThumbnailAsync(player.UserId, Enum.ThumbnailType.AvatarBust, Enum.ThumbnailSize.Size150x150)
+            end)
+            if ok and thumb then
+                AvatarImg.Image = thumb
+            else
+                -- fallback to headshot url format if GetUserThumbnailAsync fails
+                AvatarImg.Image = "rbxthumb://type=AvatarHeadShot&id=" .. player.UserId .. "&w=150&h=150"
+            end
+        end)
 
         local DisplayName = Instance.new("TextLabel")
         DisplayName.Size = UDim2.new(1, -60, 0, 20)
