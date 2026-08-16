@@ -4,6 +4,7 @@ local LocalPlayer = Players.LocalPlayer
 local Workspace = game:GetService("Workspace")
 local MarketplaceService = game:GetService("MarketplaceService")
 local InsertService = game:GetService("InsertService")
+local HttpService = game:GetService("HttpService")
 
 -- Prevent duplicate GUIs
 if LocalPlayer:WaitForChild("PlayerGui"):FindFirstChild("DeepMetadataScanner") then
@@ -343,14 +344,20 @@ local function deepScanPlayerOutfit(targetPlayer)
         -- show some scales from the HumanoidDescription if available
         local function safeGet(prop)
             local ok, val = pcall(function() return description[prop] end)
-            if ok and val ~= nil then return tostring(val) else return "N/A" end
+            if ok and val ~= nil then return val else return nil end
         end
 
-        local scalesText = "HeadScale: " .. safeGet("HeadScale")
-                        .. "  HeightScale: " .. safeGet("HeightScale")
-                        .. "\nWidthScale: " .. safeGet("WidthScale")
-                        .. "  BodyTypeScale: " .. safeGet("BodyTypeScale")
-                        .. "  ProportionScale: " .. safeGet("ProportionScale")
+        local headScale = safeGet("HeadScale")
+        local heightScale = safeGet("HeightScale")
+        local widthScale = safeGet("WidthScale")
+        local bodyTypeScale = safeGet("BodyTypeScale")
+        local proportionScale = safeGet("ProportionScale")
+
+        local scalesText = "HeadScale: " .. tostring(headScale or "N/A")
+                        .. "  HeightScale: " .. tostring(heightScale or "N/A")
+                        .. "\nWidthScale: " .. tostring(widthScale or "N/A")
+                        .. "  BodyTypeScale: " .. tostring(bodyTypeScale or "N/A")
+                        .. "  ProportionScale: " .. tostring(proportionScale or "N/A")
 
         local scalesLabel = Instance.new("TextLabel")
         scalesLabel.Size = UDim2.new(1, -10, 0, 34)
@@ -363,6 +370,110 @@ local function deepScanPlayerOutfit(targetPlayer)
         scalesLabel.TextXAlignment = Enum.TextXAlignment.Left
         scalesLabel.TextWrapped = true
         scalesLabel.Parent = infoFrame
+
+        -- Build a structured outfit data table to show full description (JSON-like)
+        local outfitData = {}
+        local function getVal(prop)
+            local ok, val = pcall(function() return description[prop] end)
+            if not ok or val == nil then return nil end
+            return val
+        end
+
+        local function colorToArray(c)
+            if typeof(c) == "Color3" then
+                return {c.R, c.G, c.B}
+            end
+            return c
+        end
+
+        outfitData.SwimAnimation = getVal("SwimAnimation")
+        outfitData.SkinTone = colorToArray(getVal("SkinTone"))
+        outfitData.Face = getVal("Face")
+        outfitData.JumpAnimation = getVal("JumpAnimation")
+        outfitData.ClimbAnimation = getVal("ClimbAnimation")
+        outfitData.Shirt = getVal("Shirt")
+        outfitData.Pants = getVal("Pants")
+        outfitData.RightArm = getVal("RightArm")
+        outfitData.WalkAnimation = getVal("WalkAnimation")
+        outfitData.Head = getVal("Head")
+        outfitData.WidthScale = widthScale
+        outfitData.GraphicTShirt = getVal("GraphicTShirt")
+        outfitData.Age = getVal("Age")
+        outfitData.RunAnimation = getVal("RunAnimation")
+        outfitData.FallAnimation = getVal("FallAnimation")
+        outfitData.IdleAnimation = getVal("IdleAnimation")
+        outfitData.Accessories = {}
+
+        -- Accessories list
+        pcall(function()
+            local accs = description:GetAccessories(true)
+            if accs and type(accs) == "table" then
+                for _, a in pairs(accs) do
+                    table.insert(outfitData.Accessories, {
+                        AssetId = a.AssetId,
+                        IsLayered = a.IsLayered,
+                        AccessoryType = a.AccessoryType and tostring(a.AccessoryType):gsub("Enum.AccessoryType.", "") or a.AccessoryType
+                    })
+                end
+            end
+        end)
+
+        outfitData.LeftArm = getVal("LeftArm")
+        outfitData.RightLeg = getVal("RightLeg")
+        outfitData.HeightScale = heightScale
+        outfitData.Torso = getVal("Torso")
+        outfitData.LeftLeg = getVal("LeftLeg")
+
+        -- Encode to JSON-safe table: ensure no userdata remains (Color3 handled)
+        local safeOutfit = {}
+        for k, v in pairs(outfitData) do
+            -- convert enums and userdata to strings or arrays
+            if typeof(v) == "Instance" or typeof(v) == "EnumItem" then
+                safeOutfit[k] = tostring(v)
+            else
+                safeOutfit[k] = v
+            end
+        end
+
+        local ok, jsonText = pcall(function()
+            return HttpService:JSONEncode(safeOutfit)
+        end)
+
+        -- Raw data display box
+        local rawFrame = Instance.new("Frame")
+        rawFrame.Size = UDim2.new(1, -5, 0, 140)
+        rawFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
+        rawFrame.BorderSizePixel = 0
+        rawFrame.Parent = AssetScroll
+
+        local rawTitle = Instance.new("TextLabel")
+        rawTitle.Size = UDim2.new(1, -10, 0, 18)
+        rawTitle.Position = UDim2.new(0, 5, 0, 6)
+        rawTitle.Text = "Raw Outfit Data"
+        rawTitle.BackgroundTransparency = 1
+        rawTitle.TextColor3 = Color3.fromRGB(0, 255, 200)
+        rawTitle.Font = Enum.Font.SourceSansBold
+        rawTitle.TextSize = 13
+        rawTitle.TextXAlignment = Enum.TextXAlignment.Left
+        rawTitle.Parent = rawFrame
+
+        local rawBox = Instance.new("TextBox")
+        rawBox.Size = UDim2.new(1, -10, 0, 110)
+        rawBox.Position = UDim2.new(0, 5, 0, 26)
+        rawBox.Text = ok and jsonText or "{}"
+        rawBox.TextWrapped = true
+        rawBox.TextXAlignment = Enum.TextXAlignment.Left
+        rawBox.TextYAlignment = Enum.TextYAlignment.Top
+        rawBox.BackgroundColor3 = Color3.fromRGB(12, 12, 16)
+        rawBox.TextColor3 = Color3.fromRGB(220, 220, 220)
+        rawBox.Font = Enum.Font.Code
+        rawBox.TextSize = 12
+        rawBox.ClearTextOnFocus = false
+        rawBox.TextEditable = false
+        rawBox.TextScaled = false
+        rawBox.MultiLine = true
+        rawBox.Parent = rawFrame
+
     end
 
     -- 1. Scan Classic 2D Clothing & Faces
