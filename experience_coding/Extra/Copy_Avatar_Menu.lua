@@ -439,9 +439,9 @@ local function deepScanPlayerOutfit(targetPlayer)
             return HttpService:JSONEncode(safeOutfit)
         end)
 
-        -- Raw data display box
+        -- Raw data display box with copy button
         local rawFrame = Instance.new("Frame")
-        rawFrame.Size = UDim2.new(1, -5, 0, 140)
+        rawFrame.Size = UDim2.new(1, -5, 0, 160)
         rawFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
         rawFrame.BorderSizePixel = 0
         rawFrame.Parent = AssetScroll
@@ -457,8 +457,19 @@ local function deepScanPlayerOutfit(targetPlayer)
         rawTitle.TextXAlignment = Enum.TextXAlignment.Left
         rawTitle.Parent = rawFrame
 
+        local copyBtn = Instance.new("TextButton")
+        copyBtn.Size = UDim2.new(0, 50, 0, 18)
+        copyBtn.Position = UDim2.new(1, -60, 0, 6)
+        copyBtn.Text = "Copy"
+        copyBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
+        copyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        copyBtn.Font = Enum.Font.SourceSansBold
+        copyBtn.TextSize = 11
+        copyBtn.BorderSizePixel = 0
+        copyBtn.Parent = rawFrame
+
         local rawBox = Instance.new("TextBox")
-        rawBox.Size = UDim2.new(1, -10, 0, 110)
+        rawBox.Size = UDim2.new(1, -10, 0, 130)
         rawBox.Position = UDim2.new(0, 5, 0, 26)
         rawBox.Text = ok and jsonText or "{}"
         rawBox.TextWrapped = true
@@ -467,13 +478,120 @@ local function deepScanPlayerOutfit(targetPlayer)
         rawBox.BackgroundColor3 = Color3.fromRGB(12, 12, 16)
         rawBox.TextColor3 = Color3.fromRGB(220, 220, 220)
         rawBox.Font = Enum.Font.Code
-        rawBox.TextSize = 12
+        rawBox.TextSize = 11
         rawBox.ClearTextOnFocus = false
         rawBox.TextEditable = false
         rawBox.TextScaled = false
         rawBox.MultiLine = true
         rawBox.Parent = rawFrame
 
+        -- Copy button functionality
+        copyBtn.MouseButton1Click:Connect(function()
+            setclipboard(rawBox.Text)
+            copyBtn.Text = "Copied!"
+            copyBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
+            task.wait(2)
+            copyBtn.Text = "Copy"
+            copyBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
+        end)
+
+    end
+
+    -- Body Parts Section
+    do
+        local bodyPartsFrame = Instance.new("Frame")
+        bodyPartsFrame.Size = UDim2.new(1, -5, 0, 110)
+        bodyPartsFrame.BackgroundColor3 = Color3.fromRGB(22, 22, 26)
+        bodyPartsFrame.BorderSizePixel = 0
+        bodyPartsFrame.Parent = AssetScroll
+
+        local bodyTitle = Instance.new("TextLabel")
+        bodyTitle.Size = UDim2.new(1, -10, 0, 18)
+        bodyTitle.Position = UDim2.new(0, 5, 0, 6)
+        bodyTitle.Text = "Body Parts"
+        bodyTitle.BackgroundTransparency = 1
+        bodyTitle.TextColor3 = Color3.fromRGB(0, 255, 200)
+        bodyTitle.Font = Enum.Font.SourceSansBold
+        bodyTitle.TextSize = 13
+        bodyTitle.TextXAlignment = Enum.TextXAlignment.Left
+        bodyTitle.Parent = bodyPartsFrame
+
+        local bodyParts = {
+            "Head", "Torso", "LeftArm", "RightArm", "LeftLeg", "RightLeg"
+        }
+
+        local bodyText = ""
+        for _, part in ipairs(bodyParts) do
+            local partId = tonumber(description[part]) or 0
+            if partId ~= 0 then
+                bodyText = bodyText .. part .. ": " .. tostring(partId) .. "\n"
+            end
+        end
+
+        local bodyPartsBox = Instance.new("TextBox")
+        bodyPartsBox.Size = UDim2.new(1, -10, 0, 80)
+        bodyPartsBox.Position = UDim2.new(0, 5, 0, 26)
+        bodyPartsBox.Text = bodyText ~= "" and bodyText or "No custom body parts"
+        bodyPartsBox.TextWrapped = true
+        bodyPartsBox.TextXAlignment = Enum.TextXAlignment.Left
+        bodyPartsBox.TextYAlignment = Enum.TextYAlignment.Top
+        bodyPartsBox.BackgroundColor3 = Color3.fromRGB(12, 12, 16)
+        bodyPartsBox.TextColor3 = Color3.fromRGB(220, 220, 220)
+        bodyPartsBox.Font = Enum.Font.Code
+        bodyPartsBox.TextSize = 11
+        bodyPartsBox.ClearTextOnFocus = false
+        bodyPartsBox.TextEditable = false
+        bodyPartsBox.MultiLine = true
+        bodyPartsBox.Parent = bodyPartsFrame
+    end
+
+    -- Animations Section
+    do
+        local animFrame = Instance.new("Frame")
+        animFrame.Size = UDim2.new(1, -5, 0, 110)
+        animFrame.BackgroundColor3 = Color3.fromRGB(22, 22, 26)
+        animFrame.BorderSizePixel = 0
+        animFrame.Parent = AssetScroll
+
+        local animTitle = Instance.new("TextLabel")
+        animTitle.Size = UDim2.new(1, -10, 0, 18)
+        animTitle.Position = UDim2.new(0, 5, 0, 6)
+        animTitle.Text = "Animations"
+        animTitle.BackgroundTransparency = 1
+        animTitle.TextColor3 = Color3.fromRGB(0, 255, 200)
+        animTitle.Font = Enum.Font.SourceSansBold
+        animTitle.TextSize = 13
+        animTitle.TextXAlignment = Enum.TextXAlignment.Left
+        animTitle.Parent = animFrame
+
+        local animations = {
+            "IdleAnimation", "RunAnimation", "WalkAnimation", "JumpAnimation",
+            "ClimbAnimation", "FallAnimation", "SwimAnimation"
+        }
+
+        local animText = ""
+        for _, anim in ipairs(animations) do
+            local animId = tonumber(description[anim]) or 0
+            if animId ~= 0 then
+                animText = animText .. anim .. ": " .. tostring(animId) .. "\n"
+            end
+        end
+
+        local animBox = Instance.new("TextBox")
+        animBox.Size = UDim2.new(1, -10, 0, 80)
+        animBox.Position = UDim2.new(0, 5, 0, 26)
+        animBox.Text = animText ~= "" and animText or "No custom animations"
+        animBox.TextWrapped = true
+        animBox.TextXAlignment = Enum.TextXAlignment.Left
+        animBox.TextYAlignment = Enum.TextYAlignment.Top
+        animBox.BackgroundColor3 = Color3.fromRGB(12, 12, 16)
+        animBox.TextColor3 = Color3.fromRGB(220, 220, 220)
+        animBox.Font = Enum.Font.Code
+        animBox.TextSize = 11
+        animBox.ClearTextOnFocus = false
+        animBox.TextEditable = false
+        animBox.MultiLine = true
+        animBox.Parent = animFrame
     end
 
     -- 1. Scan Classic 2D Clothing & Faces
