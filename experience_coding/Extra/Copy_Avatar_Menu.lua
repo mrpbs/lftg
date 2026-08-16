@@ -497,110 +497,36 @@ local function deepScanPlayerOutfit(targetPlayer)
 
     end
 
-    -- Body Parts Section
-    do
-        local bodyPartsFrame = Instance.new("Frame")
-        bodyPartsFrame.Size = UDim2.new(1, -5, 0, 110)
-        bodyPartsFrame.BackgroundColor3 = Color3.fromRGB(22, 22, 26)
-        bodyPartsFrame.BorderSizePixel = 0
-        bodyPartsFrame.Parent = AssetScroll
-
-        local bodyTitle = Instance.new("TextLabel")
-        bodyTitle.Size = UDim2.new(1, -10, 0, 18)
-        bodyTitle.Position = UDim2.new(0, 5, 0, 6)
-        bodyTitle.Text = "Body Parts"
-        bodyTitle.BackgroundTransparency = 1
-        bodyTitle.TextColor3 = Color3.fromRGB(0, 255, 200)
-        bodyTitle.Font = Enum.Font.SourceSansBold
-        bodyTitle.TextSize = 13
-        bodyTitle.TextXAlignment = Enum.TextXAlignment.Left
-        bodyTitle.Parent = bodyPartsFrame
-
-        local bodyParts = {
-            "Head", "Torso", "LeftArm", "RightArm", "LeftLeg", "RightLeg"
-        }
-
-        local bodyText = ""
-        for _, part in ipairs(bodyParts) do
-            local partId = tonumber(description[part]) or 0
-            if partId ~= 0 then
-                bodyText = bodyText .. part .. ": " .. tostring(partId) .. "\n"
-            end
-        end
-
-        local bodyPartsBox = Instance.new("TextBox")
-        bodyPartsBox.Size = UDim2.new(1, -10, 0, 80)
-        bodyPartsBox.Position = UDim2.new(0, 5, 0, 26)
-        bodyPartsBox.Text = bodyText ~= "" and bodyText or "No custom body parts"
-        bodyPartsBox.TextWrapped = true
-        bodyPartsBox.TextXAlignment = Enum.TextXAlignment.Left
-        bodyPartsBox.TextYAlignment = Enum.TextYAlignment.Top
-        bodyPartsBox.BackgroundColor3 = Color3.fromRGB(12, 12, 16)
-        bodyPartsBox.TextColor3 = Color3.fromRGB(220, 220, 220)
-        bodyPartsBox.Font = Enum.Font.Code
-        bodyPartsBox.TextSize = 11
-        bodyPartsBox.ClearTextOnFocus = false
-        bodyPartsBox.TextEditable = false
-        bodyPartsBox.MultiLine = true
-        bodyPartsBox.Parent = bodyPartsFrame
-    end
-
-    -- Animations Section
-    do
-        local animFrame = Instance.new("Frame")
-        animFrame.Size = UDim2.new(1, -5, 0, 110)
-        animFrame.BackgroundColor3 = Color3.fromRGB(22, 22, 26)
-        animFrame.BorderSizePixel = 0
-        animFrame.Parent = AssetScroll
-
-        local animTitle = Instance.new("TextLabel")
-        animTitle.Size = UDim2.new(1, -10, 0, 18)
-        animTitle.Position = UDim2.new(0, 5, 0, 6)
-        animTitle.Text = "Animations"
-        animTitle.BackgroundTransparency = 1
-        animTitle.TextColor3 = Color3.fromRGB(0, 255, 200)
-        animTitle.Font = Enum.Font.SourceSansBold
-        animTitle.TextSize = 13
-        animTitle.TextXAlignment = Enum.TextXAlignment.Left
-        animTitle.Parent = animFrame
-
-        local animations = {
-            "IdleAnimation", "RunAnimation", "WalkAnimation", "JumpAnimation",
-            "ClimbAnimation", "FallAnimation", "SwimAnimation"
-        }
-
-        local animText = ""
-        for _, anim in ipairs(animations) do
-            local animId = tonumber(description[anim]) or 0
-            if animId ~= 0 then
-                animText = animText .. anim .. ": " .. tostring(animId) .. "\n"
-            end
-        end
-
-        local animBox = Instance.new("TextBox")
-        animBox.Size = UDim2.new(1, -10, 0, 80)
-        animBox.Position = UDim2.new(0, 5, 0, 26)
-        animBox.Text = animText ~= "" and animText or "No custom animations"
-        animBox.TextWrapped = true
-        animBox.TextXAlignment = Enum.TextXAlignment.Left
-        animBox.TextYAlignment = Enum.TextYAlignment.Top
-        animBox.BackgroundColor3 = Color3.fromRGB(12, 12, 16)
-        animBox.TextColor3 = Color3.fromRGB(220, 220, 220)
-        animBox.Font = Enum.Font.Code
-        animBox.TextSize = 11
-        animBox.ClearTextOnFocus = false
-        animBox.TextEditable = false
-        animBox.MultiLine = true
-        animBox.Parent = animFrame
-    end
-
     -- 1. Scan Classic 2D Clothing & Faces
     if description.Shirt ~= 0 then createDetailedAssetCard("Classic Shirt", description.Shirt, "HumanoidDesc.Shirt") end
     if description.Pants ~= 0 then createDetailedAssetCard("Classic Pants", description.Pants, "HumanoidDesc.Pants") end
     if description.GraphicTShirt ~= 0 then createDetailedAssetCard("T-Shirt Graphic", description.GraphicTShirt, "HumanoidDesc.GraphicTShirt") end
     if description.Face ~= 0 then createDetailedAssetCard("Face Texture", description.Face, "HumanoidDesc.Face") end
 
-    -- 2. Scan 3D Accessories and Layered Clothing
+    -- 2. Scan Body Parts
+    local bodyParts = {
+        "Head", "Torso", "LeftArm", "RightArm", "LeftLeg", "RightLeg"
+    }
+    for _, part in ipairs(bodyParts) do
+        local partId = tonumber(description[part]) or 0
+        if partId ~= 0 then
+            createDetailedAssetCard("Body: " .. part, partId, "HumanoidDesc." .. part)
+        end
+    end
+
+    -- 3. Scan Animations
+    local animations = {
+        "IdleAnimation", "RunAnimation", "WalkAnimation", "JumpAnimation",
+        "ClimbAnimation", "FallAnimation", "SwimAnimation"
+    }
+    for _, anim in ipairs(animations) do
+        local animId = tonumber(description[anim]) or 0
+        if animId ~= 0 then
+            createDetailedAssetCard("Anim: " .. anim:gsub("Animation", ""), animId, "HumanoidDesc." .. anim)
+        end
+    end
+
+    -- 4. Scan 3D Accessories and Layered Clothing
     local accessories = description:GetAccessories(true)
     for _, acc in pairs(accessories) do
         local accType = tostring(acc.AccessoryType):gsub("Enum.AccessoryType.", "")
