@@ -1,4 +1,4 @@
--- Ultimate Roblox Workspace Metadata Engine & Layered Clothing Scanner (Updated)
+-- Ultimate Roblox Workspace Metadata Engine & Layered Clothing Scanner (Standalone Server Edition)
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local Workspace = game:GetService("Workspace")
@@ -73,7 +73,7 @@ MinBtn.TextSize = 18
 MinBtn.BorderSizePixel = 0
 MinBtn.Parent = TopBar
 
--- Back Button (Hidden by default)
+-- Back Button
 local BackBtn = Instance.new("TextButton")
 BackBtn.Size = UDim2.new(0, 60, 0, 25)
 BackBtn.Position = UDim2.new(0, 10, 0, 45)
@@ -117,12 +117,11 @@ local PlayerListLayout = Instance.new("UIListLayout")
 PlayerListLayout.Parent = PlayerScroll
 PlayerListLayout.SortOrder = Enum.SortOrder.LayoutOrder
 PlayerListLayout.Padding = UDim.new(0, 6)
-
 PlayerListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
     PlayerScroll.CanvasSize = UDim2.new(0, 0, 0, PlayerListLayout.AbsoluteContentSize.Y + 10)
 end)
 
--- Asset Scan Scroll Context (Hidden initially)
+-- Asset Scan Scroll Context
 local AssetScroll = Instance.new("ScrollingFrame")
 AssetScroll.Size = UDim2.new(1, -20, 1, -10)
 AssetScroll.Position = UDim2.new(0, 10, 0, 0)
@@ -135,10 +134,10 @@ local AssetListLayout = Instance.new("UIListLayout")
 AssetListLayout.Parent = AssetScroll
 AssetListLayout.SortOrder = Enum.SortOrder.LayoutOrder
 AssetListLayout.Padding = UDim.new(0, 6)
-
 AssetListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
     AssetScroll.CanvasSize = UDim2.new(0, 0, 0, AssetListLayout.AbsoluteContentSize.Y + 10)
 end)
+
 -- Resize Handle (Bottom Right Corner)
 local ResizeHandle = Instance.new("TextButton")
 ResizeHandle.Name = "ResizeHandle"
@@ -190,11 +189,11 @@ local savedSize = MainFrame.Size
 MinBtn.MouseButton1Click:Connect(function()
     minimized = not minimized
     if minimized then
-        savedSize = MainFrame.Size -- Save current custom size
+        savedSize = MainFrame.Size 
         MainFrame.Size = UDim2.new(0, MainFrame.AbsoluteSize.X, 0, 35)
         ResizeHandle.Visible = false
     else
-        MainFrame.Size = savedSize -- Restore custom size
+        MainFrame.Size = savedSize 
         ResizeHandle.Visible = true
     end
 end)
@@ -203,7 +202,6 @@ CloseBtn.MouseButton1Click:Connect(function()
     ScreenGui:Destroy()
 end)
 
--- Navigation Logic
 BackBtn.MouseButton1Click:Connect(function()
     AssetScroll.Visible = false
     PlayerScroll.Visible = true
@@ -212,7 +210,62 @@ BackBtn.MouseButton1Click:Connect(function()
     Title.Text = "🧬 Deep Live Outfit Scanner"
 end)
 
--- Function to create Asset Cards
+-- Life Together RP Payload Formatter
+local function buildBatchPayload(data)
+    local accessories = {}
+    local order = 1
+    if data.Accessories then
+        for _, acc in ipairs(data.Accessories) do
+            local isLayered = acc.IsLayered == true
+            table.insert(accessories, {
+                AssetId = acc.AssetId,
+                AccessoryType = acc.AccessoryType,
+                IsLayered = isLayered,
+                Rotation = "  ",
+                Position = "  ",
+                Scale = "1 1 1",
+                Order = isLayered and order or nil,
+                Puffiness = isLayered and 0 or nil
+            })
+            if isLayered then order = order + 1 end
+        end
+    end
+    return {
+        accessories = accessories,
+        properties = {
+            Head = data.Head or 0,
+            Torso = data.Torso or 0,
+            LeftArm = data.LeftArm or 0,
+            RightArm = data.RightArm or 0,
+            LeftLeg = data.LeftLeg or 0,
+            RightLeg = data.RightLeg or 0,
+            Face = data.Face or 0,
+            Shirt = data.Shirt or 0,
+            Pants = data.Pants or 0,
+            GraphicTShirt = data.GraphicTShirt or 0,
+            RunAnimation = data.RunAnimation or 0,
+            WalkAnimation = data.WalkAnimation or 0,
+            JumpAnimation = data.JumpAnimation or 0,
+            FallAnimation = data.FallAnimation or 0,
+            ClimbAnimation = data.ClimbAnimation or 0,
+            IdleAnimation = data.IdleAnimation or 0,
+            SwimAnimation = data.SwimAnimation or 0,
+            HeightScale = data.HeightScale or 1,
+            WidthScale = data.WidthScale or 1,
+            DepthScale = 1,
+            HeadScale = 1,
+            BodyTypeScale = 0,
+            ProportionScale = 0,
+            HeadColor = ";<,#",
+            TorsoColor = ";<,#",
+            LeftArmColor = ";<,#",
+            RightArmColor = ";<,#",
+            LeftLegColor = ";<,#",
+            RightLegColor = ";<,#",
+        }
+    }
+end
+
 local function createDetailedAssetCard(categoryName, assetId, rawPropertySource)
     local numericId = tonumber(assetId)
     if not numericId then return end
@@ -263,7 +316,6 @@ local function createDetailedAssetCard(categoryName, assetId, rawPropertySource)
     CreatorLabel.BackgroundTransparency = 1
     CreatorLabel.Parent = CardFrame
 
-    -- Small creator icon (will be populated if we get a creator id)
     local CreatorIcon = Instance.new("ImageLabel")
     CreatorIcon.Size = UDim2.new(0, 28, 0, 28)
     CreatorIcon.Position = UDim2.new(1, -40, 0, 38)
@@ -314,7 +366,6 @@ local function createDetailedAssetCard(categoryName, assetId, rawPropertySource)
         if success and info then
             NameLabel.Text = info.Name ~= "" and info.Name or "Unnamed Asset Component"
             CreatorLabel.Text = "By: " .. (info.Creator and info.Creator.Name or "Roblox")
-            -- Try to fetch creator's profile image if Creator.Id exists
             if info.Creator and info.Creator.Id and type(info.Creator.Id) == "number" then
                 local ok, thumb = pcall(function()
                     return Players:GetUserThumbnailAsync(info.Creator.Id, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size48x48)
@@ -332,12 +383,10 @@ end
 
 -- Scan Logic (Now accepts Player object directly)
 local function deepScanPlayerOutfit(targetPlayer)
-    -- Clear previous assets
     for _, child in pairs(AssetScroll:GetChildren()) do
         if child:IsA("Frame") then child:Destroy() end
     end
     
-    -- Update UI state
     Title.Text = "🧬 Scanning: " .. targetPlayer.DisplayName
     PlayerScroll.Visible = false
     AssetScroll.Visible = true
@@ -349,7 +398,7 @@ local function deepScanPlayerOutfit(targetPlayer)
 
     local humanoid = liveChar:FindFirstChildOfClass("Humanoid")
     if not humanoid then return end
-    -- === BIG IN-GAME VIEWPORT RENDER ===
+    
     local avatarFrame = Instance.new("Frame")
     avatarFrame.Size = UDim2.new(1, -5, 0, 250)
     avatarFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
@@ -363,14 +412,12 @@ local function deepScanPlayerOutfit(targetPlayer)
     bigViewport.Parent = avatarFrame
 
     task.spawn(function()
-        -- 1. Temporarily allow the character to be cloned
         local prevArchivable = liveChar.Archivable
         liveChar.Archivable = true
         local charClone = liveChar:Clone()
         liveChar.Archivable = prevArchivable
 
         if charClone then
-            -- 2. Destroy scripts so they don't run in the UI, but KEEP the Humanoid so clothes render
             for _, v in pairs(charClone:GetDescendants()) do
                 if v:IsA("Script") or v:IsA("LocalScript") then
                     v:Destroy()
@@ -383,7 +430,6 @@ local function deepScanPlayerOutfit(targetPlayer)
             
             local hrp = charClone:FindFirstChild("HumanoidRootPart") or charClone:FindFirstChild("Torso") or charClone:FindFirstChild("UpperTorso")
             if hrp then
-                -- Position camera directly in front of the avatar looking back at them
                 camera.CFrame = hrp.CFrame * CFrame.new(0, 0.5, -6) * CFrame.Angles(0, math.pi, 0)
                 camera.Focus = hrp.CFrame
             end
@@ -391,7 +437,6 @@ local function deepScanPlayerOutfit(targetPlayer)
             bigViewport.CurrentCamera = camera
         end
     end)
-    -- ===================================
 
     local success, description = pcall(function()
         return humanoid:GetAppliedDescription()
@@ -399,7 +444,6 @@ local function deepScanPlayerOutfit(targetPlayer)
 
     if not success or not description then return end
 
-    -- Add a top "body info" card showing rig type and scales
     do
         local infoFrame = Instance.new("Frame")
         infoFrame.Size = UDim2.new(1, -5, 0, 80)
@@ -433,7 +477,6 @@ local function deepScanPlayerOutfit(targetPlayer)
         rigLabel.TextXAlignment = Enum.TextXAlignment.Left
         rigLabel.Parent = infoFrame
 
-        -- show some scales from the HumanoidDescription if available
         local function safeGet(prop)
             local ok, val = pcall(function() return description[prop] end)
             if ok and val ~= nil then return val else return nil end
@@ -463,7 +506,6 @@ local function deepScanPlayerOutfit(targetPlayer)
         scalesLabel.TextWrapped = true
         scalesLabel.Parent = infoFrame
 
-        -- Build a structured outfit data table to show full description (JSON-like)
         local outfitData = {}
         local function getVal(prop)
             local ok, val = pcall(function() return description[prop] end)
@@ -471,16 +513,16 @@ local function deepScanPlayerOutfit(targetPlayer)
             return val
         end
 
-        local function colorToArray(c)
-            if typeof(c) == "Color3" then
-                return {c.R, c.G, c.B}
-            end
-            return c
+          outfitData.SwimAnimation = getVal("SwimAnimation")
+        
+        -- FIXED: Grab the actual HeadColor to use as the overall SkinTone
+        local hc = getVal("HeadColor")
+        if typeof(hc) == "Color3" then
+            outfitData.SkinTone = {hc.R, hc.G, hc.B}
         end
-
-        outfitData.SwimAnimation = getVal("SwimAnimation")
-        outfitData.SkinTone = colorToArray(getVal("SkinTone"))
+        
         outfitData.Face = getVal("Face")
+
         outfitData.JumpAnimation = getVal("JumpAnimation")
         outfitData.ClimbAnimation = getVal("ClimbAnimation")
         outfitData.Shirt = getVal("Shirt")
@@ -496,7 +538,6 @@ local function deepScanPlayerOutfit(targetPlayer)
         outfitData.IdleAnimation = getVal("IdleAnimation")
         outfitData.Accessories = {}
 
-        -- Accessories list
         pcall(function()
             local accs = description:GetAccessories(true)
             if accs and type(accs) == "table" then
@@ -516,10 +557,8 @@ local function deepScanPlayerOutfit(targetPlayer)
         outfitData.Torso = getVal("Torso")
         outfitData.LeftLeg = getVal("LeftLeg")
 
-        -- Encode to JSON-safe table: ensure no userdata remains (Color3 handled)
         local safeOutfit = {}
         for k, v in pairs(outfitData) do
-            -- convert enums and userdata to strings or arrays
             if typeof(v) == "Instance" or typeof(v) == "EnumItem" then
                 safeOutfit[k] = tostring(v)
             else
@@ -531,9 +570,9 @@ local function deepScanPlayerOutfit(targetPlayer)
             return HttpService:JSONEncode(safeOutfit)
         end)
 
-        -- Raw data display box with copy button
+        -- Action Panel & Raw JSON Output Box
         local rawFrame = Instance.new("Frame")
-        rawFrame.Size = UDim2.new(1, -5, 0, 160)
+        rawFrame.Size = UDim2.new(1, -5, 0, 195) 
         rawFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
         rawFrame.BorderSizePixel = 0
         rawFrame.Parent = AssetScroll
@@ -541,35 +580,13 @@ local function deepScanPlayerOutfit(targetPlayer)
         local rawTitle = Instance.new("TextLabel")
         rawTitle.Size = UDim2.new(1, -10, 0, 18)
         rawTitle.Position = UDim2.new(0, 5, 0, 6)
-        rawTitle.Text = "Raw Outfit Data"
+        rawTitle.Text = "Outfit Output & Actions"
         rawTitle.BackgroundTransparency = 1
         rawTitle.TextColor3 = Color3.fromRGB(0, 255, 200)
         rawTitle.Font = Enum.Font.SourceSansBold
         rawTitle.TextSize = 13
         rawTitle.TextXAlignment = Enum.TextXAlignment.Left
         rawTitle.Parent = rawFrame
-
-        local copyBtn = Instance.new("TextButton")
-        copyBtn.Size = UDim2.new(0, 50, 0, 18)
-        copyBtn.Position = UDim2.new(1, -60, 0, 6)
-        copyBtn.Text = "Copy"
-        copyBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
-        copyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-        copyBtn.Font = Enum.Font.SourceSansBold
-        copyBtn.TextSize = 11
-        copyBtn.BorderSizePixel = 0
-        copyBtn.Parent = rawFrame
-     
-        local saveBtn = Instance.new("TextButton")
-        saveBtn.Size = UDim2.new(0, 50, 0, 18)
-        saveBtn.Position = UDim2.new(1, -115, 0, 6) -- Positioned just to the left of the Copy button
-        saveBtn.Text = "Save"
-        saveBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
-        saveBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-        saveBtn.Font = Enum.Font.SourceSansBold
-        saveBtn.TextSize = 11
-        saveBtn.BorderSizePixel = 0
-        saveBtn.Parent = rawFrame
 
         local rawBox = Instance.new("TextBox")
         rawBox.Size = UDim2.new(1, -10, 0, 130)
@@ -588,26 +605,67 @@ local function deepScanPlayerOutfit(targetPlayer)
         rawBox.MultiLine = true
         rawBox.Parent = rawFrame
 
-        -- Copy button functionality
+        -- Button Layout Container
+        local actionLayout = Instance.new("Frame")
+        actionLayout.Size = UDim2.new(1, -10, 0, 28)
+        actionLayout.Position = UDim2.new(0, 5, 0, 160)
+        actionLayout.BackgroundTransparency = 1
+        actionLayout.Parent = rawFrame
+
+        local uigrid = Instance.new("UIGridLayout")
+        uigrid.CellSize = UDim2.new(0.32, 0, 1, 0)
+        uigrid.CellPadding = UDim2.new(0.02, 0, 0, 0)
+        uigrid.SortOrder = Enum.SortOrder.LayoutOrder
+        uigrid.Parent = actionLayout
+
+        -- 1. Copy Button
+        local copyBtn = Instance.new("TextButton")
+        copyBtn.Text = "Copy JSON"
+        copyBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 90)
+        copyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        copyBtn.Font = Enum.Font.SourceSansBold
+        copyBtn.TextSize = 12
+        copyBtn.BorderSizePixel = 0
+        copyBtn.LayoutOrder = 1
+        copyBtn.Parent = actionLayout
+
+        -- 2. Save Outfit Button
+        local saveBtn = Instance.new("TextButton")
+        saveBtn.Text = "Save Outfit"
+        saveBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
+        saveBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        saveBtn.Font = Enum.Font.SourceSansBold
+        saveBtn.TextSize = 12
+        saveBtn.BorderSizePixel = 0
+        saveBtn.LayoutOrder = 2
+        saveBtn.Parent = actionLayout
+
+        -- 3. Wear Outfit Button (Server-Sided via Network Hook)
+        local wearBtn = Instance.new("TextButton")
+        wearBtn.Text = "Try On (Server)"
+        wearBtn.BackgroundColor3 = Color3.fromRGB(249, 180, 0)
+        wearBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
+        wearBtn.Font = Enum.Font.SourceSansBold
+        wearBtn.TextSize = 12
+        wearBtn.BorderSizePixel = 0
+        wearBtn.LayoutOrder = 3
+        wearBtn.Parent = actionLayout
+
+        -- Action Connections
         copyBtn.MouseButton1Click:Connect(function()
             setclipboard(rawBox.Text)
             copyBtn.Text = "Copied!"
-            copyBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
             task.wait(2)
-            copyBtn.Text = "Copy"
-            copyBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
+            copyBtn.Text = "Copy JSON"
         end)
-        -- Save button functionality
+
         saveBtn.MouseButton1Click:Connect(function()
-            if writefile and isfile then
+            if writefile then
                 local folder = "lifetogether_admin_savedoutfits"
-                
-                -- Create folder if it doesn't exist
                 if makefolder and not isfolder(folder) then
                     pcall(makefolder, folder)
                 end
                 
-                -- Anti-overwrite naming logic
                 local baseName = targetPlayer.Name .. "_Scanned"
                 local fileName = folder .. "/" .. baseName .. ".json"
                 local counter = 1
@@ -616,38 +674,101 @@ local function deepScanPlayerOutfit(targetPlayer)
                     fileName = folder .. "/" .. baseName .. "_" .. tostring(counter) .. ".json"
                     counter = counter + 1
                 end
-                
-                -- Save the JSON file
+
                 local s, e = pcall(function()
                     writefile(fileName, rawBox.Text)
                 end)
-                
                 if s then
                     saveBtn.Text = "Saved!"
                     saveBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
                 else
-                    saveBtn.Text = "Error"
+                    saveBtn.Text = "Error Saving"
                     saveBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
                 end
             else
-                saveBtn.Text = "No Env"
+                saveBtn.Text = "Not Supported"
                 saveBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
             end
-            
             task.wait(2)
-            saveBtn.Text = "Save"
+            saveBtn.Text = "Save Outfit"
             saveBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
         end)
 
+        wearBtn.MouseButton1Click:Connect(function()
+            local payload = buildBatchPayload(outfitData)
+            local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
+            local Get = getgenv().Get or (getgenv().g and getgenv().g.Get)
+
+            if not Send then
+                wearBtn.Text = "Loading Net..."
+                wearBtn.BackgroundColor3 = Color3.fromRGB(150, 150, 150)
+                -- Silently fetch and execute the game's network API so this script runs standalone
+                pcall(function()
+                    loadstring(game:HttpGet("https://pastebin.com/raw/GiEmv8Qf"))()
+                end)
+                task.wait(1)
+                Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
+                Get = getgenv().Get or (getgenv().g and getgenv().g.Get)
+            end
+
+            if Send then
+                wearBtn.Text = "Applying..."
+                wearBtn.BackgroundColor3 = Color3.fromRGB(200, 200, 50)
+                
+                task.spawn(function()
+                    for i = 1, 3 do
+                        Send("wear_outfit_from_desc", payload)
+                        task.wait(0.1)
+                    end
+                    task.wait(0.2)
+                    
+                    if outfitData.SkinTone then
+                        pcall(function()
+                            local c = Color3.new(outfitData.SkinTone[1], outfitData.SkinTone[2], outfitData.SkinTone[3])
+                            for i = 1, 3 do Send("skin_tone", c) task.wait(0.1) end
+                        end)
+                        task.wait(0.2)
+                    end
+                    
+                    if outfitData.Age and Get then
+                        pcall(function()
+                            Get("age", tostring(outfitData.Age))
+                            task.wait(0.2)
+                        end)
+                    end
+                    
+                    if outfitData.HeightScale then
+                        pcall(function()
+                            for i = 1, 3 do Send("body_scale", "HeightScale", outfitData.HeightScale * 100) task.wait(0.1) end
+                        end)
+                    end
+                    if outfitData.WidthScale then
+                        pcall(function()
+                            for i = 1, 3 do Send("body_scale", "WidthScale", outfitData.WidthScale * 100) task.wait(0.1) end
+                        end)
+                    end
+
+                    wearBtn.Text = "Applied!"
+                    wearBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
+                    task.wait(2)
+                    wearBtn.Text = "Try On (Server)"
+                    wearBtn.BackgroundColor3 = Color3.fromRGB(249, 180, 0)
+                end)
+            else
+                wearBtn.Text = "Net Error"
+                wearBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+                task.wait(2)
+                wearBtn.Text = "Try On (Server)"
+                wearBtn.BackgroundColor3 = Color3.fromRGB(249, 180, 0)
+            end
+        end)
     end
 
-    -- 1. Scan Classic 2D Clothing & Faces
     if description.Shirt ~= 0 then createDetailedAssetCard("Classic Shirt", description.Shirt, "HumanoidDesc.Shirt") end
     if description.Pants ~= 0 then createDetailedAssetCard("Classic Pants", description.Pants, "HumanoidDesc.Pants") end
     if description.GraphicTShirt ~= 0 then createDetailedAssetCard("T-Shirt Graphic", description.GraphicTShirt, "HumanoidDesc.GraphicTShirt") end
     if description.Face ~= 0 then createDetailedAssetCard("Face Texture", description.Face, "HumanoidDesc.Face") end
 
-    -- 2. Scan Body Parts
     local bodyParts = {
         "Head", "Torso", "LeftArm", "RightArm", "LeftLeg", "RightLeg"
     }
@@ -658,7 +779,6 @@ local function deepScanPlayerOutfit(targetPlayer)
         end
     end
 
-    -- 3. Scan Animations
     local animations = {
         "IdleAnimation", "RunAnimation", "WalkAnimation", "JumpAnimation",
         "ClimbAnimation", "FallAnimation", "SwimAnimation"
@@ -670,7 +790,6 @@ local function deepScanPlayerOutfit(targetPlayer)
         end
     end
 
-    -- 4. Scan 3D Accessories and Layered Clothing
     local accessories = description:GetAccessories(true)
     for _, acc in pairs(accessories) do
         local accType = tostring(acc.AccessoryType):gsub("Enum.AccessoryType.", "")
@@ -679,9 +798,7 @@ local function deepScanPlayerOutfit(targetPlayer)
     end
 end
 
--- Load All Users into Player List
 local function populatePlayerList()
-    -- Clear current list
     for _, child in pairs(PlayerScroll:GetChildren()) do
         if child:IsA("TextButton") then child:Destroy() end
     end
@@ -694,7 +811,6 @@ local function populatePlayerList()
         PlayerBtn.Text = ""
         PlayerBtn.Parent = PlayerScroll
 
-        -- Use a ViewportFrame directly instead of ImageLabel so it actually renders the 3D model
         local SmallViewport = Instance.new("ViewportFrame")
         SmallViewport.Size = UDim2.new(0, 40, 0, 40)
         SmallViewport.Position = UDim2.new(0, 5, 0, 5)
@@ -705,7 +821,6 @@ local function populatePlayerList()
         task.spawn(function()
             local char = player.Character
             if char then
-                -- Temporarily make Archivable true so we can clone it
                 local oldArchivable = char.Archivable
                 char.Archivable = true
                 local headClone = char:Clone()
@@ -718,7 +833,6 @@ local function populatePlayerList()
                     
                     local head = headClone:FindFirstChild("Head")
                     if head then
-                        -- Position camera right in front of the face
                         camera.CFrame = head.CFrame * CFrame.new(0, 0, -2.5) * CFrame.Angles(0, math.pi, 0)
                         camera.Focus = head.CFrame
                     end
@@ -749,7 +863,6 @@ local function populatePlayerList()
         Username.BackgroundTransparency = 1
         Username.Parent = PlayerBtn
 
-        -- Click to scan
         PlayerBtn.MouseButton1Click:Connect(function()
             deepScanPlayerOutfit(player)
         end)
