@@ -559,6 +559,17 @@ local function deepScanPlayerOutfit(targetPlayer)
         copyBtn.TextSize = 11
         copyBtn.BorderSizePixel = 0
         copyBtn.Parent = rawFrame
+     
+        local saveBtn = Instance.new("TextButton")
+        saveBtn.Size = UDim2.new(0, 50, 0, 18)
+        saveBtn.Position = UDim2.new(1, -115, 0, 6) -- Positioned just to the left of the Copy button
+        saveBtn.Text = "Save"
+        saveBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
+        saveBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        saveBtn.Font = Enum.Font.SourceSansBold
+        saveBtn.TextSize = 11
+        saveBtn.BorderSizePixel = 0
+        saveBtn.Parent = rawFrame
 
         local rawBox = Instance.new("TextBox")
         rawBox.Size = UDim2.new(1, -10, 0, 130)
@@ -585,6 +596,47 @@ local function deepScanPlayerOutfit(targetPlayer)
             task.wait(2)
             copyBtn.Text = "Copy"
             copyBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
+        end)
+        -- Save button functionality
+        saveBtn.MouseButton1Click:Connect(function()
+            if writefile and isfile then
+                local folder = "lifetogether_admin_savedoutfits"
+                
+                -- Create folder if it doesn't exist
+                if makefolder and not isfolder(folder) then
+                    pcall(makefolder, folder)
+                end
+                
+                -- Anti-overwrite naming logic
+                local baseName = targetPlayer.Name .. "_Scanned"
+                local fileName = folder .. "/" .. baseName .. ".json"
+                local counter = 1
+                
+                while isfile(fileName) do
+                    fileName = folder .. "/" .. baseName .. "_" .. tostring(counter) .. ".json"
+                    counter = counter + 1
+                end
+                
+                -- Save the JSON file
+                local s, e = pcall(function()
+                    writefile(fileName, rawBox.Text)
+                end)
+                
+                if s then
+                    saveBtn.Text = "Saved!"
+                    saveBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
+                else
+                    saveBtn.Text = "Error"
+                    saveBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+                end
+            else
+                saveBtn.Text = "No Env"
+                saveBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+            end
+            
+            task.wait(2)
+            saveBtn.Text = "Save"
+            saveBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
         end)
 
     end
