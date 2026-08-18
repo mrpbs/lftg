@@ -782,12 +782,12 @@ local function deepScanPlayerOutfit(targetPlayer)
                         task.wait(0.2)
                     end
                     
-                                     if outfitData.Age and Get then
-                        pcall(function()
-                            Get("age", tostring(outfitData.Age)) 
-                           end)
+                               --      if outfitData.Age and Get then
+                     --   pcall(function()
+                        --    Get("age", tostring(outfitData.Age)) 
+                        --   end)
             
-                    end
+                   -- end
 
                     
                     if outfitData.HeightScale then
@@ -1047,7 +1047,7 @@ populateSavedOutfits = function()
                     for i = 1, 3 do Send("wear_outfit_from_desc", payload) task.wait(0.1) end
                     task.wait(0.2)
                     if data.SkinTone then pcall(function() local c = Color3.new(data.SkinTone[1], data.SkinTone[2], data.SkinTone[3]) for i = 1, 3 do Send("skin_tone", c) task.wait(0.1) end end) end
-                    if data.Age and Get then pcall(function() Get("age", tostring(data.Age)) end) end
+               --     if data.Age and Get then pcall(function() Get("age", tostring(data.Age)) end) end
                     if data.HeightScale then for i=1,3 do Send("body_scale", "HeightScale", data.HeightScale * 100) task.wait(0.1) end end
                     if data.WidthScale then for i=1,3 do Send("body_scale", "WidthScale", data.WidthScale * 100) task.wait(0.1) end end
                     WearBtn.Text = "Worn!"
