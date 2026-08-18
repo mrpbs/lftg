@@ -861,6 +861,9 @@ populateSavedOutfits = function()
     local folderName = "lifetogether_admin_savedoutfits"
     if not isfolder or not isfolder(folderName) then return end
 
+    -- 1. Collect all valid outfits into a table first
+    local outfitsList = {}
+    
     for _, file in ipairs(listfiles(folderName)) do
         if file:match("%.json$") then
             local name = file:match("([^/\\]+)%.json$")
@@ -869,111 +872,219 @@ populateSavedOutfits = function()
             if ok and content and #content > 0 then
                 local success, data = pcall(function() return HttpService:JSONDecode(content) end)
                 if success and type(data) == "table" then
-                    
-                    local Entry = Instance.new("Frame")
-                    Entry.Size = UDim2.new(1, -5, 0, 40)
-                    Entry.BackgroundColor3 = Color3.fromRGB(24, 24, 30)
-                    Entry.BorderSizePixel = 0
-                    Entry.Parent = SavedScroll
-
-                    -- Uses a TextBox so you can directly type to rename!
-                    local NameBox = Instance.new("TextBox")
-                    NameBox.Size = UDim2.new(0.35, 0, 1, 0)
-                    NameBox.Position = UDim2.new(0, 10, 0, 0)
-                    NameBox.BackgroundTransparency = 1
-                    NameBox.Text = name
-                    NameBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-                    NameBox.Font = Enum.Font.SourceSansBold
-                    NameBox.TextSize = 14
-                    NameBox.TextXAlignment = Enum.TextXAlignment.Left
-                    NameBox.ClearTextOnFocus = false
-                    NameBox.Parent = Entry
-
-                    local WearBtn = Instance.new("TextButton")
-                    WearBtn.Size = UDim2.new(0.18, 0, 0, 26)
-                    WearBtn.Position = UDim2.new(0.40, 0, 0.5, -13)
-                    WearBtn.Text = "Wear"
-                    WearBtn.BackgroundColor3 = Color3.fromRGB(249, 180, 0)
-                    WearBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
-                    WearBtn.Font = Enum.Font.SourceSansBold
-                    WearBtn.TextSize = 12
-                    WearBtn.BorderSizePixel = 0
-                    WearBtn.Parent = Entry
-
-                    local RenameBtn = Instance.new("TextButton")
-                    RenameBtn.Size = UDim2.new(0.20, 0, 0, 26)
-                    RenameBtn.Position = UDim2.new(0.60, 0, 0.5, -13)
-                    RenameBtn.Text = "Rename"
-                    RenameBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 150)
-                    RenameBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-                    RenameBtn.Font = Enum.Font.SourceSansBold
-                    RenameBtn.TextSize = 12
-                    RenameBtn.BorderSizePixel = 0
-                    RenameBtn.Parent = Entry
-
-                    local DeleteBtn = Instance.new("TextButton")
-                    DeleteBtn.Size = UDim2.new(0.14, 0, 0, 26)
-                    DeleteBtn.Position = UDim2.new(0.82, 0, 0.5, -13)
-                    DeleteBtn.Text = "Del"
-                    DeleteBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-                    DeleteBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-                    DeleteBtn.Font = Enum.Font.SourceSansBold
-                    DeleteBtn.TextSize = 12
-                    DeleteBtn.BorderSizePixel = 0
-                    DeleteBtn.Parent = Entry
-
-                    -- Wear Logic
-                    WearBtn.MouseButton1Click:Connect(function()
-                        WearBtn.Text = "..."
-                        local payload = buildBatchPayload(data)
-                        local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
-                        local Get = getgenv().Get or (getgenv().g and getgenv().g.Get)
-                        
-                        if Send then
-                            task.spawn(function()
-                                for i = 1, 3 do Send("wear_outfit_from_desc", payload) task.wait(0.1) end
-                                task.wait(0.2)
-                                if data.SkinTone then pcall(function() local c = Color3.new(data.SkinTone[1], data.SkinTone[2], data.SkinTone[3]) for i = 1, 3 do Send("skin_tone", c) task.wait(0.1) end end) end
-                                if data.Age and Get then pcall(function() Get("age", tostring(data.Age)) task.wait(0.3) Get("age", tostring(data.Age)) end) end
-                                if data.HeightScale then for i=1,3 do Send("body_scale", "HeightScale", data.HeightScale * 100) task.wait(0.1) end end
-                                if data.WidthScale then for i=1,3 do Send("body_scale", "WidthScale", data.WidthScale * 100) task.wait(0.1) end end
-                                WearBtn.Text = "Worn!"
-                                task.wait(1.5)
-                                WearBtn.Text = "Wear"
-                            end)
-                        end
-                    end)
-
-                    -- Rename Logic: Focuses the box. When you press Enter, it saves the file under the new name.
-                    RenameBtn.MouseButton1Click:Connect(function()
-                        NameBox:CaptureFocus()
-                    end)
-                    NameBox.FocusLost:Connect(function()
-                        local newName = NameBox.Text:gsub("%s+", "")
-                        if newName ~= "" and newName ~= name then
-                            local oldPath = folderName .. "/" .. name .. ".json"
-                            local newPath = folderName .. "/" .. newName .. ".json"
-                            if not isfile(newPath) then
-                                pcall(function()
-                                    writefile(newPath, HttpService:JSONEncode(data))
-                                    if isfile(oldPath) then delfile(oldPath) end
-                                end)
-                            end
-                        end
-                        populateSavedOutfits()
-                    end)
-
-                    -- Delete Logic
-                    DeleteBtn.MouseButton1Click:Connect(function()
-                        pcall(function()
-                            if isfile(file) then delfile(file) end
-                        end)
-                        populateSavedOutfits()
-                    end)
-
+                    local isScanned = string.find(name, "_Scanned") ~= nil
+                    table.insert(outfitsList, {
+                        name = name,
+                        data = data,
+                        file = file,
+                        isScanned = isScanned
+                    })
                 end
             end
         end
+    end
+
+    -- 2. Sort the table: Scanned outfits first, then alphabetical
+    table.sort(outfitsList, function(a, b)
+        if a.isScanned and not b.isScanned then
+            return true
+        elseif not a.isScanned and b.isScanned then
+            return false
+        else
+            return string.lower(a.name) < string.lower(b.name)
+        end
+    end)
+
+    -- 3. Build the UI in the sorted order
+    for _, outfitInfo in ipairs(outfitsList) do
+        local name = outfitInfo.name
+        local data = outfitInfo.data
+        local file = outfitInfo.file
+
+        local Entry = Instance.new("Frame")
+        Entry.Size = UDim2.new(1, -5, 0, 40)
+        Entry.BackgroundColor3 = Color3.fromRGB(24, 24, 30)
+        Entry.BorderSizePixel = 0
+        Entry.Parent = SavedScroll
+
+        -- NEW: Mini 3D Viewport Thumbnail
+        local SmallViewport = Instance.new("ViewportFrame")
+        SmallViewport.Size = UDim2.new(0, 30, 0, 30)
+        SmallViewport.Position = UDim2.new(0, 5, 0, 5)
+        SmallViewport.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
+        SmallViewport.BorderSizePixel = 0
+        SmallViewport.Parent = Entry
+
+        -- Background thread to build the avatar and take a picture
+        task.spawn(function()
+            local myChar = LocalPlayer.Character
+            if not myChar then return end
+
+            -- Safely clone the character
+            local oldArch = myChar.Archivable
+            myChar.Archivable = true
+            local dummy = myChar:Clone()
+            myChar.Archivable = oldArch
+
+            if dummy then
+                -- Clean up scripts
+                for _, v in pairs(dummy:GetDescendants()) do
+                    if v:IsA("Script") or v:IsA("LocalScript") then v:Destroy() end
+                end
+
+                local hum = dummy:FindFirstChildOfClass("Humanoid")
+                if hum then
+                    -- Build a Roblox Description out of the saved JSON
+                    local desc = Instance.new("HumanoidDescription")
+                    desc.Shirt = data.Shirt or 0
+                    desc.Pants = data.Pants or 0
+                    desc.GraphicTShirt = data.GraphicTShirt or 0
+                    desc.Face = data.Face or 0
+                    desc.Head = data.Head or 0
+
+                    if data.SkinTone then
+                        local c = Color3.new(data.SkinTone[1], data.SkinTone[2], data.SkinTone[3])
+                        desc.HeadColor = c
+                        desc.TorsoColor = c
+                        desc.LeftArmColor = c
+                        desc.RightArmColor = c
+                        desc.LeftLegColor = c
+                        desc.RightLegColor = c
+                    end
+
+                    -- Safely attach accessories by grouping their types
+                    if data.Accessories then
+                        local accGroups = {}
+                        for _, acc in pairs(data.Accessories) do
+                            local typeName = acc.AccessoryType .. "Accessory"
+                            if accGroups[typeName] then
+                                accGroups[typeName] = accGroups[typeName] .. "," .. tostring(acc.AssetId)
+                            else
+                                accGroups[typeName] = tostring(acc.AssetId)
+                            end
+                        end
+                        for prop, val in pairs(accGroups) do
+                            pcall(function() desc[prop] = val end)
+                        end
+                    end
+
+                    -- Apply the outfit to the dummy (Pcall because it has to download assets from Roblox)
+                    pcall(function() hum:ApplyDescription(desc) end)
+                end
+
+                dummy.Parent = SmallViewport
+                local camera = Instance.new("Camera")
+                camera.Parent = SmallViewport
+                
+                local head = dummy:FindFirstChild("Head")
+                if head then
+                    camera.CFrame = head.CFrame * CFrame.new(0, 0, -2.5) * CFrame.Angles(0, math.pi, 0)
+                    camera.Focus = head.CFrame
+                end
+                SmallViewport.CurrentCamera = camera
+            end
+        end)
+
+        -- Text Box shifted over to make room for the picture
+        local NameBox = Instance.new("TextBox")
+        NameBox.Size = UDim2.new(0.35, -30, 1, 0)
+        NameBox.Position = UDim2.new(0, 40, 0, 0)
+        NameBox.BackgroundTransparency = 1
+        NameBox.Text = name
+        
+        if outfitInfo.isScanned then
+            NameBox.TextColor3 = Color3.fromRGB(0, 255, 200)
+        else
+            NameBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+        end
+        
+        NameBox.Font = Enum.Font.SourceSansBold
+        NameBox.TextSize = 14
+        NameBox.TextXAlignment = Enum.TextXAlignment.Left
+        NameBox.ClearTextOnFocus = false
+        NameBox.Parent = Entry
+
+        local WearBtn = Instance.new("TextButton")
+        WearBtn.Size = UDim2.new(0.18, 0, 0, 26)
+        WearBtn.Position = UDim2.new(0.40, 0, 0.5, -13)
+        WearBtn.Text = "Wear"
+        WearBtn.BackgroundColor3 = Color3.fromRGB(249, 180, 0)
+        WearBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
+        WearBtn.Font = Enum.Font.SourceSansBold
+        WearBtn.TextSize = 12
+        WearBtn.BorderSizePixel = 0
+        WearBtn.Parent = Entry
+
+        local RenameBtn = Instance.new("TextButton")
+        RenameBtn.Size = UDim2.new(0.20, 0, 0, 26)
+        RenameBtn.Position = UDim2.new(0.60, 0, 0.5, -13)
+        RenameBtn.Text = "Rename"
+        RenameBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 150)
+        RenameBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        RenameBtn.Font = Enum.Font.SourceSansBold
+        RenameBtn.TextSize = 12
+        RenameBtn.BorderSizePixel = 0
+        RenameBtn.Parent = Entry
+
+        local DeleteBtn = Instance.new("TextButton")
+        DeleteBtn.Size = UDim2.new(0.14, 0, 0, 26)
+        DeleteBtn.Position = UDim2.new(0.82, 0, 0.5, -13)
+        DeleteBtn.Text = "Del"
+        DeleteBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+        DeleteBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        DeleteBtn.Font = Enum.Font.SourceSansBold
+        DeleteBtn.TextSize = 12
+        DeleteBtn.BorderSizePixel = 0
+        DeleteBtn.Parent = Entry
+
+        -- Wear Logic
+        WearBtn.MouseButton1Click:Connect(function()
+            WearBtn.Text = "..."
+            local payload = buildBatchPayload(data)
+            local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
+            local Get = getgenv().Get or (getgenv().g and getgenv().g.Get)
+            
+            if Send then
+                task.spawn(function()
+                    for i = 1, 3 do Send("wear_outfit_from_desc", payload) task.wait(0.1) end
+                    task.wait(0.2)
+                    if data.SkinTone then pcall(function() local c = Color3.new(data.SkinTone[1], data.SkinTone[2], data.SkinTone[3]) for i = 1, 3 do Send("skin_tone", c) task.wait(0.1) end end) end
+                    if data.Age and Get then pcall(function() Get("age", tostring(data.Age)) task.wait(0.3) Get("age", tostring(data.Age)) end) end
+                    if data.HeightScale then for i=1,3 do Send("body_scale", "HeightScale", data.HeightScale * 100) task.wait(0.1) end end
+                    if data.WidthScale then for i=1,3 do Send("body_scale", "WidthScale", data.WidthScale * 100) task.wait(0.1) end end
+                    WearBtn.Text = "Worn!"
+                    task.wait(1.5)
+                    WearBtn.Text = "Wear"
+                end)
+            end
+        end)
+
+        -- Rename Logic
+        RenameBtn.MouseButton1Click:Connect(function()
+            NameBox:CaptureFocus()
+        end)
+        NameBox.FocusLost:Connect(function()
+            local newName = NameBox.Text:gsub("%s+", "")
+            if newName ~= "" and newName ~= name then
+                local oldPath = folderName .. "/" .. name .. ".json"
+                local newPath = folderName .. "/" .. newName .. ".json"
+                if not isfile(newPath) then
+                    pcall(function()
+                        writefile(newPath, HttpService:JSONEncode(data))
+                        if isfile(oldPath) then delfile(oldPath) end
+                    end)
+                end
+            end
+            populateSavedOutfits()
+        end)
+
+        -- Delete Logic
+        DeleteBtn.MouseButton1Click:Connect(function()
+            pcall(function()
+                if isfile(file) then delfile(file) end
+            end)
+            populateSavedOutfits()
+        end)
     end
 end
 
