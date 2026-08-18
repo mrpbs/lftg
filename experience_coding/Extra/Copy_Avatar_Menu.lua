@@ -98,6 +98,17 @@ RefreshBtn.TextSize = 14
 RefreshBtn.BorderSizePixel = 0
 RefreshBtn.Parent = MainFrame
 
+-- Tools Tab Button (Right Side)
+local ToolsTabBtn = Instance.new("TextButton")
+ToolsTabBtn.Size = UDim2.new(0.5, -15, 0, 25)
+ToolsTabBtn.Position = UDim2.new(0.5, 5, 0, 45)
+ToolsTabBtn.Text = "Tools"
+ToolsTabBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 150)
+ToolsTabBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToolsTabBtn.Font = Enum.Font.SourceSansBold
+ToolsTabBtn.TextSize = 14
+ToolsTabBtn.BorderSizePixel = 0
+ToolsTabBtn.Parent = MainFrame
 -- Saved Outfits Tab (Right Side)
 local SavedTabBtn = Instance.new("TextButton")
 SavedTabBtn.Size = UDim2.new(0.5, -15, 0, 25)
@@ -150,6 +161,111 @@ AssetListLayout.Padding = UDim.new(0, 6)
 AssetListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
     AssetScroll.CanvasSize = UDim2.new(0, 0, 0, AssetListLayout.AbsoluteContentSize.Y + 10)
 end)
+-- Tools Scroll Context
+local ToolsScroll = Instance.new("ScrollingFrame")
+ToolsScroll.Size = UDim2.new(1, -20, 1, -10)
+ToolsScroll.Position = UDim2.new(0, 10, 0, 0)
+ToolsScroll.BackgroundColor3 = Color3.fromRGB(8, 8, 10)
+ToolsScroll.ScrollBarThickness = 6
+ToolsScroll.Visible = false
+ToolsScroll.Parent = ContentContainer
+
+local ToolsListLayout = Instance.new("UIListLayout")
+ToolsListLayout.Parent = ToolsScroll
+ToolsListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+ToolsListLayout.Padding = UDim.new(0, 10)
+ToolsListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    ToolsScroll.CanvasSize = UDim2.new(0, 0, 0, ToolsListLayout.AbsoluteContentSize.Y + 10)
+end)
+-- Tool 1: Body Size Changer
+local SizeChangerFrame = Instance.new("Frame")
+SizeChangerFrame.Size = UDim2.new(1, -5, 0, 160)
+SizeChangerFrame.BackgroundColor3 = Color3.fromRGB(24, 24, 30)
+SizeChangerFrame.BorderSizePixel = 0
+SizeChangerFrame.Parent = ToolsScroll
+
+local SizeTitle = Instance.new("TextLabel")
+SizeTitle.Size = UDim2.new(1, -10, 0, 20)
+SizeTitle.Position = UDim2.new(0, 5, 0, 5)
+SizeTitle.Text = "📏 Body Size Changer"
+SizeTitle.TextColor3 = Color3.fromRGB(0, 255, 200)
+SizeTitle.BackgroundTransparency = 1
+SizeTitle.Font = Enum.Font.SourceSansBold
+SizeTitle.TextSize = 14
+SizeTitle.TextXAlignment = Enum.TextXAlignment.Left
+SizeTitle.Parent = SizeChangerFrame
+
+-- Function to easily create input rows
+local function createScaleInput(name, yPos, defaultVal)
+    local Label = Instance.new("TextLabel")
+    Label.Size = UDim2.new(0.4, 0, 0, 25)
+    Label.Position = UDim2.new(0, 10, 0, yPos)
+    Label.Text = name .. ":"
+    Label.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Label.BackgroundTransparency = 1
+    Label.Font = Enum.Font.SourceSans
+    Label.TextSize = 14
+    Label.TextXAlignment = Enum.TextXAlignment.Left
+    Label.Parent = SizeChangerFrame
+
+    local Input = Instance.new("TextBox")
+    Input.Size = UDim2.new(0.5, 0, 0, 25)
+    Input.Position = UDim2.new(0.4, 0, 0, yPos)
+    Input.Text = tostring(defaultVal)
+    Input.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+    Input.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Input.Font = Enum.Font.Code
+    Input.TextSize = 14
+    Input.ClearTextOnFocus = false
+    Input.Parent = SizeChangerFrame
+    return Input
+end
+
+-- Create the inputs (Default is 1.0)
+local HeightInput = createScaleInput("Height (Max 3.0)", 30, 1.0)
+local WidthInput = createScaleInput("Width (Max 3.0)", 60, 1.0)
+local HeadInput = createScaleInput("Head (Max 3.0)", 90, 1.0)
+
+local ApplySizeBtn = Instance.new("TextButton")
+ApplySizeBtn.Size = UDim2.new(1, -20, 0, 30)
+ApplySizeBtn.Position = UDim2.new(0, 10, 0, 125)
+ApplySizeBtn.Text = "Apply Size"
+ApplySizeBtn.BackgroundColor3 = Color3.fromRGB(249, 180, 0)
+ApplySizeBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
+ApplySizeBtn.Font = Enum.Font.SourceSansBold
+ApplySizeBtn.TextSize = 14
+ApplySizeBtn.BorderSizePixel = 0
+ApplySizeBtn.Parent = SizeChangerFrame
+
+-- Connect the server firing logic
+ApplySizeBtn.MouseButton1Click:Connect(function()
+    local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
+    
+    if Send then
+        -- Grab the text, convert to a number, default to 1 if they type something invalid
+        local h = tonumber(HeightInput.Text) or 1
+        local w = tonumber(WidthInput.Text) or 1
+        local hd = tonumber(HeadInput.Text) or 1
+        
+        task.spawn(function()
+            ApplySizeBtn.Text = "Applying..."
+            -- The game server expects these as whole numbers, so we multiply your float by 100
+            Send("body_scale", "HeightScale", h * 100)
+            task.wait(0.1)
+            Send("body_scale", "WidthScale", w * 100)
+            task.wait(0.1)
+            Send("body_scale", "HeadScale", hd * 100)
+            task.wait(0.5)
+            ApplySizeBtn.Text = "Apply Size"
+        end)
+    else
+        ApplySizeBtn.Text = "Net API Not Found!"
+        task.wait(1.5)
+        ApplySizeBtn.Text = "Apply Size"
+    end
+end)
+
+
 -- Saved Outfits Scroll Context
 local SavedScroll = Instance.new("ScrollingFrame")
 SavedScroll.Size = UDim2.new(1, -20, 1, -10)
@@ -243,7 +359,15 @@ BackBtn.MouseButton1Click:Connect(function()
     SavedTabBtn.Visible = true
     Title.Text = "🧬 Deep Live Outfit Scanner"
 end)
-
+ToolsTabBtn.MouseButton1Click:Connect(function()
+    AssetScroll.Visible = false
+    PlayerScroll.Visible = false
+    ToolsScroll.Visible = true
+    BackBtn.Visible = true
+    RefreshBtn.Visible = false
+    ToolsTabBtn.Visible = false
+    Title.Text = "🛠️ Tools Panel"
+end)
 SavedTabBtn.MouseButton1Click:Connect(function()
     AssetScroll.Visible = false
     PlayerScroll.Visible = false
