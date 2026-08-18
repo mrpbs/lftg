@@ -20,7 +20,7 @@ ScreenGui.ResetOnSpawn = false
 
 -- Main Drag Frame
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 360, 0, 450)
+MainFrame.Size = UDim2.new(0, 360, 0, 300)
 MainFrame.Position = UDim2.new(0.5, -180, 0.15, 0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
 MainFrame.BorderSizePixel = 1
