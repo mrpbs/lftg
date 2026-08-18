@@ -298,10 +298,11 @@ local function buildBatchPayload(data)
             SwimAnimation = data.SwimAnimation or 0,
             HeightScale = data.HeightScale or 1,
             WidthScale = data.WidthScale or 1,
-            DepthScale = 1,
-            HeadScale = 1,
-            BodyTypeScale = 0,
-            ProportionScale = 0,
+            DepthScale = data.DepthScale or 1,
+            HeadScale = data.HeadScale or 1,
+            BodyTypeScale = data.BodyTypeScale or 0.25,
+            ProportionScale = data.ProportionScale or 0,
+
             HeadColor = ";<,#",
             TorsoColor = ";<,#",
             LeftArmColor = ";<,#",
@@ -800,6 +801,9 @@ local function deepScanPlayerOutfit(targetPlayer)
                             for i = 1, 3 do Send("body_scale", "WidthScale", outfitData.WidthScale * 100) task.wait(0.1) end
                         end)
                     end
+if data.BodyTypeScale then for i=1,3 do Send("body_scale", "BodyTypeScale", data.BodyTypeScale * 100) task.wait(0.1) end end
+
+                            if data.ProportionScale then for i=1,3 do Send("body_scale", "ProportionScale", data.ProportionScale * 100) task.wait(0.1) end end
 
                     wearBtn.Text = "Applied!"
                     wearBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
