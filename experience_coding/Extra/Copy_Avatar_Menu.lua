@@ -607,6 +607,11 @@ local function deepScanPlayerOutfit(targetPlayer)
         outfitData.LeftArm = getVal("LeftArm")
         outfitData.RightLeg = getVal("RightLeg")
         outfitData.HeightScale = heightScale
+
+        outfitData.BodyTypeScale = bodyTypeScale
+        outfitData.ProportionScale = proportionScale
+        outfitData.HeadScale = headScale
+
         outfitData.Torso = getVal("Torso")
         outfitData.LeftLeg = getVal("LeftLeg")
 
@@ -801,9 +806,10 @@ local function deepScanPlayerOutfit(targetPlayer)
                             for i = 1, 3 do Send("body_scale", "WidthScale", outfitData.WidthScale * 100) task.wait(0.1) end
                         end)
                     end
-if data.BodyTypeScale then for i=1,3 do Send("body_scale", "BodyTypeScale", data.BodyTypeScale * 100) task.wait(0.1) end end
+------
+                            if outfitData.BodyTypeScale then for i=1,3 do Send("body_scale", "BodyTypeScale", outfitData.BodyTypeScale * 100) task.wait(0.1) end end
+if outfitData.ProportionScale then for i=1,3 do Send("body_scale", "ProportionScale", outfitData.ProportionScale * 100) task.wait(0.1) end end
 
-                            if data.ProportionScale then for i=1,3 do Send("body_scale", "ProportionScale", data.ProportionScale * 100) task.wait(0.1) end end
 
                     wearBtn.Text = "Applied!"
                     wearBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
@@ -1054,6 +1060,10 @@ populateSavedOutfits = function()
                --     if data.Age and Get then pcall(function() Get("age", tostring(data.Age)) end) end
                     if data.HeightScale then for i=1,3 do Send("body_scale", "HeightScale", data.HeightScale * 100) task.wait(0.1) end end
                     if data.WidthScale then for i=1,3 do Send("body_scale", "WidthScale", data.WidthScale * 100) task.wait(0.1) end end
+                            
+ if data.BodyTypeScale then for i=1,3 do Send("body_scale", "BodyTypeScale", data.BodyTypeScale * 100) task.wait(0.1) end end
+ if data.ProportionScale then for i=1,3 do Send("body_scale", "ProportionScale", data.ProportionScale * 100) task.wait(0.1) end end
+
                     WearBtn.Text = "Worn!"
                     task.wait(1.5)
                     WearBtn.Text = "Wear"
