@@ -923,63 +923,49 @@ populateSavedOutfits = function()
         SmallViewport.BorderSizePixel = 0
         SmallViewport.Parent = Entry
 
-        -- Background thread to build the avatar and take a picture
+                -- Background thread to build the avatar and take a picture
         task.spawn(function()
-            local myChar = LocalPlayer.Character
-            if not myChar then return end
+            -- Build a Roblox Description out of the saved JSON first
+            local desc = Instance.new("HumanoidDescription")
+            desc.Shirt = data.Shirt or 0
+            desc.Pants = data.Pants or 0
+            desc.GraphicTShirt = data.GraphicTShirt or 0
+            desc.Face = data.Face or 0
+            desc.Head = data.Head or 0
 
-            -- Safely clone the character
-            local oldArch = myChar.Archivable
-            myChar.Archivable = true
-            local dummy = myChar:Clone()
-            myChar.Archivable = oldArch
+            if data.SkinTone then
+                local c = Color3.new(data.SkinTone[1], data.SkinTone[2], data.SkinTone[3])
+                desc.HeadColor = c
+                desc.TorsoColor = c
+                desc.LeftArmColor = c
+                desc.RightArmColor = c
+                desc.LeftLegColor = c
+                desc.RightLegColor = c
+            end
 
-            if dummy then
-                -- Clean up scripts
-                for _, v in pairs(dummy:GetDescendants()) do
-                    if v:IsA("Script") or v:IsA("LocalScript") then v:Destroy() end
-                end
-
-                local hum = dummy:FindFirstChildOfClass("Humanoid")
-                if hum then
-                    -- Build a Roblox Description out of the saved JSON
-                    local desc = Instance.new("HumanoidDescription")
-                    desc.Shirt = data.Shirt or 0
-                    desc.Pants = data.Pants or 0
-                    desc.GraphicTShirt = data.GraphicTShirt or 0
-                    desc.Face = data.Face or 0
-                    desc.Head = data.Head or 0
-
-                    if data.SkinTone then
-                        local c = Color3.new(data.SkinTone[1], data.SkinTone[2], data.SkinTone[3])
-                        desc.HeadColor = c
-                        desc.TorsoColor = c
-                        desc.LeftArmColor = c
-                        desc.RightArmColor = c
-                        desc.LeftLegColor = c
-                        desc.RightLegColor = c
+            -- Safely attach accessories by grouping their types
+            if data.Accessories then
+                local accGroups = {}
+                for _, acc in pairs(data.Accessories) do
+                    local typeName = acc.AccessoryType .. "Accessory"
+                    if accGroups[typeName] then
+                        accGroups[typeName] = accGroups[typeName] .. "," .. tostring(acc.AssetId)
+                    else
+                        accGroups[typeName] = tostring(acc.AssetId)
                     end
-
-                    -- Safely attach accessories by grouping their types
-                    if data.Accessories then
-                        local accGroups = {}
-                        for _, acc in pairs(data.Accessories) do
-                            local typeName = acc.AccessoryType .. "Accessory"
-                            if accGroups[typeName] then
-                                accGroups[typeName] = accGroups[typeName] .. "," .. tostring(acc.AssetId)
-                            else
-                                accGroups[typeName] = tostring(acc.AssetId)
-                            end
-                        end
-                        for prop, val in pairs(accGroups) do
-                            pcall(function() desc[prop] = val end)
-                        end
-                    end
-
-                    -- Apply the outfit to the dummy (Pcall because it has to download assets from Roblox)
-                    pcall(function() hum:ApplyDescription(desc) end)
                 end
+                for prop, val in pairs(accGroups) do
+                    pcall(function() desc[prop] = val end)
+                end
+            end
 
+            -- Generate a brand new dummy straight from the data (Ignores your current outfit!)
+            local dummy
+            local success = pcall(function()
+                dummy = Players:CreateHumanoidModelFromDescription(desc, Enum.HumanoidRigType.R15)
+            end)
+
+            if success and dummy then
                 dummy.Parent = SmallViewport
                 local camera = Instance.new("Camera")
                 camera.Parent = SmallViewport
@@ -992,6 +978,7 @@ populateSavedOutfits = function()
                 SmallViewport.CurrentCamera = camera
             end
         end)
+
 
         -- Text Box shifted over to make room for the picture
         local NameBox = Instance.new("TextBox")
