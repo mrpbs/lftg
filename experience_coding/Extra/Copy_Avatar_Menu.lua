@@ -86,17 +86,30 @@ BackBtn.BorderSizePixel = 0
 BackBtn.Visible = false
 BackBtn.Parent = MainFrame
 
--- Refresh Button
+-- Refresh Button (Left Side)
 local RefreshBtn = Instance.new("TextButton")
-RefreshBtn.Size = UDim2.new(1, -20, 0, 25)
+RefreshBtn.Size = UDim2.new(0.5, -15, 0, 25)
 RefreshBtn.Position = UDim2.new(0, 10, 0, 45)
-RefreshBtn.Text = "Refresh Player List"
+RefreshBtn.Text = "Refresh Players"
 RefreshBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
 RefreshBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 RefreshBtn.Font = Enum.Font.SourceSansBold
 RefreshBtn.TextSize = 14
 RefreshBtn.BorderSizePixel = 0
 RefreshBtn.Parent = MainFrame
+
+-- Saved Outfits Tab (Right Side)
+local SavedTabBtn = Instance.new("TextButton")
+SavedTabBtn.Size = UDim2.new(0.5, -15, 0, 25)
+SavedTabBtn.Position = UDim2.new(0.5, 5, 0, 45)
+SavedTabBtn.Text = "Saved Outfits"
+SavedTabBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 150)
+SavedTabBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+SavedTabBtn.Font = Enum.Font.SourceSansBold
+SavedTabBtn.TextSize = 14
+SavedTabBtn.BorderSizePixel = 0
+SavedTabBtn.Parent = MainFrame
+
 
 -- Containers for Views
 local ContentContainer = Instance.new("Frame")
@@ -136,6 +149,22 @@ AssetListLayout.SortOrder = Enum.SortOrder.LayoutOrder
 AssetListLayout.Padding = UDim.new(0, 6)
 AssetListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
     AssetScroll.CanvasSize = UDim2.new(0, 0, 0, AssetListLayout.AbsoluteContentSize.Y + 10)
+end)
+-- Saved Outfits Scroll Context
+local SavedScroll = Instance.new("ScrollingFrame")
+SavedScroll.Size = UDim2.new(1, -20, 1, -10)
+SavedScroll.Position = UDim2.new(0, 10, 0, 0)
+SavedScroll.BackgroundColor3 = Color3.fromRGB(8, 8, 10)
+SavedScroll.ScrollBarThickness = 6
+SavedScroll.Visible = false
+SavedScroll.Parent = ContentContainer
+
+local SavedListLayout = Instance.new("UIListLayout")
+SavedListLayout.Parent = SavedScroll
+SavedListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+SavedListLayout.Padding = UDim.new(0, 6)
+SavedListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    SavedScroll.CanvasSize = UDim2.new(0, 0, 0, SavedListLayout.AbsoluteContentSize.Y + 10)
 end)
 
 -- Resize Handle (Bottom Right Corner)
@@ -202,13 +231,30 @@ CloseBtn.MouseButton1Click:Connect(function()
     ScreenGui:Destroy()
 end)
 
+-- We need to forward-declare the populate function so the button can call it
+local populateSavedOutfits
+
 BackBtn.MouseButton1Click:Connect(function()
     AssetScroll.Visible = false
+    SavedScroll.Visible = false
     PlayerScroll.Visible = true
     BackBtn.Visible = false
     RefreshBtn.Visible = true
+    SavedTabBtn.Visible = true
     Title.Text = "🧬 Deep Live Outfit Scanner"
 end)
+
+SavedTabBtn.MouseButton1Click:Connect(function()
+    AssetScroll.Visible = false
+    PlayerScroll.Visible = false
+    SavedScroll.Visible = true
+    BackBtn.Visible = true
+    RefreshBtn.Visible = false
+    SavedTabBtn.Visible = false
+    Title.Text = "📁 Saved Outfits"
+    if populateSavedOutfits then populateSavedOutfits() end
+end)
+
 
 -- Life Together RP Payload Formatter
 local function buildBatchPayload(data)
@@ -804,6 +850,130 @@ local function deepScanPlayerOutfit(targetPlayer)
         local accType = tostring(acc.AccessoryType):gsub("Enum.AccessoryType.", "")
         local label = acc.IsLayered and ("Layered " .. accType) or accType
         createDetailedAssetCard(label, acc.AssetId, "HumanoidDesc." .. accType)
+    end
+end
+populateSavedOutfits = function()
+    -- Clear current list
+    for _, child in pairs(SavedScroll:GetChildren()) do
+        if child:IsA("Frame") then child:Destroy() end
+    end
+
+    local folderName = "lifetogether_admin_savedoutfits"
+    if not isfolder or not isfolder(folderName) then return end
+
+    for _, file in ipairs(listfiles(folderName)) do
+        if file:match("%.json$") then
+            local name = file:match("([^/\\]+)%.json$")
+            local ok, content = pcall(readfile, file)
+            
+            if ok and content and #content > 0 then
+                local success, data = pcall(function() return HttpService:JSONDecode(content) end)
+                if success and type(data) == "table" then
+                    
+                    local Entry = Instance.new("Frame")
+                    Entry.Size = UDim2.new(1, -5, 0, 40)
+                    Entry.BackgroundColor3 = Color3.fromRGB(24, 24, 30)
+                    Entry.BorderSizePixel = 0
+                    Entry.Parent = SavedScroll
+
+                    -- Uses a TextBox so you can directly type to rename!
+                    local NameBox = Instance.new("TextBox")
+                    NameBox.Size = UDim2.new(0.35, 0, 1, 0)
+                    NameBox.Position = UDim2.new(0, 10, 0, 0)
+                    NameBox.BackgroundTransparency = 1
+                    NameBox.Text = name
+                    NameBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+                    NameBox.Font = Enum.Font.SourceSansBold
+                    NameBox.TextSize = 14
+                    NameBox.TextXAlignment = Enum.TextXAlignment.Left
+                    NameBox.ClearTextOnFocus = false
+                    NameBox.Parent = Entry
+
+                    local WearBtn = Instance.new("TextButton")
+                    WearBtn.Size = UDim2.new(0.18, 0, 0, 26)
+                    WearBtn.Position = UDim2.new(0.40, 0, 0.5, -13)
+                    WearBtn.Text = "Wear"
+                    WearBtn.BackgroundColor3 = Color3.fromRGB(249, 180, 0)
+                    WearBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
+                    WearBtn.Font = Enum.Font.SourceSansBold
+                    WearBtn.TextSize = 12
+                    WearBtn.BorderSizePixel = 0
+                    WearBtn.Parent = Entry
+
+                    local RenameBtn = Instance.new("TextButton")
+                    RenameBtn.Size = UDim2.new(0.20, 0, 0, 26)
+                    RenameBtn.Position = UDim2.new(0.60, 0, 0.5, -13)
+                    RenameBtn.Text = "Rename"
+                    RenameBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 150)
+                    RenameBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+                    RenameBtn.Font = Enum.Font.SourceSansBold
+                    RenameBtn.TextSize = 12
+                    RenameBtn.BorderSizePixel = 0
+                    RenameBtn.Parent = Entry
+
+                    local DeleteBtn = Instance.new("TextButton")
+                    DeleteBtn.Size = UDim2.new(0.14, 0, 0, 26)
+                    DeleteBtn.Position = UDim2.new(0.82, 0, 0.5, -13)
+                    DeleteBtn.Text = "Del"
+                    DeleteBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+                    DeleteBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+                    DeleteBtn.Font = Enum.Font.SourceSansBold
+                    DeleteBtn.TextSize = 12
+                    DeleteBtn.BorderSizePixel = 0
+                    DeleteBtn.Parent = Entry
+
+                    -- Wear Logic
+                    WearBtn.MouseButton1Click:Connect(function()
+                        WearBtn.Text = "..."
+                        local payload = buildBatchPayload(data)
+                        local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
+                        local Get = getgenv().Get or (getgenv().g and getgenv().g.Get)
+                        
+                        if Send then
+                            task.spawn(function()
+                                for i = 1, 3 do Send("wear_outfit_from_desc", payload) task.wait(0.1) end
+                                task.wait(0.2)
+                                if data.SkinTone then pcall(function() local c = Color3.new(data.SkinTone[1], data.SkinTone[2], data.SkinTone[3]) for i = 1, 3 do Send("skin_tone", c) task.wait(0.1) end end) end
+                                if data.Age and Get then pcall(function() Get("age", tostring(data.Age)) task.wait(0.3) Get("age", tostring(data.Age)) end) end
+                                if data.HeightScale then for i=1,3 do Send("body_scale", "HeightScale", data.HeightScale * 100) task.wait(0.1) end end
+                                if data.WidthScale then for i=1,3 do Send("body_scale", "WidthScale", data.WidthScale * 100) task.wait(0.1) end end
+                                WearBtn.Text = "Worn!"
+                                task.wait(1.5)
+                                WearBtn.Text = "Wear"
+                            end)
+                        end
+                    end)
+
+                    -- Rename Logic: Focuses the box. When you press Enter, it saves the file under the new name.
+                    RenameBtn.MouseButton1Click:Connect(function()
+                        NameBox:CaptureFocus()
+                    end)
+                    NameBox.FocusLost:Connect(function()
+                        local newName = NameBox.Text:gsub("%s+", "")
+                        if newName ~= "" and newName ~= name then
+                            local oldPath = folderName .. "/" .. name .. ".json"
+                            local newPath = folderName .. "/" .. newName .. ".json"
+                            if not isfile(newPath) then
+                                pcall(function()
+                                    writefile(newPath, HttpService:JSONEncode(data))
+                                    if isfile(oldPath) then delfile(oldPath) end
+                                end)
+                            end
+                        end
+                        populateSavedOutfits()
+                    end)
+
+                    -- Delete Logic
+                    DeleteBtn.MouseButton1Click:Connect(function()
+                        pcall(function()
+                            if isfile(file) then delfile(file) end
+                        end)
+                        populateSavedOutfits()
+                    end)
+
+                end
+            end
+        end
     end
 end
 
