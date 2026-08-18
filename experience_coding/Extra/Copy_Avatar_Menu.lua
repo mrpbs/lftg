@@ -532,7 +532,13 @@ local function deepScanPlayerOutfit(targetPlayer)
         outfitData.Head = getVal("Head")
         outfitData.WidthScale = widthScale
         outfitData.GraphicTShirt = getVal("GraphicTShirt")
-        outfitData.Age = getVal("Age")
+
+      -- Pull the custom age attribute directly from the player being scanned
+        local targetAge = targetPlayer:GetAttribute("age")
+        if targetAge then 
+            outfitData.Age = tostring(targetAge) 
+        end
+        
         outfitData.RunAnimation = getVal("RunAnimation")
         outfitData.FallAnimation = getVal("FallAnimation")
         outfitData.IdleAnimation = getVal("IdleAnimation")
