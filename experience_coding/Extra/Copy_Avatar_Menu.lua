@@ -736,12 +736,15 @@ local function deepScanPlayerOutfit(targetPlayer)
                         task.wait(0.2)
                     end
                     
-                    if outfitData.Age and Get then
+                                     if outfitData.Age and Get then
                         pcall(function()
+                            Get("age", tostring(outfitData.Age)) 
+                            task.wait(0.3)
                             Get("age", tostring(outfitData.Age))
-                            task.wait(0.2)
                         end)
+                        task.wait(0.3)
                     end
+
                     
                     if outfitData.HeightScale then
                         pcall(function()
