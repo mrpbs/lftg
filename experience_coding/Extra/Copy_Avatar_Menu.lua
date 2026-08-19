@@ -7,6 +7,69 @@ local InsertService = game:GetService("InsertService")
 local HttpService = game:GetService("HttpService")
 local UserInputService = game:GetService("UserInputService")
 
+-- Life Together RP Payload Formatter
+local function buildBatchPayload(data)
+    local accessories = {}
+    local order = 1
+    if data.Accessories then
+        for _, acc in ipairs(data.Accessories) do
+            local isLayered = acc.IsLayered == true
+            table.insert(accessories, {
+                AssetId = acc.AssetId,
+                AccessoryType = acc.AccessoryType,
+                IsLayered = isLayered,
+                Rotation = "  ",
+                Position = "  ",
+                Scale = "1 1 1",
+                Order = isLayered and order or nil,
+                Puffiness = isLayered and 0 or nil
+            })
+            if isLayered then order = order + 1 end
+        end
+    end
+
+        
+
+    return {
+        accessories = accessories,
+        properties = {
+            Head = data.Head or 0,
+            Torso = data.Torso or 0,
+            LeftArm = data.LeftArm or 0,
+            RightArm = data.RightArm or 0,
+            LeftLeg = data.LeftLeg or 0,
+            RightLeg = data.RightLeg or 0,
+            Face = data.Face or 0,
+            Shirt = data.Shirt or 0,
+            Pants = data.Pants or 0,
+            GraphicTShirt = data.GraphicTShirt or 0,
+           
+            RunAnimation = data.RunAnimation or 0,
+            WalkAnimation = data.WalkAnimation or 0,
+
+            
+            JumpAnimation = data.JumpAnimation or 0,
+            FallAnimation = data.FallAnimation or 0,
+            ClimbAnimation = data.ClimbAnimation or 0,
+            IdleAnimation = data.IdleAnimation or 0,
+            SwimAnimation = data.SwimAnimation or 0,
+            HeightScale = data.HeightScale or 1,
+            WidthScale = data.WidthScale or 1,
+            DepthScale = data.DepthScale or 1,
+            HeadScale = data.HeadScale or 1,
+            BodyTypeScale = data.BodyTypeScale or 0.25,
+            ProportionScale = data.ProportionScale or 0,
+
+            HeadColor = ";<,#",
+            TorsoColor = ";<,#",
+            LeftArmColor = ";<,#",
+            RightArmColor = ";<,#",
+            LeftLegColor = ";<,#",
+            RightLegColor = ";<,#",
+        }
+    }
+end
+
 -- Prevent duplicate GUIs
 if LocalPlayer:WaitForChild("PlayerGui"):FindFirstChild("DeepMetadataScanner") then
     LocalPlayer.PlayerGui.DeepMetadataScanner:Destroy()
@@ -673,68 +736,6 @@ ToolsTabBtn.MouseButton1Click:Connect(function()
     Title.Text = "🛠️ Utility Tools"
 end)
 
--- Life Together RP Payload Formatter
-local function buildBatchPayload(data)
-    local accessories = {}
-    local order = 1
-    if data.Accessories then
-        for _, acc in ipairs(data.Accessories) do
-            local isLayered = acc.IsLayered == true
-            table.insert(accessories, {
-                AssetId = acc.AssetId,
-                AccessoryType = acc.AccessoryType,
-                IsLayered = isLayered,
-                Rotation = "  ",
-                Position = "  ",
-                Scale = "1 1 1",
-                Order = isLayered and order or nil,
-                Puffiness = isLayered and 0 or nil
-            })
-            if isLayered then order = order + 1 end
-        end
-    end
-
-        
-
-    return {
-        accessories = accessories,
-        properties = {
-            Head = data.Head or 0,
-            Torso = data.Torso or 0,
-            LeftArm = data.LeftArm or 0,
-            RightArm = data.RightArm or 0,
-            LeftLeg = data.LeftLeg or 0,
-            RightLeg = data.RightLeg or 0,
-            Face = data.Face or 0,
-            Shirt = data.Shirt or 0,
-            Pants = data.Pants or 0,
-            GraphicTShirt = data.GraphicTShirt or 0,
-           
-            RunAnimation = data.RunAnimation or 0,
-            WalkAnimation = data.WalkAnimation or 0,
-
-            
-            JumpAnimation = data.JumpAnimation or 0,
-            FallAnimation = data.FallAnimation or 0,
-            ClimbAnimation = data.ClimbAnimation or 0,
-            IdleAnimation = data.IdleAnimation or 0,
-            SwimAnimation = data.SwimAnimation or 0,
-            HeightScale = data.HeightScale or 1,
-            WidthScale = data.WidthScale or 1,
-            DepthScale = data.DepthScale or 1,
-            HeadScale = data.HeadScale or 1,
-            BodyTypeScale = data.BodyTypeScale or 0.25,
-            ProportionScale = data.ProportionScale or 0,
-
-            HeadColor = ";<,#",
-            TorsoColor = ";<,#",
-            LeftArmColor = ";<,#",
-            RightArmColor = ";<,#",
-            LeftLegColor = ";<,#",
-            RightLegColor = ";<,#",
-        }
-    }
-end
 
 local function createDetailedAssetCard(categoryName, assetId, rawPropertySource)
     local numericId = tonumber(assetId)
