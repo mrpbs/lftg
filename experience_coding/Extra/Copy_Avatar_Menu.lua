@@ -276,6 +276,11 @@ local function buildBatchPayload(data)
             if isLayered then order = order + 1 end
         end
     end
+    -- Extract the walk animation. If it exists, we will force the engine to use it for running too.
+    local walkAnim = (data.WalkAnimation ~= nil and data.WalkAnimation ~= 0) and data.WalkAnimation or nil
+    local runAnim = data.RunAnimation or 0
+    
+
     return {
         accessories = accessories,
         properties = {
@@ -289,8 +294,10 @@ local function buildBatchPayload(data)
             Shirt = data.Shirt or 0,
             Pants = data.Pants or 0,
             GraphicTShirt = data.GraphicTShirt or 0,
-            RunAnimation = data.RunAnimation or 0,
-            WalkAnimation = data.WalkAnimation or 0,
+          -- THE FIX: Force the Run slot to use the Walk animation ID if it exists
+            RunAnimation = walkAnim or runAnim, 
+            WalkAnimation = walkAnim or 0,
+         
             JumpAnimation = data.JumpAnimation or 0,
             FallAnimation = data.FallAnimation or 0,
             ClimbAnimation = data.ClimbAnimation or 0,
