@@ -298,89 +298,108 @@ end)
 
 ---
 
--- ========== ANTI-SIT TOOL ==========
-local antiSitEnabled = false
-local antiSitConnections = {}
+-- ========== LIFE TOGETHER RP ANTI-SIT TOOL ==========
+local ltAntiSitEnabled = false
+local ltAntiSitConnections = {}
+local seatModule = nil
 
-local function cleanupAntiSit()
-    for _, conn in pairs(antiSitConnections) do
-        if conn and conn.Connected then
-            conn:Disconnect()
+-- Attempt to find Life Together's specific Seat module
+task.spawn(function()
+    pcall(function()
+        for _, v in pairs(game:GetDescendants()) do
+            if v:IsA("ModuleScript") and v.Name == "Seat" then
+                local s = require(v)
+                -- Verify it's the right module by checking for the 'enabled.set' function
+                if type(s) == "table" and s.enabled and s.enabled.set then
+                    seatModule = s
+                    break
+                end
+            end
         end
-    end
-    table.clear(antiSitConnections)
-end
+    end)
+end)
 
-local function hookAntiSit(character)
+local function hookLtCharacter(character)
     if not character then return end
-    
     local humanoid = character:WaitForChild("Humanoid", 5)
     if not humanoid then return end
 
     local conn = humanoid:GetPropertyChangedSignal("Sit"):Connect(function()
-        if not antiSitEnabled then return end
+        if not ltAntiSitEnabled then return end
         
         if humanoid.Sit then
-            -- Temporarily block the seated state
             humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated, false)
-            
             task.spawn(function()
-                -- Break the physical weld connecting you to the seat
                 if humanoid.SeatPart then
                     local weld = humanoid.SeatPart:FindFirstChildOfClass("Weld")
                     if weld then weld:Destroy() end
-                    
-                    -- If the seat had a ProximityPrompt that disabled itself, turn it back on
                     local prox = humanoid.SeatPart:FindFirstChildOfClass("ProximityPrompt")
-                    if prox and not prox.Enabled then
+                    if prox and prox.Enabled == false then
                         prox.Enabled = true
                     end
                 end
-                
-                -- Force the character to jump out of the animation
                 for _ = 1, 5 do
                     task.wait()
                     humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
                     humanoid.Sit = false
                 end
-                
-                -- Re-allow the seated state for later (if turned off)
                 humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated, true)
             end)
         end
     end)
-    table.insert(antiSitConnections, conn)
+    table.insert(ltAntiSitConnections, conn)
 end
 
-local AntiSitBtn = Instance.new("TextButton")
-AntiSitBtn.Size = UDim2.new(1, -5, 0, 40)
-AntiSitBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-AntiSitBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-AntiSitBtn.Font = Enum.Font.SourceSansBold
-AntiSitBtn.TextSize = 16
-AntiSitBtn.Text = "🪑 Anti-Sit: OFF"
-AntiSitBtn.BorderSizePixel = 0
-AntiSitBtn.Parent = ToolsScroll
+local LtAntiSitBtn = Instance.new("TextButton")
+LtAntiSitBtn.Size = UDim2.new(1, -5, 0, 40)
+LtAntiSitBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+LtAntiSitBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+LtAntiSitBtn.Font = Enum.Font.SourceSansBold
+LtAntiSitBtn.TextSize = 16
+LtAntiSitBtn.Text = "🪑 LT Anti-Sit: OFF"
+LtAntiSitBtn.BorderSizePixel = 0
+LtAntiSitBtn.Parent = ToolsScroll
 
-AntiSitBtn.MouseButton1Click:Connect(function()
-    antiSitEnabled = not antiSitEnabled
+LtAntiSitBtn.MouseButton1Click:Connect(function()
+    ltAntiSitEnabled = not ltAntiSitEnabled
     
-    if antiSitEnabled then
-        AntiSitBtn.Text = "🪑 Anti-Sit: ON"
-        AntiSitBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
+    if ltAntiSitEnabled then
+        LtAntiSitBtn.Text = "🪑 LT Anti-Sit: ON"
+        LtAntiSitBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
         
-        -- Hook our current body
-        hookAntiSit(LocalPlayer.Character)
+        -- 1. Apply your custom character physics hook
+        hookLtCharacter(LocalPlayer.Character)
+        local charConn = LocalPlayer.CharacterAdded:Connect(hookLtCharacter)
+        table.insert(ltAntiSitConnections, charConn)
         
-        -- Make sure it stays on if we die and respawn
-        local charConn = LocalPlayer.CharacterAdded:Connect(hookAntiSit)
-        table.insert(antiSitConnections, charConn)
+        -- 2. Attack the Life Together Seat Module specifically (from your script)
+        if seatModule then
+            local loopConn = RunService.Stepped:Connect(function()
+                if ltAntiSitEnabled then
+                    pcall(function() seatModule.enabled.set(false) end)
+                end
+            end)
+            table.insert(ltAntiSitConnections, loopConn)
+        end
+        
     else
-        AntiSitBtn.Text = "🪑 Anti-Sit: OFF"
-        AntiSitBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-        cleanupAntiSit()
+        LtAntiSitBtn.Text = "🪑 LT Anti-Sit: OFF"
+        LtAntiSitBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+        
+        -- Cleanup all loops and connections
+        for _, conn in pairs(ltAntiSitConnections) do
+            if conn and conn.Connected then conn:Disconnect() end
+        end
+        table.clear(ltAntiSitConnections)
+        
+        -- Restore Life Together's Seat Module back to normal
+        if seatModule then
+            pcall(function() seatModule.enabled.set(true) end)
+        end
     end
 end)
+
+----------
 
 local SavedListLayout = Instance.new("UIListLayout")
 SavedListLayout.Parent = SavedScroll
