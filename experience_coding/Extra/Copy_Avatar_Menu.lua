@@ -959,14 +959,14 @@ populateSavedOutfits = function()
                 end
             end
 
-            -- Generate a brand new dummy straight from the data (Ignores your current outfit!)
+                     -- Generate a brand new dummy straight from the data (Ignores your current outfit!)
             local dummy
             local success = pcall(function()
                 dummy = Players:CreateHumanoidModelFromDescription(desc, Enum.HumanoidRigType.R15)
             end)
 
             if success and dummy then
-                             dummy.Parent = SmallViewport
+                dummy.Parent = SmallViewport
                 local camera = Instance.new("Camera")
                 camera.Parent = SmallViewport
                 
@@ -981,6 +981,7 @@ populateSavedOutfits = function()
                 SmallViewport.CurrentCamera = camera
             end
         end)
+
 
 
 
