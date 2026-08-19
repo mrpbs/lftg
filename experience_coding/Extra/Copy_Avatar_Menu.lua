@@ -966,18 +966,22 @@ populateSavedOutfits = function()
             end)
 
             if success and dummy then
-                dummy.Parent = SmallViewport
+                             dummy.Parent = SmallViewport
                 local camera = Instance.new("Camera")
                 camera.Parent = SmallViewport
                 
-                local head = dummy:FindFirstChild("Head")
-                if head then
-                    camera.CFrame = head.CFrame * CFrame.new(0, 0, -2.5) * CFrame.Angles(0, math.pi, 0)
-                    camera.Focus = head.CFrame
+                -- Target the center of the body instead of the head
+                local hrp = dummy:FindFirstChild("HumanoidRootPart") or dummy:FindFirstChild("UpperTorso") or dummy:FindFirstChild("Torso")
+                if hrp then
+                    -- Pull the camera back to -5.5 studs and up slightly to frame the whole body
+                    camera.CFrame = hrp.CFrame * CFrame.new(0, 0.5, -5.5) * CFrame.Angles(0, math.pi, 0)
+                    camera.Focus = hrp.CFrame
                 end
+                
                 SmallViewport.CurrentCamera = camera
             end
         end)
+
 
 
         -- Text Box shifted over to make room for the picture
