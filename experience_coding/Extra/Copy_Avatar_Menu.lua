@@ -575,7 +575,11 @@ local function deepScanPlayerOutfit(targetPlayer)
         outfitData.Shirt = getVal("Shirt")
         outfitData.Pants = getVal("Pants")
         outfitData.RightArm = getVal("RightArm")
-        outfitData.WalkAnimation = getVal("WalkAnimation")
+   
+outfitData.WalkAnimation = getVal("WalkAnimation")
+        task.wait(0.1)
+outfitData.WalkAnimation = getVal("WalkAnimation")
+
         outfitData.Head = getVal("Head")
         outfitData.WidthScale = widthScale
         outfitData.GraphicTShirt = getVal("GraphicTShirt")
