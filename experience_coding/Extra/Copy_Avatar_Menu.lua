@@ -927,7 +927,7 @@ populateSavedOutfits = function()
         SmallViewport.BorderSizePixel = 0
         SmallViewport.Parent = Entry
 
-                -- Background thread to build the avatar and take a picture
+        -- Background thread to build the avatar and take a picture
         task.spawn(function()
             -- Build a Roblox Description out of the saved JSON first
             local desc = Instance.new("HumanoidDescription")
@@ -951,7 +951,12 @@ populateSavedOutfits = function()
             if data.Accessories then
                 local accGroups = {}
                 for _, acc in pairs(data.Accessories) do
-                    local typeName = acc.AccessoryType .. "Accessory"
+                    local typeName = acc.AccessoryType
+                    -- Ensure "Accessory" is appended if it's not already there
+                    if not string.find(typeName, "Accessory") then
+                        typeName = typeName .. "Accessory"
+                    end
+                    
                     if accGroups[typeName] then
                         accGroups[typeName] = accGroups[typeName] .. "," .. tostring(acc.AssetId)
                     else
@@ -963,28 +968,39 @@ populateSavedOutfits = function()
                 end
             end
 
-            
-                            -- Use the actual player as a base rig, but completely overwrite their look with the saved description
+            -- Create a fresh, fully-loaded model using Roblox's built-in API
             local dummy
-            local success = pcall(function()
-                local oldArch = myChar.Archivable
-                myChar.Archivable = true
-                dummy = myChar:Clone()
-                myChar.Archivable = oldArch
+            local success, err = pcall(function()
+                -- This guarantees all layered clothing and accessories are downloaded and built
+                dummy = Players:CreateHumanoidModelFromDescription(desc, Enum.HumanoidRigType.R15)
             end)
 
-            if success and dummy then
+            -- Fallback just in case the API fails (uses LocalPlayer)
+            if not success or not dummy then
+                pcall(function()
+                    local myChar = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+                    local oldArch = myChar.Archivable
+                    myChar.Archivable = true
+                    dummy = myChar:Clone()
+                    myChar.Archivable = oldArch
+                    
+                    local hum = dummy:FindFirstChildOfClass("Humanoid")
+                    if hum then
+                        hum:ApplyDescription(desc)
+                    end
+                end)
+            end
+
+            if dummy then
                 for _, v in pairs(dummy:GetDescendants()) do
                     if v:IsA("Script") or v:IsA("LocalScript") then v:Destroy() end
                 end
 
-                local hum = dummy:FindFirstChildOfClass("Humanoid")
-                if hum then
-                    -- Force the dummy to wear the SAVED outfit, not the current one
-                    pcall(function() hum:ApplyDescription(desc) end)
-                end
-
                 dummy.Parent = SmallViewport
+    
+                -- FIX: Create the missing camera instance
+                local camera = Instance.new("Camera")
+                camera.Parent = SmallViewport
     
                 -- Target the center of the body instead of the head
                 local hrp = dummy:FindFirstChild("HumanoidRootPart") or dummy:FindFirstChild("UpperTorso") or dummy:FindFirstChild("Torso")
@@ -997,8 +1013,6 @@ populateSavedOutfits = function()
                 SmallViewport.CurrentCamera = camera
             end
         end)
-
-
 
 
         -- Text Box shifted over to make room for the picture
