@@ -220,6 +220,81 @@ NoclipBtn.MouseButton1Click:Connect(function()
         if noclipConnection then noclipConnection:Disconnect() end
     end
 end)
+-- ========== FE INVISIBLE TOOL (Desync Method) ==========
+local feInvisEnabled = false
+local invisConnections = {}
+local ghostParts = {}
+
+local FeInvisBtn = Instance.new("TextButton")
+FeInvisBtn.Size = UDim2.new(1, -5, 0, 40)
+FeInvisBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+FeInvisBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+FeInvisBtn.Font = Enum.Font.SourceSansBold
+FeInvisBtn.TextSize = 16
+FeInvisBtn.Text = "🫥 Server Invis: OFF"
+FeInvisBtn.BorderSizePixel = 0
+FeInvisBtn.Parent = ToolsScroll
+
+FeInvisBtn.MouseButton1Click:Connect(function()
+    local char = LocalPlayer.Character
+    local humanoid = char and char:FindFirstChildOfClass("Humanoid")
+    local rootPart = char and char:FindFirstChild("HumanoidRootPart")
+    
+    if not char or not humanoid or not rootPart then return end
+
+    feInvisEnabled = not feInvisEnabled
+
+    if feInvisEnabled then
+        FeInvisBtn.Text = "🫥 Server Invis: ON"
+        FeInvisBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
+        
+        -- Make us look like a ghost locally so we know it's on
+        table.clear(ghostParts)
+        for _, obj in pairs(char:GetDescendants()) do 
+            if obj:IsA("BasePart") and obj.Transparency == 0 then 
+                table.insert(ghostParts, obj)
+                obj.Transparency = 0.5
+            end 
+        end
+
+        -- The Desync Loop
+        invisConnections[1] = RunService.Heartbeat:Connect(function()
+            if feInvisEnabled and rootPart and humanoid then
+                local cf = rootPart.CFrame
+                local camOffset = humanoid.CameraOffset
+
+                -- Fling way under the map exactly when the server updates
+                local hidden = cf * CFrame.new(0, -200000, 0)
+                rootPart.CFrame = hidden
+                humanoid.CameraOffset = hidden:ToObjectSpace(CFrame.new(cf.Position)).Position
+
+                -- Wait for our local screen to render
+                RunService.RenderStepped:Wait()
+
+                -- Snap back to normal for our screen
+                rootPart.CFrame = cf
+                humanoid.CameraOffset = camOffset
+            end
+        end)
+    else
+        FeInvisBtn.Text = "🫥 Server Invis: OFF"
+        FeInvisBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+        
+        -- Cleanup connections
+        for _, conn in pairs(invisConnections) do conn:Disconnect() end
+        table.clear(invisConnections)
+        
+        -- Restore our character's looks and camera
+        for _, part in pairs(ghostParts) do
+            if part and part.Parent then
+                part.Transparency = 0
+            end
+        end
+        if humanoid then
+            humanoid.CameraOffset = Vector3.new(0,0,0)
+        end
+    end
+end)
 
 
 local SavedListLayout = Instance.new("UIListLayout")
