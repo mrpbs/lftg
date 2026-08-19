@@ -625,7 +625,7 @@ outfitData.WalkAnimation = getVal("WalkAnimation")
         outfitData.Torso = getVal("Torso")
         outfitData.LeftLeg = getVal("LeftLeg")
 
-        local safeOutfit = {}
+             local safeOutfit = {}
         for k, v in pairs(outfitData) do
             if typeof(v) == "Instance" or typeof(v) == "EnumItem" then
                 safeOutfit[k] = tostring(v)
@@ -633,6 +633,9 @@ outfitData.WalkAnimation = getVal("WalkAnimation")
                 safeOutfit[k] = v
             end
         end
+        
+        -- INJECT THE TIMESTAMP: Save the exact Unix time this was scanned
+        safeOutfit.SavedAtTime = os.time()
 
         local ok, jsonText = pcall(function()
             return HttpService:JSONEncode(safeOutfit)
@@ -879,7 +882,7 @@ populateSavedOutfits = function()
     local folderName = "lifetogether_admin_savedoutfits"
     if not isfolder or not isfolder(folderName) then return end
 
-    -- 1. Collect all valid outfits into a table first
+       -- 1. Collect all valid outfits into a table first
     local outfitsList = {}
     
     for _, file in ipairs(listfiles(folderName)) do
@@ -891,25 +894,36 @@ populateSavedOutfits = function()
                 local success, data = pcall(function() return HttpService:JSONDecode(content) end)
                 if success and type(data) == "table" then
                     local isScanned = string.find(name, "_Scanned") ~= nil
+                    -- Extract the time we saved earlier (Default to 0 for older saved files)
+                    local savedTime = tonumber(data.SavedAtTime) or 0
+                    
                     table.insert(outfitsList, {
                         name = name,
                         data = data,
                         file = file,
-                        isScanned = isScanned
+                        isScanned = isScanned,
+                        time = savedTime
                     })
                 end
             end
         end
     end
 
-    -- 2. Sort the table: Scanned outfits first, then alphabetical
+    -- 2. Sort the table: Scanned outfits first, then Latest to Oldest
     table.sort(outfitsList, function(a, b)
+        -- Keep scanned files pinned to the very top
         if a.isScanned and not b.isScanned then
             return true
         elseif not a.isScanned and b.isScanned then
             return false
         else
-            return string.lower(a.name) < string.lower(b.name)
+            -- If neither is scanned (or both are), sort by newest time first
+            if a.time ~= b.time then
+                return a.time > b.time
+            else
+                -- Fallback to alphabetical if they have the exact same time (or are old saves without a time)
+                return string.lower(a.name) < string.lower(b.name)
+            end
         end
     end)
 
