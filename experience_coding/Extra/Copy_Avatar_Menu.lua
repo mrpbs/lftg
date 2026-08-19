@@ -86,11 +86,11 @@ BackBtn.BorderSizePixel = 0
 BackBtn.Visible = false
 BackBtn.Parent = MainFrame
 
--- Refresh Button (Left Side)
+-- Refresh Button (Left 1/3)
 local RefreshBtn = Instance.new("TextButton")
-RefreshBtn.Size = UDim2.new(0.5, -15, 0, 25)
+RefreshBtn.Size = UDim2.new(0.33, -10, 0, 25)
 RefreshBtn.Position = UDim2.new(0, 10, 0, 45)
-RefreshBtn.Text = "Refresh Players"
+RefreshBtn.Text = "Refresh"
 RefreshBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
 RefreshBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 RefreshBtn.Font = Enum.Font.SourceSansBold
@@ -98,11 +98,11 @@ RefreshBtn.TextSize = 14
 RefreshBtn.BorderSizePixel = 0
 RefreshBtn.Parent = MainFrame
 
--- Saved Outfits Tab (Right Side)
+-- Saved Outfits Tab (Middle 1/3)
 local SavedTabBtn = Instance.new("TextButton")
-SavedTabBtn.Size = UDim2.new(0.5, -15, 0, 25)
-SavedTabBtn.Position = UDim2.new(0.5, 5, 0, 45)
-SavedTabBtn.Text = "Saved Outfits"
+SavedTabBtn.Size = UDim2.new(0.33, -5, 0, 25)
+SavedTabBtn.Position = UDim2.new(0.33, 5, 0, 45)
+SavedTabBtn.Text = "Saved"
 SavedTabBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 150)
 SavedTabBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 SavedTabBtn.Font = Enum.Font.SourceSansBold
@@ -110,6 +110,17 @@ SavedTabBtn.TextSize = 14
 SavedTabBtn.BorderSizePixel = 0
 SavedTabBtn.Parent = MainFrame
 
+-- Tools Tab (Right 1/3)
+local ToolsTabBtn = Instance.new("TextButton")
+ToolsTabBtn.Size = UDim2.new(0.33, -10, 0, 25)
+ToolsTabBtn.Position = UDim2.new(0.66, 5, 0, 45)
+ToolsTabBtn.Text = "Tools"
+ToolsTabBtn.BackgroundColor3 = Color3.fromRGB(150, 80, 80)
+ToolsTabBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToolsTabBtn.Font = Enum.Font.SourceSansBold
+ToolsTabBtn.TextSize = 14
+ToolsTabBtn.BorderSizePixel = 0
+ToolsTabBtn.Parent = MainFrame
 
 -- Containers for Views
 local ContentContainer = Instance.new("Frame")
@@ -158,6 +169,58 @@ SavedScroll.BackgroundColor3 = Color3.fromRGB(8, 8, 10)
 SavedScroll.ScrollBarThickness = 6
 SavedScroll.Visible = false
 SavedScroll.Parent = ContentContainer
+
+-- Tools Scroll Context
+local ToolsScroll = Instance.new("ScrollingFrame")
+ToolsScroll.Size = UDim2.new(1, -20, 1, -10)
+ToolsScroll.Position = UDim2.new(0, 10, 0, 0)
+ToolsScroll.BackgroundColor3 = Color3.fromRGB(8, 8, 10)
+ToolsScroll.ScrollBarThickness = 6
+ToolsScroll.Visible = false
+ToolsScroll.Parent = ContentContainer
+
+local ToolsListLayout = Instance.new("UIListLayout")
+ToolsListLayout.Parent = ToolsScroll
+ToolsListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+ToolsListLayout.Padding = UDim.new(0, 6)
+
+-- ========== NO CLIP TOOL ==========
+local RunService = game:GetService("RunService")
+local noclipEnabled = false
+local noclipConnection = nil
+
+local NoclipBtn = Instance.new("TextButton")
+NoclipBtn.Size = UDim2.new(1, -5, 0, 40)
+NoclipBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+NoclipBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+NoclipBtn.Font = Enum.Font.SourceSansBold
+NoclipBtn.TextSize = 16
+NoclipBtn.Text = "👻 No Clip: OFF"
+NoclipBtn.BorderSizePixel = 0
+NoclipBtn.Parent = ToolsScroll
+
+NoclipBtn.MouseButton1Click:Connect(function()
+    noclipEnabled = not noclipEnabled
+    if noclipEnabled then
+        NoclipBtn.Text = "👻 No Clip: ON"
+        NoclipBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
+        noclipConnection = RunService.Stepped:Connect(function()
+            local char = LocalPlayer.Character
+            if char then
+                for _, v in pairs(char:GetDescendants()) do
+                    if v:IsA("BasePart") and v.CanCollide then
+                        v.CanCollide = false
+                    end
+                end
+            end
+        end)
+    else
+        NoclipBtn.Text = "👻 No Clip: OFF"
+        NoclipBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+        if noclipConnection then noclipConnection:Disconnect() end
+    end
+end)
+
 
 local SavedListLayout = Instance.new("UIListLayout")
 SavedListLayout.Parent = SavedScroll
@@ -237,24 +300,42 @@ local populateSavedOutfits
 BackBtn.MouseButton1Click:Connect(function()
     AssetScroll.Visible = false
     SavedScroll.Visible = false
+    ToolsScroll.Visible = false
     PlayerScroll.Visible = true
+    
     BackBtn.Visible = false
     RefreshBtn.Visible = true
     SavedTabBtn.Visible = true
+    ToolsTabBtn.Visible = true
     Title.Text = "🧬 Deep Live Outfit Scanner"
 end)
 
 SavedTabBtn.MouseButton1Click:Connect(function()
     AssetScroll.Visible = false
     PlayerScroll.Visible = false
+    ToolsScroll.Visible = false
     SavedScroll.Visible = true
+    
     BackBtn.Visible = true
     RefreshBtn.Visible = false
     SavedTabBtn.Visible = false
+    ToolsTabBtn.Visible = false
     Title.Text = "📁 Saved Outfits"
     if populateSavedOutfits then populateSavedOutfits() end
 end)
 
+ToolsTabBtn.MouseButton1Click:Connect(function()
+    AssetScroll.Visible = false
+    PlayerScroll.Visible = false
+    SavedScroll.Visible = false
+    ToolsScroll.Visible = true
+    
+    BackBtn.Visible = true
+    RefreshBtn.Visible = false
+    SavedTabBtn.Visible = false
+    ToolsTabBtn.Visible = false
+    Title.Text = "🛠️ Utility Tools"
+end)
 
 -- Life Together RP Payload Formatter
 local function buildBatchPayload(data)
