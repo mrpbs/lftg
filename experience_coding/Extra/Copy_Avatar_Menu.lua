@@ -296,6 +296,91 @@ FeInvisBtn.MouseButton1Click:Connect(function()
     end
 end)
 
+---
+
+-- ========== ANTI-SIT TOOL ==========
+local antiSitEnabled = false
+local antiSitConnections = {}
+
+local function cleanupAntiSit()
+    for _, conn in pairs(antiSitConnections) do
+        if conn and conn.Connected then
+            conn:Disconnect()
+        end
+    end
+    table.clear(antiSitConnections)
+end
+
+local function hookAntiSit(character)
+    if not character then return end
+    
+    local humanoid = character:WaitForChild("Humanoid", 5)
+    if not humanoid then return end
+
+    local conn = humanoid:GetPropertyChangedSignal("Sit"):Connect(function()
+        if not antiSitEnabled then return end
+        
+        if humanoid.Sit then
+            -- Temporarily block the seated state
+            humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated, false)
+            
+            task.spawn(function()
+                -- Break the physical weld connecting you to the seat
+                if humanoid.SeatPart then
+                    local weld = humanoid.SeatPart:FindFirstChildOfClass("Weld")
+                    if weld then weld:Destroy() end
+                    
+                    -- If the seat had a ProximityPrompt that disabled itself, turn it back on
+                    local prox = humanoid.SeatPart:FindFirstChildOfClass("ProximityPrompt")
+                    if prox and not prox.Enabled then
+                        prox.Enabled = true
+                    end
+                end
+                
+                -- Force the character to jump out of the animation
+                for _ = 1, 5 do
+                    task.wait()
+                    humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+                    humanoid.Sit = false
+                end
+                
+                -- Re-allow the seated state for later (if turned off)
+                humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated, true)
+            end)
+        end
+    end)
+    table.insert(antiSitConnections, conn)
+end
+
+local AntiSitBtn = Instance.new("TextButton")
+AntiSitBtn.Size = UDim2.new(1, -5, 0, 40)
+AntiSitBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+AntiSitBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+AntiSitBtn.Font = Enum.Font.SourceSansBold
+AntiSitBtn.TextSize = 16
+AntiSitBtn.Text = "🪑 Anti-Sit: OFF"
+AntiSitBtn.BorderSizePixel = 0
+AntiSitBtn.Parent = ToolsScroll
+
+AntiSitBtn.MouseButton1Click:Connect(function()
+    antiSitEnabled = not antiSitEnabled
+    
+    if antiSitEnabled then
+        AntiSitBtn.Text = "🪑 Anti-Sit: ON"
+        AntiSitBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
+        
+        -- Hook our current body
+        hookAntiSit(LocalPlayer.Character)
+        
+        -- Make sure it stays on if we die and respawn
+        local charConn = LocalPlayer.CharacterAdded:Connect(hookAntiSit)
+        table.insert(antiSitConnections, charConn)
+    else
+        AntiSitBtn.Text = "🪑 Anti-Sit: OFF"
+        AntiSitBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+        cleanupAntiSit()
+    end
+end)
 
 local SavedListLayout = Instance.new("UIListLayout")
 SavedListLayout.Parent = SavedScroll
