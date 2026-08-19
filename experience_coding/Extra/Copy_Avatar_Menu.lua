@@ -964,39 +964,33 @@ populateSavedOutfits = function()
             end
 
             
-                            -- Use the actual player as a base rig, but completely overwrite their look with the saved description
+                       -- Generate a brand new dummy straight from the data (Ignores your current outfit!)
             local dummy
             local success = pcall(function()
-                local oldArch = myChar.Archivable
-                myChar.Archivable = true
-                dummy = myChar:Clone()
-                myChar.Archivable = oldArch
+                -- This forces Roblox to build a clean model using the JSON description we just built
+                dummy = Players:CreateHumanoidModelFromDescription(desc, Enum.HumanoidRigType.R15)
             end)
 
             if success and dummy then
+                -- Clean up scripts
                 for _, v in pairs(dummy:GetDescendants()) do
                     if v:IsA("Script") or v:IsA("LocalScript") then v:Destroy() end
                 end
 
-                local hum = dummy:FindFirstChildOfClass("Humanoid")
-                if hum then
-                    -- Force the dummy to wear the SAVED outfit, not the current one
-                    pcall(function() hum:ApplyDescription(desc) end)
-                end
-
                 dummy.Parent = SmallViewport
-    
-                -- Target the center of the body instead of the head
+                local camera = Instance.new("Camera")
+                camera.Parent = SmallViewport
+                
+                -- Target the center of the body to show the full outfit
                 local hrp = dummy:FindFirstChild("HumanoidRootPart") or dummy:FindFirstChild("UpperTorso") or dummy:FindFirstChild("Torso")
                 if hrp then
-                    -- Pull the camera back to -5.5 studs and up slightly to frame the whole body
                     camera.CFrame = hrp.CFrame * CFrame.new(0, 0.5, -5.5) * CFrame.Angles(0, math.pi, 0)
                     camera.Focus = hrp.CFrame
                 end
                 
                 SmallViewport.CurrentCamera = camera
             end
-        end)
+
 
 
 
