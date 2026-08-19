@@ -465,7 +465,7 @@ end)
 ----------
 -- ========== AVATAR SCALER TOOL ==========
 local ScalerFrame = Instance.new("Frame")
-ScalerFrame.Size = UDim2.new(1, -5, 0, 75)
+ScalerFrame.Size = UDim2.new(1, -5, 0, 160) -- Made the frame taller to fit all 5 options
 ScalerFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 38)
 ScalerFrame.BorderSizePixel = 0
 ScalerFrame.Parent = ToolsScroll
@@ -481,8 +481,9 @@ ScalerTitle.TextXAlignment = Enum.TextXAlignment.Left
 ScalerTitle.BackgroundTransparency = 1
 ScalerTitle.Parent = ScalerFrame
 
+-- 1. Height
 local HeightLabel = Instance.new("TextLabel")
-HeightLabel.Size = UDim2.new(0, 50, 0, 20)
+HeightLabel.Size = UDim2.new(0, 60, 0, 20)
 HeightLabel.Position = UDim2.new(0, 5, 0, 25)
 HeightLabel.Text = "Height:"
 HeightLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -492,8 +493,8 @@ HeightLabel.BackgroundTransparency = 1
 HeightLabel.Parent = ScalerFrame
 
 local HeightInput = Instance.new("TextBox")
-HeightInput.Size = UDim2.new(0.3, -10, 0, 20)
-HeightInput.Position = UDim2.new(0, 55, 0, 25)
+HeightInput.Size = UDim2.new(0.3, -20, 0, 20)
+HeightInput.Position = UDim2.new(0, 65, 0, 25)
 HeightInput.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
 HeightInput.TextColor3 = Color3.fromRGB(255, 255, 255)
 HeightInput.Font = Enum.Font.Code
@@ -501,8 +502,9 @@ HeightInput.TextSize = 13
 HeightInput.Text = "1"
 HeightInput.Parent = ScalerFrame
 
+-- 2. Width
 local WidthLabel = Instance.new("TextLabel")
-WidthLabel.Size = UDim2.new(0, 50, 0, 20)
+WidthLabel.Size = UDim2.new(0, 60, 0, 20)
 WidthLabel.Position = UDim2.new(0, 5, 0, 50)
 WidthLabel.Text = "Width:"
 WidthLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -512,8 +514,8 @@ WidthLabel.BackgroundTransparency = 1
 WidthLabel.Parent = ScalerFrame
 
 local WidthInput = Instance.new("TextBox")
-WidthInput.Size = UDim2.new(0.3, -10, 0, 20)
-WidthInput.Position = UDim2.new(0, 55, 0, 50)
+WidthInput.Size = UDim2.new(0.3, -20, 0, 20)
+WidthInput.Position = UDim2.new(0, 65, 0, 50)
 WidthInput.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
 WidthInput.TextColor3 = Color3.fromRGB(255, 255, 255)
 WidthInput.Font = Enum.Font.Code
@@ -521,14 +523,77 @@ WidthInput.TextSize = 13
 WidthInput.Text = "1"
 WidthInput.Parent = ScalerFrame
 
+-- 3. Depth
+local DepthLabel = Instance.new("TextLabel")
+DepthLabel.Size = UDim2.new(0, 60, 0, 20)
+DepthLabel.Position = UDim2.new(0, 5, 0, 75)
+DepthLabel.Text = "Depth:"
+DepthLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+DepthLabel.Font = Enum.Font.SourceSansBold
+DepthLabel.TextSize = 13
+DepthLabel.BackgroundTransparency = 1
+DepthLabel.Parent = ScalerFrame
+
+local DepthInput = Instance.new("TextBox")
+DepthInput.Size = UDim2.new(0.3, -20, 0, 20)
+DepthInput.Position = UDim2.new(0, 65, 0, 75)
+DepthInput.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
+DepthInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+DepthInput.Font = Enum.Font.Code
+DepthInput.TextSize = 13
+DepthInput.Text = "1"
+DepthInput.Parent = ScalerFrame
+
+-- 4. Head
+local HeadLabel = Instance.new("TextLabel")
+HeadLabel.Size = UDim2.new(0, 60, 0, 20)
+HeadLabel.Position = UDim2.new(0, 5, 0, 100)
+HeadLabel.Text = "Head:"
+HeadLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+HeadLabel.Font = Enum.Font.SourceSansBold
+HeadLabel.TextSize = 13
+HeadLabel.BackgroundTransparency = 1
+HeadLabel.Parent = ScalerFrame
+
+local HeadInput = Instance.new("TextBox")
+HeadInput.Size = UDim2.new(0.3, -20, 0, 20)
+HeadInput.Position = UDim2.new(0, 65, 0, 100)
+HeadInput.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
+HeadInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+HeadInput.Font = Enum.Font.Code
+HeadInput.TextSize = 13
+HeadInput.Text = "1"
+HeadInput.Parent = ScalerFrame
+
+-- 5. BodyType
+local BodyTypeLabel = Instance.new("TextLabel")
+BodyTypeLabel.Size = UDim2.new(0, 60, 0, 20)
+BodyTypeLabel.Position = UDim2.new(0, 5, 0, 125)
+BodyTypeLabel.Text = "BodyType:"
+BodyTypeLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+BodyTypeLabel.Font = Enum.Font.SourceSansBold
+BodyTypeLabel.TextSize = 13
+BodyTypeLabel.BackgroundTransparency = 1
+BodyTypeLabel.Parent = ScalerFrame
+
+local BodyTypeInput = Instance.new("TextBox")
+BodyTypeInput.Size = UDim2.new(0.3, -20, 0, 20)
+BodyTypeInput.Position = UDim2.new(0, 65, 0, 125)
+BodyTypeInput.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
+BodyTypeInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+BodyTypeInput.Font = Enum.Font.Code
+BodyTypeInput.TextSize = 13
+BodyTypeInput.Text = "0"
+BodyTypeInput.Parent = ScalerFrame
+
 local ApplyScaleBtn = Instance.new("TextButton")
-ApplyScaleBtn.Size = UDim2.new(0.4, 0, 0, 45)
+ApplyScaleBtn.Size = UDim2.new(0.4, 0, 0, 120) -- Stretched the button to match new height
 ApplyScaleBtn.Position = UDim2.new(0.6, -5, 0, 25)
 ApplyScaleBtn.BackgroundColor3 = Color3.fromRGB(249, 180, 0)
 ApplyScaleBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
 ApplyScaleBtn.Font = Enum.Font.SourceSansBold
 ApplyScaleBtn.TextSize = 14
-ApplyScaleBtn.Text = "Apply Size"
+ApplyScaleBtn.Text = "Apply Sizes"
 ApplyScaleBtn.BorderSizePixel = 0
 ApplyScaleBtn.Parent = ScalerFrame
 
@@ -553,7 +618,7 @@ ApplyScaleBtn.MouseButton1Click:Connect(function()
     local hc = getVal("HeadColor")
     if typeof(hc) == "Color3" then outfitData.SkinTone = {hc.R, hc.G, hc.B} end
 
-    local props = {"Face", "Shirt", "Pants", "GraphicTShirt", "Head", "Torso", "LeftArm", "RightArm", "LeftLeg", "RightLeg", "IdleAnimation", "WalkAnimation", "RunAnimation", "JumpAnimation", "FallAnimation", "ClimbAnimation", "SwimAnimation", "BodyTypeScale", "ProportionScale", "HeadScale"}
+    local props = {"Face", "Shirt", "Pants", "GraphicTShirt", "Head", "Torso", "LeftArm", "RightArm", "LeftLeg", "RightLeg", "IdleAnimation", "WalkAnimation", "RunAnimation", "JumpAnimation", "FallAnimation", "ClimbAnimation", "SwimAnimation", "ProportionScale"}
     for _, p in ipairs(props) do outfitData[p] = getVal(p) end
 
     outfitData.Accessories = {}
@@ -570,9 +635,12 @@ ApplyScaleBtn.MouseButton1Click:Connect(function()
         end
     end)
 
-    -- INJECT CUSTOM SIZES
+    -- INJECT ALL CUSTOM SIZES
     outfitData.HeightScale = tonumber(HeightInput.Text) or 1
     outfitData.WidthScale = tonumber(WidthInput.Text) or 1
+    outfitData.DepthScale = tonumber(DepthInput.Text) or 1
+    outfitData.HeadScale = tonumber(HeadInput.Text) or 1
+    outfitData.BodyTypeScale = tonumber(BodyTypeInput.Text) or 0
 
     local payload = buildBatchPayload(outfitData)
     local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
@@ -598,27 +666,28 @@ ApplyScaleBtn.MouseButton1Click:Connect(function()
                 end) 
             end
             
-            -- Push the actual scale remotes
-            for i=1,3 do Send("body_scale", "HeightScale", outfitData.HeightScale * 100) task.wait(0.1) end
-            for i=1,3 do Send("body_scale", "WidthScale", outfitData.WidthScale * 100) task.wait(0.1) end
-            if outfitData.BodyTypeScale then for i=1,3 do Send("body_scale", "BodyTypeScale", outfitData.BodyTypeScale * 100) task.wait(0.1) end end
-            if outfitData.ProportionScale then for i=1,3 do Send("body_scale", "ProportionScale", outfitData.ProportionScale * 100) task.wait(0.1) end end
+            -- Push all 5 scale remotes rapidly to update the server body profile
+            for i=1,3 do Send("body_scale", "HeightScale", outfitData.HeightScale * 100) task.wait(0.05) end
+            for i=1,3 do Send("body_scale", "WidthScale", outfitData.WidthScale * 100) task.wait(0.05) end
+            for i=1,3 do Send("body_scale", "DepthScale", outfitData.DepthScale * 100) task.wait(0.05) end
+            for i=1,3 do Send("body_scale", "HeadScale", outfitData.HeadScale * 100) task.wait(0.05) end
+            for i=1,3 do Send("body_scale", "BodyTypeScale", outfitData.BodyTypeScale * 100) task.wait(0.05) end
+            if outfitData.ProportionScale then for i=1,3 do Send("body_scale", "ProportionScale", outfitData.ProportionScale * 100) task.wait(0.05) end end
 
             ApplyScaleBtn.Text = "Size Applied!"
             ApplyScaleBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
             task.wait(1.5)
-            ApplyScaleBtn.Text = "Apply Size"
+            ApplyScaleBtn.Text = "Apply Sizes"
             ApplyScaleBtn.BackgroundColor3 = Color3.fromRGB(249, 180, 0)
         end)
     else
         ApplyScaleBtn.Text = "Net Error"
         ApplyScaleBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
         task.wait(1.5)
-        ApplyScaleBtn.Text = "Apply Size"
+        ApplyScaleBtn.Text = "Apply Sizes"
         ApplyScaleBtn.BackgroundColor3 = Color3.fromRGB(249, 180, 0)
     end
 end)
-
 ------
 
 local SavedListLayout = Instance.new("UIListLayout")
