@@ -963,17 +963,29 @@ populateSavedOutfits = function()
                 end
             end
 
-                     -- Generate a brand new dummy straight from the data (Ignores your current outfit!)
+            
+                            -- Use the actual player as a base rig, but completely overwrite their look with the saved description
             local dummy
             local success = pcall(function()
-                dummy = Players:CreateHumanoidModelFromDescription(desc, Enum.HumanoidRigType.R15)
+                local oldArch = myChar.Archivable
+                myChar.Archivable = true
+                dummy = myChar:Clone()
+                myChar.Archivable = oldArch
             end)
 
             if success and dummy then
+                for _, v in pairs(dummy:GetDescendants()) do
+                    if v:IsA("Script") or v:IsA("LocalScript") then v:Destroy() end
+                end
+
+                local hum = dummy:FindFirstChildOfClass("Humanoid")
+                if hum then
+                    -- Force the dummy to wear the SAVED outfit, not the current one
+                    pcall(function() hum:ApplyDescription(desc) end)
+                end
+
                 dummy.Parent = SmallViewport
-                local camera = Instance.new("Camera")
-                camera.Parent = SmallViewport
-                
+    
                 -- Target the center of the body instead of the head
                 local hrp = dummy:FindFirstChild("HumanoidRootPart") or dummy:FindFirstChild("UpperTorso") or dummy:FindFirstChild("Torso")
                 if hrp then
