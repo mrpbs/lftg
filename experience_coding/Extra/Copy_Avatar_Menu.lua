@@ -567,7 +567,7 @@ FlingBtn.MouseButton1Click:Connect(function()
         table.clear(originalProperties)
     end
 end)
--- ========== MASS AUTO-FLING & WHITELIST ==========
+-- ========== MASS AUTO-FLING (Roll & Glue Version) ==========
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 local isMassFlinging = false
@@ -577,59 +577,66 @@ local massFlingTarget = nil
 local massWhitelist = {}
 local originalCarProps = {}
 
--- Main Container
+-- Main Container (Starts Collapsed)
 local MassFlingFrame = Instance.new("Frame")
-MassFlingFrame.Size = UDim2.new(1, -5, 0, 180)
+MassFlingFrame.Size = UDim2.new(1, -5, 0, 95)
 MassFlingFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 38)
 MassFlingFrame.BorderSizePixel = 0
+MassFlingFrame.ClipsDescendants = true
 MassFlingFrame.Parent = ToolsScroll
 
-local MassFlingTitle = Instance.new("TextLabel")
-MassFlingTitle.Size = UDim2.new(1, -10, 0, 20)
-MassFlingTitle.Position = UDim2.new(0, 5, 0, 5)
-MassFlingTitle.Text = "🚗 Mass Auto-Fling"
-MassFlingTitle.TextColor3 = Color3.fromRGB(0, 255, 200)
-MassFlingTitle.Font = Enum.Font.SourceSansBold
-MassFlingTitle.TextSize = 14
-MassFlingTitle.TextXAlignment = Enum.TextXAlignment.Left
-MassFlingTitle.BackgroundTransparency = 1
-MassFlingTitle.Parent = MassFlingFrame
-
 local MassFlingBtn = Instance.new("TextButton")
-MassFlingBtn.Size = UDim2.new(1, -10, 0, 35)
-MassFlingBtn.Position = UDim2.new(0, 5, 0, 25)
+MassFlingBtn.Size = UDim2.new(1, -10, 0, 40)
+MassFlingBtn.Position = UDim2.new(0, 5, 0, 5)
 MassFlingBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
 MassFlingBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 MassFlingBtn.Font = Enum.Font.SourceSansBold
 MassFlingBtn.TextSize = 16
-MassFlingBtn.Text = "START SERVER FLING"
+MassFlingBtn.Text = "🚗 START SERVER FLING"
 MassFlingBtn.BorderSizePixel = 0
 MassFlingBtn.Parent = MassFlingFrame
 
--- Whitelist UI
-local WhitelistLabel = Instance.new("TextLabel")
-WhitelistLabel.Size = UDim2.new(1, -10, 0, 15)
-WhitelistLabel.Position = UDim2.new(0, 5, 0, 65)
-WhitelistLabel.Text = "Whitelist (Green = Safe):"
-WhitelistLabel.TextColor3 = Color3.fromRGB(150, 150, 160)
-WhitelistLabel.Font = Enum.Font.SourceSans
-WhitelistLabel.TextSize = 12
-WhitelistLabel.TextXAlignment = Enum.TextXAlignment.Left
-WhitelistLabel.BackgroundTransparency = 1
-WhitelistLabel.Parent = MassFlingFrame
+-- Whitelist Dropdown Button
+local WhitelistToggleBtn = Instance.new("TextButton")
+WhitelistToggleBtn.Size = UDim2.new(1, -10, 0, 30)
+WhitelistToggleBtn.Position = UDim2.new(0, 5, 0, 55)
+WhitelistToggleBtn.BackgroundColor3 = Color3.fromRGB(25, 25, 32)
+WhitelistToggleBtn.TextColor3 = Color3.fromRGB(0, 255, 200)
+WhitelistToggleBtn.Font = Enum.Font.SourceSansBold
+WhitelistToggleBtn.TextSize = 14
+WhitelistToggleBtn.TextXAlignment = Enum.TextXAlignment.Left
+WhitelistToggleBtn.Text = "  📜 Whitelist [ ▼ ]"
+WhitelistToggleBtn.BorderSizePixel = 0
+WhitelistToggleBtn.Parent = MassFlingFrame
 
 local WhitelistScroll = Instance.new("ScrollingFrame")
-WhitelistScroll.Size = UDim2.new(1, -10, 0, 90)
-WhitelistScroll.Position = UDim2.new(0, 5, 0, 85)
+WhitelistScroll.Size = UDim2.new(1, -10, 0, 95)
+WhitelistScroll.Position = UDim2.new(0, 5, 0, 90)
 WhitelistScroll.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 WhitelistScroll.BorderSizePixel = 0
 WhitelistScroll.ScrollBarThickness = 4
+WhitelistScroll.Visible = false
 WhitelistScroll.Parent = MassFlingFrame
 
 local WhitelistLayout = Instance.new("UIListLayout")
 WhitelistLayout.SortOrder = Enum.SortOrder.Name
 WhitelistLayout.Padding = UDim.new(0, 4)
 WhitelistLayout.Parent = WhitelistScroll
+
+-- Dropdown Logic
+local whitelistExpanded = false
+WhitelistToggleBtn.MouseButton1Click:Connect(function()
+    whitelistExpanded = not whitelistExpanded
+    if whitelistExpanded then
+        MassFlingFrame.Size = UDim2.new(1, -5, 0, 195)
+        WhitelistScroll.Visible = true
+        WhitelistToggleBtn.Text = "  📜 Whitelist [ ▲ ]"
+    else
+        MassFlingFrame.Size = UDim2.new(1, -5, 0, 95)
+        WhitelistScroll.Visible = false
+        WhitelistToggleBtn.Text = "  📜 Whitelist [ ▼ ]"
+    end
+end)
 
 -- Refresh Whitelist UI
 local function refreshWhitelist()
@@ -644,15 +651,16 @@ local function refreshWhitelist()
             btn.Size = UDim2.new(1, -5, 0, 22)
             btn.Font = Enum.Font.SourceSansBold
             btn.TextSize = 13
-            btn.Text = plr.Name
+            btn.Text = "  " .. plr.Name
+            btn.TextXAlignment = Enum.TextXAlignment.Left
             btn.BorderSizePixel = 0
             btn.Parent = WhitelistScroll
             
             if massWhitelist[plr.Name] then
-                btn.BackgroundColor3 = Color3.fromRGB(40, 170, 90) -- Green (Safe)
+                btn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
                 btn.TextColor3 = Color3.fromRGB(255, 255, 255)
             else
-                btn.BackgroundColor3 = Color3.fromRGB(50, 50, 60) -- Gray (Target)
+                btn.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
                 btn.TextColor3 = Color3.fromRGB(200, 200, 200)
             end
             
@@ -669,7 +677,6 @@ Players.PlayerAdded:Connect(refreshWhitelist)
 Players.PlayerRemoving:Connect(refreshWhitelist)
 refreshWhitelist()
 
--- Helper to find your car
 local function getMyVehicle()
     local vehiclesFolder = workspace:FindFirstChild("Vehicles")
     if not vehiclesFolder then return nil end
@@ -687,7 +694,6 @@ local function stopMassFling()
     if massFlingLoop then massFlingLoop:Disconnect(); massFlingLoop = nil end
     if targetCycler then task.cancel(targetCycler); targetCycler = nil end
     
-    -- Restore original physics
     for part, props in pairs(originalCarProps) do
         if part and part.Parent then part.CustomPhysicalProperties = props end
     end
@@ -707,7 +713,7 @@ end
 local function startMassFling()
     local char = LocalPlayer.Character
     local hum = char and char:FindFirstChildOfClass("Humanoid")
-    if not hum or not hum.SeatPart then return false end -- Must be seated to claim Network Ownership
+    if not hum or not hum.SeatPart then return false end 
     
     local car = getMyVehicle()
     local base = car and (car.PrimaryPart or car:FindFirstChild("Base") or hum.SeatPart)
@@ -716,47 +722,47 @@ local function startMassFling()
     isMassFlinging = true
     table.clear(originalCarProps)
 
-    -- Max out density so targets get crushed
+    -- Max density for extreme impact force
     for _, part in ipairs(car:GetDescendants()) do
         if part:IsA("BasePart") then
             originalCarProps[part] = part.CustomPhysicalProperties
             part.CustomPhysicalProperties = PhysicalProperties.new(100, 0, 0, 100, 100)
+            -- Turn off collisions for everything except the base so the car doesn't get stuck on walls
+            if part ~= base then part.CanCollide = false end
         end
     end
 
-    -- 1. THE CYCLER: Picks a target, waits for them to fling, then moves to the next
+    -- 1. THE CYCLER: Aggressively switches targets the millisecond they are flung
     targetCycler = task.spawn(function()
         while isMassFlinging do
             for _, plr in ipairs(Players:GetPlayers()) do
                 if not isMassFlinging then break end
                 
-                -- If they aren't us, aren't whitelisted, and are spawned in
                 if plr ~= LocalPlayer and not massWhitelist[plr.Name] and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
                     massFlingTarget = plr
                     
-                    local ticks = 0
-                    -- Wait until they get flung (velocity spikes) OR 1.5 seconds pass (so we don't get stuck)
-                    while isMassFlinging and massFlingTarget == plr and ticks < 15 do
-                        task.wait(0.1)
-                        ticks = ticks + 1
+                    local maxTime = tick() + 3 -- Move on if they somehow survive for 3 seconds
+                    while isMassFlinging and massFlingTarget == plr and tick() < maxTime do
+                        task.wait()
                         local tRoot = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
-                        if not tRoot or tRoot.Velocity.Magnitude > 1000 or tRoot.Position.Y < -50 then
-                            break -- Target successfully eliminated! Move to next.
+                        -- If they are destroyed, shot to the sky (> 500), or shoved under the map (< -50), they are dead
+                        if not tRoot or tRoot.Position.Y > 500 or tRoot.Position.Y < -50 or tRoot.Velocity.Magnitude > 1500 then
+                            break
                         end
                     end
                 end
             end
-            task.wait(0.1) -- Small pause before sweeping the server again
+            task.wait() -- Instantly loop back to catch respawns
         end
     end)
 
-    -- 2. THE PHYSICS DESYNC: Teleports the car down for 1 frame, then back to the sky
+    -- 2. THE ROLLING BALL ATTACK
     massFlingLoop = RunService.Heartbeat:Connect(function()
         if not isMassFlinging then return end
         
-        -- Abort if user jumps out of car
+        -- Seat Detection: Aborts safely if you hop out or get knocked out
         if not hum.SeatPart then
-            MassFlingBtn.Text = "START SERVER FLING"
+            MassFlingBtn.Text = "🚗 START SERVER FLING"
             MassFlingBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
             stopMassFling()
             return
@@ -765,28 +771,24 @@ local function startMassFling()
         local tRoot = massFlingTarget and massFlingTarget.Character and massFlingTarget.Character:FindFirstChild("HumanoidRootPart")
         
         if tRoot then
-            -- Safe hover point: 150 studs above the current victim
-            local skyPos = tRoot.CFrame * CFrame.new(0, 150, 0)
+            -- Glue the car to the target's center and rotate it randomly on all 3 axes
+            local angleX = math.random() * math.pi * 2
+            local angleY = math.random() * math.pi * 2
+            local angleZ = math.random() * math.pi * 2
             
-            -- STRIKE: Teleport into victim and inject lethal velocity
-            base.CFrame = tRoot.CFrame
-            base.Velocity = Vector3.new(math.random(-50000, 50000), -50000, math.random(-50000, 50000))
+            base.CFrame = tRoot.CFrame * CFrame.Angles(angleX, angleY, angleZ)
+            
+            -- Prevent downward velocity so the car doesn't dive into the void
+            base.Velocity = Vector3.new(0, 1000, 0)
             base.RotVelocity = Vector3.new(50000, 50000, 50000)
-            
-            -- Wait for the engine to register the hit
-            RunService.RenderStepped:Wait()
-            
-            -- RECOVERY: Instantly warp back to the safe hover point
-            if base then
-                base.CFrame = skyPos
+        else
+            -- If no target is alive, hover safely directly above your own character's last location
+            local myRoot = char:FindFirstChild("HumanoidRootPart")
+            if myRoot then
+                base.CFrame = myRoot.CFrame * CFrame.new(0, 15, 0)
                 base.Velocity = Vector3.zero
                 base.RotVelocity = Vector3.zero
             end
-        else
-            -- If no target is currently selected, just hover high up at the center of the map
-            base.CFrame = CFrame.new(0, 1000, 0)
-            base.Velocity = Vector3.zero
-            base.RotVelocity = Vector3.zero
         end
     end)
     
@@ -795,19 +797,19 @@ end
 
 MassFlingBtn.MouseButton1Click:Connect(function()
     if isMassFlinging then
-        MassFlingBtn.Text = "START SERVER FLING"
+        MassFlingBtn.Text = "🚗 START SERVER FLING"
         MassFlingBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
         stopMassFling()
     else
         local success = startMassFling()
         if success then
-            MassFlingBtn.Text = "STOP SERVER FLING"
+            MassFlingBtn.Text = "🛑 STOP SERVER FLING"
             MassFlingBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
         else
             MassFlingBtn.Text = "⚠️ SIT IN DRIVER SEAT FIRST"
             MassFlingBtn.BackgroundColor3 = Color3.fromRGB(200, 100, 0)
             task.wait(1.5)
-            MassFlingBtn.Text = "START SERVER FLING"
+            MassFlingBtn.Text = "🚗 START SERVER FLING"
             MassFlingBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
         end
     end
