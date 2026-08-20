@@ -567,34 +567,34 @@ FlingBtn.MouseButton1Click:Connect(function()
         table.clear(originalProperties)
     end
 end)
--- ========== ORBIT & STRIKE MASS FLING ==========
+-- ========== LIGHTNING MASS FLING & DROPDOWN WHITELIST ==========
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
-local isOrbitFlinging = false
-local orbitFlingLoop = nil
+local isMassFlinging = false
+local massFlingLoop = nil
 local targetCycler = nil
-local currentTarget = nil
+local massFlingTarget = nil
 local massWhitelist = {}
 local originalCarProps = {}
 
 -- Main Container (Starts Collapsed)
-local OrbitFlingFrame = Instance.new("Frame")
-OrbitFlingFrame.Size = UDim2.new(1, -5, 0, 95)
-OrbitFlingFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 38)
-OrbitFlingFrame.BorderSizePixel = 0
-OrbitFlingFrame.ClipsDescendants = true
-OrbitFlingFrame.Parent = ToolsScroll
+local MassFlingFrame = Instance.new("Frame")
+MassFlingFrame.Size = UDim2.new(1, -5, 0, 95)
+MassFlingFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 38)
+MassFlingFrame.BorderSizePixel = 0
+MassFlingFrame.ClipsDescendants = true
+MassFlingFrame.Parent = ToolsScroll
 
-local OrbitFlingBtn = Instance.new("TextButton")
-OrbitFlingBtn.Size = UDim2.new(1, -10, 0, 40)
-OrbitFlingBtn.Position = UDim2.new(0, 5, 0, 5)
-OrbitFlingBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-OrbitFlingBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-OrbitFlingBtn.Font = Enum.Font.SourceSansBold
-OrbitFlingBtn.TextSize = 16
-OrbitFlingBtn.Text = "🚗 START ORBIT FLING"
-OrbitFlingBtn.BorderSizePixel = 0
-OrbitFlingBtn.Parent = OrbitFlingFrame
+local MassFlingBtn = Instance.new("TextButton")
+MassFlingBtn.Size = UDim2.new(1, -10, 0, 40)
+MassFlingBtn.Position = UDim2.new(0, 5, 0, 5)
+MassFlingBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+MassFlingBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+MassFlingBtn.Font = Enum.Font.SourceSansBold
+MassFlingBtn.TextSize = 16
+MassFlingBtn.Text = "🚗 START SERVER FLING"
+MassFlingBtn.BorderSizePixel = 0
+MassFlingBtn.Parent = MassFlingFrame
 
 -- Whitelist Dropdown Button
 local WhitelistToggleBtn = Instance.new("TextButton")
@@ -607,7 +607,7 @@ WhitelistToggleBtn.TextSize = 14
 WhitelistToggleBtn.TextXAlignment = Enum.TextXAlignment.Left
 WhitelistToggleBtn.Text = "  📜 Whitelist [ ▼ ]"
 WhitelistToggleBtn.BorderSizePixel = 0
-WhitelistToggleBtn.Parent = OrbitFlingFrame
+WhitelistToggleBtn.Parent = MassFlingFrame
 
 local WhitelistScroll = Instance.new("ScrollingFrame")
 WhitelistScroll.Size = UDim2.new(1, -10, 0, 150)
@@ -616,7 +616,7 @@ WhitelistScroll.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 WhitelistScroll.BorderSizePixel = 0
 WhitelistScroll.ScrollBarThickness = 4
 WhitelistScroll.Visible = false
-WhitelistScroll.Parent = OrbitFlingFrame
+WhitelistScroll.Parent = MassFlingFrame
 
 local WhitelistLayout = Instance.new("UIListLayout")
 WhitelistLayout.SortOrder = Enum.SortOrder.Name
@@ -628,11 +628,11 @@ local whitelistExpanded = false
 WhitelistToggleBtn.MouseButton1Click:Connect(function()
     whitelistExpanded = not whitelistExpanded
     if whitelistExpanded then
-        OrbitFlingFrame.Size = UDim2.new(1, -5, 0, 250)
+        MassFlingFrame.Size = UDim2.new(1, -5, 0, 250)
         WhitelistScroll.Visible = true
         WhitelistToggleBtn.Text = "  📜 Whitelist [ ▲ ]"
     else
-        OrbitFlingFrame.Size = UDim2.new(1, -5, 0, 95)
+        MassFlingFrame.Size = UDim2.new(1, -5, 0, 95)
         WhitelistScroll.Visible = false
         WhitelistToggleBtn.Text = "  📜 Whitelist [ ▼ ]"
     end
@@ -657,10 +657,10 @@ local function refreshWhitelist()
             btn.Parent = WhitelistScroll
             
             if massWhitelist[plr.Name] then
-                btn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
+                btn.BackgroundColor3 = Color3.fromRGB(40, 170, 90) -- Green (Safe)
                 btn.TextColor3 = Color3.fromRGB(255, 255, 255)
             else
-                btn.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
+                btn.BackgroundColor3 = Color3.fromRGB(50, 50, 60) -- Gray (Target)
                 btn.TextColor3 = Color3.fromRGB(200, 200, 200)
             end
             
@@ -677,6 +677,7 @@ Players.PlayerAdded:Connect(refreshWhitelist)
 Players.PlayerRemoving:Connect(refreshWhitelist)
 refreshWhitelist()
 
+-- Helper to find your car
 local function getMyVehicle()
     local vehiclesFolder = workspace:FindFirstChild("Vehicles")
     if not vehiclesFolder then return nil end
@@ -687,13 +688,14 @@ local function getMyVehicle()
     return nil
 end
 
-local function stopOrbitFling()
-    isOrbitFlinging = false
-    currentTarget = nil
+local function stopMassFling()
+    isMassFlinging = false
+    massFlingTarget = nil
     
-    if orbitFlingLoop then orbitFlingLoop:Disconnect(); orbitFlingLoop = nil end
+    if massFlingLoop then massFlingLoop:Disconnect(); massFlingLoop = nil end
     if targetCycler then task.cancel(targetCycler); targetCycler = nil end
     
+    -- Restore original physics
     for part, props in pairs(originalCarProps) do
         if part and part.Parent then part.CustomPhysicalProperties = props end
     end
@@ -709,121 +711,122 @@ local function stopOrbitFling()
     end
 end
 
-local function startOrbitFling()
+local function startMassFling()
     local char = LocalPlayer.Character
     local hum = char and char:FindFirstChildOfClass("Humanoid")
-    if not hum or not hum.SeatPart then return false end 
+    if not hum or not hum.SeatPart then return false end -- Must be seated
     
     local car = getMyVehicle()
     local base = car and (car.PrimaryPart or car:FindFirstChild("Base") or hum.SeatPart)
     if not base then return false end
 
-    isOrbitFlinging = true
+    isMassFlinging = true
     table.clear(originalCarProps)
 
-    -- Max density so the vehicle doesn't bounce off targets
+    -- Max out density so targets get crushed
     for _, part in ipairs(car:GetDescendants()) do
         if part:IsA("BasePart") then
             originalCarProps[part] = part.CustomPhysicalProperties
             part.CustomPhysicalProperties = PhysicalProperties.new(100, 0, 0, 100, 100)
-            part.CanCollide = true -- Essential for server collisions
         end
     end
 
-    -- 1. TARGET CYCLER
+    -- 1. LIGHTNING CYCLER: Skips seated/void players and bombs targets instantly
     targetCycler = task.spawn(function()
-        while isOrbitFlinging do
+        while isMassFlinging do
             for _, plr in ipairs(Players:GetPlayers()) do
-                if not isOrbitFlinging then break end
+                if not isMassFlinging then break end
                 
-                if plr ~= LocalPlayer and not massWhitelist[plr.Name] and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
-                    currentTarget = plr
+                if plr ~= LocalPlayer and not massWhitelist[plr.Name] and plr.Character then
+                    local tRoot = plr.Character:FindFirstChild("HumanoidRootPart")
+                    local tHum = plr.Character:FindFirstChildOfClass("Humanoid")
                     
-                    local maxTime = tick() + 5 -- Allow 5 seconds per target before giving up
-                    while isOrbitFlinging and currentTarget == plr and tick() < maxTime do
-                        task.wait(0.1)
-                        local tRoot = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
-                        if not tRoot or tRoot.Velocity.Magnitude > 1000 or tRoot.Position.Y < -50 or tRoot.Position.Y > 500 then
-                            break -- Fling successful!
+                    -- SKIP LOGIC: Ignore if they are sitting, in the void (< -40), or flying high (> 400)
+                    if tRoot and tHum and not tHum.Sit and tRoot.Position.Y > -40 and tRoot.Position.Y < 400 then
+                        massFlingTarget = plr
+                        
+                        local ticks = 0
+                        -- Extremely fast check loop (gives up after ~0.3 seconds if it misses)
+                        while isMassFlinging and massFlingTarget == plr and ticks < 10 do
+                            task.wait(0.03) -- 3x faster than the old loop
+                            ticks = ticks + 1
+                            
+                            local currentRoot = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
+                            local currentHum = plr.Character and plr.Character:FindFirstChildOfClass("Humanoid")
+                            
+                            -- Move on instantly if they sit down, die, or their velocity spikes (successfully hit)
+                            if not currentRoot or not currentHum or currentHum.Sit or currentRoot.Velocity.Magnitude > 300 or currentRoot.Position.Y < -40 then
+                                break 
+                            end
                         end
                     end
                 end
             end
-            task.wait(0.1) 
+            task.wait(0.05) -- Minimal pause between server sweeps
         end
     end)
 
-    -- 2. ORBIT AND STRIKE LOGIC
-    local orbitAngle = 0
-    local attackTimer = 0
-
-    orbitFlingLoop = RunService.Heartbeat:Connect(function(dt)
-        if not isOrbitFlinging then return end
+    -- 2. THE PHYSICS DESYNC: Teleports the car down for 1 frame, then back to the sky
+    massFlingLoop = RunService.Heartbeat:Connect(function()
+        if not isMassFlinging then return end
+        
+        -- Abort if user jumps out of car
         if not hum.SeatPart then
-            OrbitFlingBtn.Text = "🚗 START ORBIT FLING"
-            OrbitFlingBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-            stopOrbitFling()
+            MassFlingBtn.Text = "🚗 START SERVER FLING"
+            MassFlingBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+            stopMassFling()
             return
         end
 
-        local tRoot = currentTarget and currentTarget.Character and currentTarget.Character:FindFirstChild("HumanoidRootPart")
+        local tRoot = massFlingTarget and massFlingTarget.Character and massFlingTarget.Character:FindFirstChild("HumanoidRootPart")
+        local tHum = massFlingTarget and massFlingTarget.Character and massFlingTarget.Character:FindFirstChildOfClass("Humanoid")
         
-        if tRoot then
-            orbitAngle = orbitAngle + (dt * 5) -- Orbit speed
-            attackTimer = attackTimer + dt
-
-            if attackTimer >= 1.0 then
-                -- ATTACK PHASE (Lasts 0.1 seconds)
-                -- Teleport directly onto them and unleash chaos
-                base.CFrame = tRoot.CFrame
-                base.Velocity = Vector3.new(math.random(-50000, 50000), -50000, math.random(-50000, 50000))
-                base.RotVelocity = Vector3.new(50000, 50000, 50000)
-
-                -- Reset timer after the strike finishes
-                if attackTimer >= 1.1 then
-                    attackTimer = 0 
-                end
-            else
-                -- ORBIT PHASE
-                -- Fly smoothly in a circle 15 studs around them
-                local offsetX = math.cos(orbitAngle) * 15
-                local offsetZ = math.sin(orbitAngle) * 15
-                base.CFrame = CFrame.new(tRoot.Position + Vector3.new(offsetX, 5, offsetZ))
-                
-                base.Velocity = Vector3.zero
-                base.RotVelocity = Vector3.new(0, 25, 0) -- Mild spin while orbiting to look intimidating
-            end
-        else
-            -- No target? Orbit ourselves safely
-            local myRoot = char:FindFirstChild("HumanoidRootPart")
-            if myRoot then
-                orbitAngle = orbitAngle + (dt * 3)
-                base.CFrame = CFrame.new(myRoot.Position + Vector3.new(math.cos(orbitAngle)*10, 15, math.sin(orbitAngle)*10))
+        -- Ensure target is still valid for physics strike
+        if tRoot and tHum and not tHum.Sit then
+            -- Safe hover point: 150 studs above the current victim
+            local skyPos = tRoot.CFrame * CFrame.new(0, 150, 0)
+            
+            -- STRIKE: Teleport into victim and inject lethal velocity
+            base.CFrame = tRoot.CFrame
+            base.Velocity = Vector3.new(math.random(-50000, 50000), -50000, math.random(-50000, 50000))
+            base.RotVelocity = Vector3.new(50000, 50000, 50000)
+            
+            -- Wait for the engine to register the hit
+            RunService.RenderStepped:Wait()
+            
+            -- RECOVERY: Instantly warp back to the safe hover point
+            if base then
+                base.CFrame = skyPos
                 base.Velocity = Vector3.zero
                 base.RotVelocity = Vector3.zero
             end
+        else
+            -- If no target is currently selected, just hover high up at the center of the map
+            base.CFrame = CFrame.new(0, 1000, 0)
+            base.Velocity = Vector3.zero
+            base.RotVelocity = Vector3.zero
         end
     end)
     
     return true
 end
 
-OrbitFlingBtn.MouseButton1Click:Connect(function()
-    if isOrbitFlinging then
-        OrbitFlingBtn.Text = "🚗 START ORBIT FLING"
-        OrbitFlingBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-        stopOrbitFling()
+MassFlingBtn.MouseButton1Click:Connect(function()
+    if isMassFlinging then
+        MassFlingBtn.Text = "🚗 START SERVER FLING"
+        MassFlingBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+        stopMassFling()
     else
-        local success = startOrbitFling()
+        local success = startMassFling()
         if success then
-            OrbitFlingBtn.Text = "🛑 STOP ORBIT FLING"
-            OrbitFlingBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+            MassFlingBtn.Text = "🛑 STOP SERVER FLING"
+            MassFlingBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
         else
-            OrbitFlingBtn.Text = "⚠️ SIT IN DRIVER SEAT FIRST"
-            OrbitFlingBtn.BackgroundColor3 = Color3.fromRGB(200, 100, 0)
+            MassFlingBtn.Text = "⚠️ SIT IN DRIVER SEAT FIRST"
+            MassFlingBtn.BackgroundColor3 = Color3.fromRGB(200, 100, 0)
             task.wait(1.5)
-            OrbitFlingBtn.Text = "🚗 START ORBIT FLING"
-            OrbitFlingBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+            MassFlingBtn.Text = "🚗 START SERVER FLING"
+            MassFlingBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
         end
     end
 end)
