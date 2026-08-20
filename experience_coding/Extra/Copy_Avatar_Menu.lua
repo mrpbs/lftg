@@ -567,34 +567,34 @@ FlingBtn.MouseButton1Click:Connect(function()
         table.clear(originalProperties)
     end
 end)
--- ========== MASS AUTO-FLING (Continuous Roll & Dropdown) ==========
+-- ========== ORBIT & STRIKE MASS FLING ==========
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
-local isMassFlinging = false
-local massFlingLoop = nil
+local isOrbitFlinging = false
+local orbitFlingLoop = nil
 local targetCycler = nil
-local massFlingTarget = nil
+local currentTarget = nil
 local massWhitelist = {}
 local originalCarProps = {}
 
 -- Main Container (Starts Collapsed)
-local MassFlingFrame = Instance.new("Frame")
-MassFlingFrame.Size = UDim2.new(1, -5, 0, 95)
-MassFlingFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 38)
-MassFlingFrame.BorderSizePixel = 0
-MassFlingFrame.ClipsDescendants = true
-MassFlingFrame.Parent = ToolsScroll
+local OrbitFlingFrame = Instance.new("Frame")
+OrbitFlingFrame.Size = UDim2.new(1, -5, 0, 95)
+OrbitFlingFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 38)
+OrbitFlingFrame.BorderSizePixel = 0
+OrbitFlingFrame.ClipsDescendants = true
+OrbitFlingFrame.Parent = ToolsScroll
 
-local MassFlingBtn = Instance.new("TextButton")
-MassFlingBtn.Size = UDim2.new(1, -10, 0, 40)
-MassFlingBtn.Position = UDim2.new(0, 5, 0, 5)
-MassFlingBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-MassFlingBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-MassFlingBtn.Font = Enum.Font.SourceSansBold
-MassFlingBtn.TextSize = 16
-MassFlingBtn.Text = "🚗 START SERVER FLING"
-MassFlingBtn.BorderSizePixel = 0
-MassFlingBtn.Parent = MassFlingFrame
+local OrbitFlingBtn = Instance.new("TextButton")
+OrbitFlingBtn.Size = UDim2.new(1, -10, 0, 40)
+OrbitFlingBtn.Position = UDim2.new(0, 5, 0, 5)
+OrbitFlingBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+OrbitFlingBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+OrbitFlingBtn.Font = Enum.Font.SourceSansBold
+OrbitFlingBtn.TextSize = 16
+OrbitFlingBtn.Text = "🚗 START ORBIT FLING"
+OrbitFlingBtn.BorderSizePixel = 0
+OrbitFlingBtn.Parent = OrbitFlingFrame
 
 -- Whitelist Dropdown Button
 local WhitelistToggleBtn = Instance.new("TextButton")
@@ -607,7 +607,7 @@ WhitelistToggleBtn.TextSize = 14
 WhitelistToggleBtn.TextXAlignment = Enum.TextXAlignment.Left
 WhitelistToggleBtn.Text = "  📜 Whitelist [ ▼ ]"
 WhitelistToggleBtn.BorderSizePixel = 0
-WhitelistToggleBtn.Parent = MassFlingFrame
+WhitelistToggleBtn.Parent = OrbitFlingFrame
 
 local WhitelistScroll = Instance.new("ScrollingFrame")
 WhitelistScroll.Size = UDim2.new(1, -10, 0, 150)
@@ -616,7 +616,7 @@ WhitelistScroll.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 WhitelistScroll.BorderSizePixel = 0
 WhitelistScroll.ScrollBarThickness = 4
 WhitelistScroll.Visible = false
-WhitelistScroll.Parent = MassFlingFrame
+WhitelistScroll.Parent = OrbitFlingFrame
 
 local WhitelistLayout = Instance.new("UIListLayout")
 WhitelistLayout.SortOrder = Enum.SortOrder.Name
@@ -628,11 +628,11 @@ local whitelistExpanded = false
 WhitelistToggleBtn.MouseButton1Click:Connect(function()
     whitelistExpanded = not whitelistExpanded
     if whitelistExpanded then
-        MassFlingFrame.Size = UDim2.new(1, -5, 0, 250)
+        OrbitFlingFrame.Size = UDim2.new(1, -5, 0, 250)
         WhitelistScroll.Visible = true
         WhitelistToggleBtn.Text = "  📜 Whitelist [ ▲ ]"
     else
-        MassFlingFrame.Size = UDim2.new(1, -5, 0, 95)
+        OrbitFlingFrame.Size = UDim2.new(1, -5, 0, 95)
         WhitelistScroll.Visible = false
         WhitelistToggleBtn.Text = "  📜 Whitelist [ ▼ ]"
     end
@@ -687,11 +687,11 @@ local function getMyVehicle()
     return nil
 end
 
-local function stopMassFling()
-    isMassFlinging = false
-    massFlingTarget = nil
+local function stopOrbitFling()
+    isOrbitFlinging = false
+    currentTarget = nil
     
-    if massFlingLoop then massFlingLoop:Disconnect(); massFlingLoop = nil end
+    if orbitFlingLoop then orbitFlingLoop:Disconnect(); orbitFlingLoop = nil end
     if targetCycler then task.cancel(targetCycler); targetCycler = nil end
     
     for part, props in pairs(originalCarProps) do
@@ -705,12 +705,11 @@ local function stopMassFling()
         if base then
             base.Velocity = Vector3.zero
             base.RotVelocity = Vector3.zero
-            base.AssemblyAngularVelocity = Vector3.zero
         end
     end
 end
 
-local function startMassFling()
+local function startOrbitFling()
     local char = LocalPlayer.Character
     local hum = char and char:FindFirstChildOfClass("Humanoid")
     if not hum or not hum.SeatPart then return false end 
@@ -719,71 +718,87 @@ local function startMassFling()
     local base = car and (car.PrimaryPart or car:FindFirstChild("Base") or hum.SeatPart)
     if not base then return false end
 
-    isMassFlinging = true
+    isOrbitFlinging = true
     table.clear(originalCarProps)
 
-    -- Max density for massive kinetic energy transfer
+    -- Max density so the vehicle doesn't bounce off targets
     for _, part in ipairs(car:GetDescendants()) do
         if part:IsA("BasePart") then
             originalCarProps[part] = part.CustomPhysicalProperties
             part.CustomPhysicalProperties = PhysicalProperties.new(100, 0, 0, 100, 100)
+            part.CanCollide = true -- Essential for server collisions
         end
     end
 
-    -- 1. THE CYCLER: Locks onto a target until they are flung
+    -- 1. TARGET CYCLER
     targetCycler = task.spawn(function()
-        while isMassFlinging do
+        while isOrbitFlinging do
             for _, plr in ipairs(Players:GetPlayers()) do
-                if not isMassFlinging then break end
+                if not isOrbitFlinging then break end
                 
                 if plr ~= LocalPlayer and not massWhitelist[plr.Name] and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
-                    massFlingTarget = plr
+                    currentTarget = plr
                     
-                    local maxTime = tick() + 4
-                    while isMassFlinging and massFlingTarget == plr and tick() < maxTime do
+                    local maxTime = tick() + 5 -- Allow 5 seconds per target before giving up
+                    while isOrbitFlinging and currentTarget == plr and tick() < maxTime do
                         task.wait(0.1)
                         local tRoot = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
-                        -- Move to the next player if they die, fall into the void, or their velocity spikes massively
-                        if not tRoot or tRoot.Position.Y > 500 or tRoot.Position.Y < -50 or tRoot.Velocity.Magnitude > 1500 then
-                            break
+                        if not tRoot or tRoot.Velocity.Magnitude > 1000 or tRoot.Position.Y < -50 or tRoot.Position.Y > 500 then
+                            break -- Fling successful!
                         end
                     end
                 end
             end
-            task.wait() 
+            task.wait(0.1) 
         end
     end)
 
-    -- 2. THE CONTINUOUS ROLL: Keeps the car glued to the target without jumping back to the sky
-    massFlingLoop = RunService.Heartbeat:Connect(function()
-        if not isMassFlinging then return end
+    -- 2. ORBIT AND STRIKE LOGIC
+    local orbitAngle = 0
+    local attackTimer = 0
+
+    orbitFlingLoop = RunService.Heartbeat:Connect(function(dt)
+        if not isOrbitFlinging then return end
         if not hum.SeatPart then
-            MassFlingBtn.Text = "🚗 START SERVER FLING"
-            MassFlingBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-            stopMassFling()
+            OrbitFlingBtn.Text = "🚗 START ORBIT FLING"
+            OrbitFlingBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+            stopOrbitFling()
             return
         end
 
-        local tRoot = massFlingTarget and massFlingTarget.Character and massFlingTarget.Character:FindFirstChild("HumanoidRootPart")
+        local tRoot = currentTarget and currentTarget.Character and currentTarget.Character:FindFirstChild("HumanoidRootPart")
         
         if tRoot then
-            -- Wrap the car around the target with completely randomized angles every frame
-            local angleX = (math.random(-314, 314) / 100)
-            local angleY = (math.random(-314, 314) / 100)
-            local angleZ = (math.random(-314, 314) / 100)
-            
-            base.CFrame = tRoot.CFrame * CFrame.Angles(angleX, angleY, angleZ)
-            
-            -- Prevent voiding: Replace the -50000 Y velocity with a positive upward bounce
-            base.Velocity = Vector3.new(math.random(-50000, 50000), math.random(5000, 15000), math.random(-50000, 50000))
-            
-            -- Keep the chaotic rotation active
-            base.RotVelocity = Vector3.new(math.random(-50000, 50000), math.random(-50000, 50000), math.random(-50000, 50000))
+            orbitAngle = orbitAngle + (dt * 5) -- Orbit speed
+            attackTimer = attackTimer + dt
+
+            if attackTimer >= 1.0 then
+                -- ATTACK PHASE (Lasts 0.1 seconds)
+                -- Teleport directly onto them and unleash chaos
+                base.CFrame = tRoot.CFrame
+                base.Velocity = Vector3.new(math.random(-50000, 50000), -50000, math.random(-50000, 50000))
+                base.RotVelocity = Vector3.new(50000, 50000, 50000)
+
+                -- Reset timer after the strike finishes
+                if attackTimer >= 1.1 then
+                    attackTimer = 0 
+                end
+            else
+                -- ORBIT PHASE
+                -- Fly smoothly in a circle 15 studs around them
+                local offsetX = math.cos(orbitAngle) * 15
+                local offsetZ = math.sin(orbitAngle) * 15
+                base.CFrame = CFrame.new(tRoot.Position + Vector3.new(offsetX, 5, offsetZ))
+                
+                base.Velocity = Vector3.zero
+                base.RotVelocity = Vector3.new(0, 25, 0) -- Mild spin while orbiting to look intimidating
+            end
         else
-            -- If no targets remain, safely hover the car above your own character's last location
+            -- No target? Orbit ourselves safely
             local myRoot = char:FindFirstChild("HumanoidRootPart")
             if myRoot then
-                base.CFrame = myRoot.CFrame * CFrame.new(0, 25, 0)
+                orbitAngle = orbitAngle + (dt * 3)
+                base.CFrame = CFrame.new(myRoot.Position + Vector3.new(math.cos(orbitAngle)*10, 15, math.sin(orbitAngle)*10))
                 base.Velocity = Vector3.zero
                 base.RotVelocity = Vector3.zero
             end
@@ -793,22 +808,22 @@ local function startMassFling()
     return true
 end
 
-MassFlingBtn.MouseButton1Click:Connect(function()
-    if isMassFlinging then
-        MassFlingBtn.Text = "🚗 START SERVER FLING"
-        MassFlingBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-        stopMassFling()
+OrbitFlingBtn.MouseButton1Click:Connect(function()
+    if isOrbitFlinging then
+        OrbitFlingBtn.Text = "🚗 START ORBIT FLING"
+        OrbitFlingBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+        stopOrbitFling()
     else
-        local success = startMassFling()
+        local success = startOrbitFling()
         if success then
-            MassFlingBtn.Text = "🛑 STOP SERVER FLING"
-            MassFlingBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+            OrbitFlingBtn.Text = "🛑 STOP ORBIT FLING"
+            OrbitFlingBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
         else
-            MassFlingBtn.Text = "⚠️ SIT IN DRIVER SEAT FIRST"
-            MassFlingBtn.BackgroundColor3 = Color3.fromRGB(200, 100, 0)
+            OrbitFlingBtn.Text = "⚠️ SIT IN DRIVER SEAT FIRST"
+            OrbitFlingBtn.BackgroundColor3 = Color3.fromRGB(200, 100, 0)
             task.wait(1.5)
-            MassFlingBtn.Text = "🚗 START SERVER FLING"
-            MassFlingBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+            OrbitFlingBtn.Text = "🚗 START ORBIT FLING"
+            OrbitFlingBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
         end
     end
 end)
