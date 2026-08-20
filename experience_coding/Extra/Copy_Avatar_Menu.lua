@@ -488,9 +488,9 @@ LtAntiSitBtn.MouseButton1Click:Connect(function()
 end)
 
 ----------
--- ========== TORNADO WALK FLING (Stable Version) ==========
-local isTornadoFlinging = false
-local flingSpin = nil
+-- ========== WALK FLING (Exact Source Method) ==========
+local isWalkFlinging = false
+local walkFlingConnections = {}
 
 local FlingBtn = Instance.new("TextButton")
 FlingBtn.Size = UDim2.new(1, -5, 0, 40)
@@ -498,56 +498,101 @@ FlingBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
 FlingBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 FlingBtn.Font = Enum.Font.SourceSansBold
 FlingBtn.TextSize = 16
-FlingBtn.Text = "🌪️ Tornado Fling: OFF"
+FlingBtn.Text = "🌪️ Walk Fling: OFF"
 FlingBtn.BorderSizePixel = 0
 FlingBtn.Parent = ToolsScroll
 
-local function stopTornadoFling()
-    isTornadoFlinging = false
-    if flingSpin then
-        flingSpin:Destroy()
-        flingSpin = nil
+local function stopWalkFling()
+    isWalkFlinging = false
+    for _, conn in pairs(walkFlingConnections) do
+        if conn.Connected then conn:Disconnect() end
     end
+    table.clear(walkFlingConnections)
     
     local char = LocalPlayer.Character
     if char then
         local root = char:FindFirstChild("HumanoidRootPart")
-        if root then 
-            -- Reset the spinning momentum so you stop cleanly
-            root.AssemblyAngularVelocity = Vector3.zero 
+        if root then root.Velocity = Vector3.zero end
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        if hum then 
+            hum.PlatformStand = false 
+            hum:ChangeState(Enum.HumanoidStateType.GettingUp) 
         end
     end
 end
 
-local function startTornadoFling()
-    local char = LocalPlayer.Character
-    if not char then return end
-    local root = char:FindFirstChild("HumanoidRootPart")
-    if not root then return end
+local function connectTouchFling(char)
+    -- Hook touches to BaseParts[span_5](start_span)[span_5](end_span)
+    for _, part in ipairs(char:GetChildren()) do
+        if part:IsA("BasePart") then
+            local touchConn = part.Touched:Connect(function(hit)
+                if not isWalkFlinging then return end
+                if hit:IsDescendantOf(char) then return end
+                
+                -- Expanded to target anything unanchored
+                local targetRoot = hit
+                local hitModel = hit:FindFirstAncestorOfClass("Model")
+                if hitModel then
+                    targetRoot = hitModel.PrimaryPart or hitModel:FindFirstChild("HumanoidRootPart") or hit
+                end
+                
+                if targetRoot and not targetRoot.Anchored then
+                    local myRoot = char:FindFirstChild("HumanoidRootPart")
+                    local v = myRoot and myRoot.CFrame.LookVector or Vector3.zero
+                    local power = 10000
+                    
+                    -- Exact touch velocity sequence from the source script[span_6](start_span)[span_6](end_span)
+                    targetRoot.Velocity = v * power + Vector3.new(0, power, 0)
+                    RunService.RenderStepped:Wait()
+                    if targetRoot then targetRoot.Velocity = v * power end
+                    RunService.RenderStepped:Wait()
+                    if targetRoot then targetRoot.Velocity = v * power + Vector3.new(0, 0.1, 0) end
+                end
+            end)
+            table.insert(walkFlingConnections, touchConn)
+        end
+    end
+end
 
-    isTornadoFlinging = true
+local function startWalkFling()
+    isWalkFlinging = true
+    local char = LocalPlayer.Character
+    if char then connectTouchFling(char) end
     
-    -- Create the massive spinning force
-    flingSpin = Instance.new("BodyAngularVelocity")
-    flingSpin.Name = "LethalSpin"
-    -- Lock the X and Z axes so you don't flip over, only spin on the Y axis
-    flingSpin.MaxTorque = Vector3.new(0, math.huge, 0)
-    flingSpin.AngularVelocity = Vector3.new(0, 50000, 0)
-    flingSpin.Parent = root
+    -- Ensure it stays active if you respawn[span_7](start_span)[span_7](end_span)
+    local charAddedConn = LocalPlayer.CharacterAdded:Connect(function(newChar)
+        if isWalkFlinging then connectTouchFling(newChar) end
+    end)
+    table.insert(walkFlingConnections, charAddedConn)
+    
+    -- Exact Heartbeat Desync loop from the source script[span_8](start_span)[span_8](end_span)
+    local loopConn = RunService.Heartbeat:Connect(function()
+        if not isWalkFlinging then return end
+        local current_char = LocalPlayer.Character
+        local r = current_char and current_char:FindFirstChild("HumanoidRootPart")
+        if not r then return end
+        
+        local v = r.Velocity
+        r.Velocity = v * 10000 + Vector3.new(0, 10000, 0)
+        RunService.RenderStepped:Wait()
+        if r then r.Velocity = v end
+        RunService.RenderStepped:Wait()
+        if r then r.Velocity = v + Vector3.new(0, 0.1, 0) end
+    end)
+    table.insert(walkFlingConnections, loopConn)
 end
 
 FlingBtn.MouseButton1Click:Connect(function()
-    if isTornadoFlinging then
-        FlingBtn.Text = "🌪️ Tornado Fling: OFF"
+    if isWalkFlinging then
+        FlingBtn.Text = "🌪️ Walk Fling: OFF"
         FlingBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-        stopTornadoFling()
+        stopWalkFling()
     else
-        FlingBtn.Text = "🌪️ Tornado Fling: ON"
+        FlingBtn.Text = "🌪️ Walk Fling: ON"
         FlingBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-        startTornadoFling()
+        startWalkFling()
     end
 end)
-
 -- ========== AVATAR SCALER TOOL (Collapsible) ==========
 local ScalerFrame = Instance.new("Frame")
 ScalerFrame.Size = UDim2.new(1, -5, 0, 30) -- Starts collapsed
