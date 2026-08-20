@@ -567,7 +567,7 @@ FlingBtn.MouseButton1Click:Connect(function()
         table.clear(originalProperties)
     end
 end)
--- ========== MASS SERVER FLING (Physics Wake Version) ==========
+-- ========== MASS AUTO-FLING (Continuous Roll & Dropdown) ==========
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 local isMassFlinging = false
@@ -694,7 +694,6 @@ local function stopMassFling()
     if massFlingLoop then massFlingLoop:Disconnect(); massFlingLoop = nil end
     if targetCycler then task.cancel(targetCycler); targetCycler = nil end
     
-    -- Restore original physical properties so the car is drivable again
     for part, props in pairs(originalCarProps) do
         if part and part.Parent then part.CustomPhysicalProperties = props end
     end
@@ -706,6 +705,7 @@ local function stopMassFling()
         if base then
             base.Velocity = Vector3.zero
             base.RotVelocity = Vector3.zero
+            base.AssemblyAngularVelocity = Vector3.zero
         end
     end
 end
@@ -722,13 +722,11 @@ local function startMassFling()
     isMassFlinging = true
     table.clear(originalCarProps)
 
-    -- Force maximum density so targets absorb the kinetic transfer
+    -- Max density for massive kinetic energy transfer
     for _, part in ipairs(car:GetDescendants()) do
         if part:IsA("BasePart") then
             originalCarProps[part] = part.CustomPhysicalProperties
             part.CustomPhysicalProperties = PhysicalProperties.new(100, 0, 0, 100, 100)
-            -- CRITICAL: Must be true so the server processes the hit
-            part.CanCollide = true 
         end
     end
 
@@ -745,8 +743,8 @@ local function startMassFling()
                     while isMassFlinging and massFlingTarget == plr and tick() < maxTime do
                         task.wait(0.1)
                         local tRoot = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
-                        -- If velocity spikes or they fall below map, they are dealt with
-                        if not tRoot or tRoot.Velocity.Magnitude > 1000 or tRoot.Position.Y < -50 then
+                        -- Move to the next player if they die, fall into the void, or their velocity spikes massively
+                        if not tRoot or tRoot.Position.Y > 500 or tRoot.Position.Y < -50 or tRoot.Velocity.Magnitude > 1500 then
                             break
                         end
                     end
@@ -756,7 +754,7 @@ local function startMassFling()
         end
     end)
 
-    -- 2. THE STRIKER: Teleports if far, relies purely on physics if close
+    -- 2. THE CONTINUOUS ROLL: Keeps the car glued to the target without jumping back to the sky
     massFlingLoop = RunService.Heartbeat:Connect(function()
         if not isMassFlinging then return end
         if not hum.SeatPart then
@@ -769,21 +767,23 @@ local function startMassFling()
         local tRoot = massFlingTarget and massFlingTarget.Character and massFlingTarget.Character:FindFirstChild("HumanoidRootPart")
         
         if tRoot then
-            -- If we are more than 5 studs away, or the car bounced too far, teleport onto them
-            local dist = (base.Position - tRoot.Position).Magnitude
-            if dist > 5 then
-                base.CFrame = tRoot.CFrame * CFrame.new(0, 0.5, 0)
-            end
+            -- Wrap the car around the target with completely randomized angles every frame
+            local angleX = (math.random(-314, 314) / 100)
+            local angleY = (math.random(-314, 314) / 100)
+            local angleZ = (math.random(-314, 314) / 100)
             
-            -- Inject pure rotational and directional physics.
-            -- Because we STOP CFraming when we are close, the server processes this impact!
-            base.Velocity = Vector3.new(math.random(-25000, 25000), -25000, math.random(-25000, 25000))
-            base.RotVelocity = Vector3.new(50000, 50000, 50000)
+            base.CFrame = tRoot.CFrame * CFrame.Angles(angleX, angleY, angleZ)
+            
+            -- Prevent voiding: Replace the -50000 Y velocity with a positive upward bounce
+            base.Velocity = Vector3.new(math.random(-50000, 50000), math.random(5000, 15000), math.random(-50000, 50000))
+            
+            -- Keep the chaotic rotation active
+            base.RotVelocity = Vector3.new(math.random(-50000, 50000), math.random(-50000, 50000), math.random(-50000, 50000))
         else
-            -- No target? Wait in the air
+            -- If no targets remain, safely hover the car above your own character's last location
             local myRoot = char:FindFirstChild("HumanoidRootPart")
             if myRoot then
-                base.CFrame = myRoot.CFrame * CFrame.new(0, 15, 0)
+                base.CFrame = myRoot.CFrame * CFrame.new(0, 25, 0)
                 base.Velocity = Vector3.zero
                 base.RotVelocity = Vector3.zero
             end
