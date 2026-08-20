@@ -488,10 +488,11 @@ LtAntiSitBtn.MouseButton1Click:Connect(function()
 end)
 
 ----------
--- ========== SYSTEM BROKEN FLING (Negative Y-Axis Desync) ==========
+-- ========== SYSTEM BROKEN V2 (Max Intensity Fling) ==========
 local RunService = game:GetService("RunService")
 local isSystemFlinging = false
 local systemFlingLoop = nil
+local originalProperties = {}
 
 local FlingBtn = Instance.new("TextButton")
 FlingBtn.Size = UDim2.new(1, -5, 0, 40)
@@ -499,7 +500,7 @@ FlingBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
 FlingBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 FlingBtn.Font = Enum.Font.SourceSansBold
 FlingBtn.TextSize = 16
-FlingBtn.Text = "🌪️ Sys Fling: OFF"
+FlingBtn.Text = "🌪️ Max Fling: OFF"
 FlingBtn.BorderSizePixel = 0
 FlingBtn.Parent = ToolsScroll
 
@@ -512,29 +513,40 @@ FlingBtn.MouseButton1Click:Connect(function()
     isSystemFlinging = not isSystemFlinging
 
     if isSystemFlinging then
-        FlingBtn.Text = "🌪️ Sys Fling: ON"
+        FlingBtn.Text = "🌪️ Max Fling: ON"
         FlingBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
         
-        -- Exact logic ripped from the "System Broken" script
+        -- 1. Increase our mass to the engine's limit so we don't bounce off targets
+        table.clear(originalProperties)
+        for _, part in ipairs(char:GetChildren()) do
+            if part:IsA("BasePart") then
+                originalProperties[part] = part.CustomPhysicalProperties
+                part.CustomPhysicalProperties = PhysicalProperties.new(100, 0, 0, 100, 100)
+            end
+        end
+
         systemFlingLoop = RunService.Heartbeat:Connect(function()
             if not char or not root then return end
             
-            -- Save your real movement
-            local savedVelocity = root.Velocity
+            -- Save your real movement and camera orientation
+            local savedVel = root.Velocity
+            local savedRot = root.RotVelocity
             
-            -- Violently spike the hitbox 25,000 studs downward into the floor/target
-            root.Velocity = Vector3.new(math.random(-150, 150), -25000, math.random(-150, 150))
+            -- 2. Violent Multi-Axis Spike (-50,000 Y combined with random X/Z rotation)
+            root.Velocity = Vector3.new(math.random(-50000, 50000), -50000, math.random(-50000, 50000))
+            root.RotVelocity = Vector3.new(math.random(-50000, 50000), math.random(-50000, 50000), math.random(-50000, 50000))
             
-            -- Wait for the engine to process the massive collision
+            -- Wait for the engine to transfer this massive energy to the target
             RunService.RenderStepped:Wait()
             
-            -- Instantly restore real velocity so you don't actually fall through the map
+            -- Instantly restore so we don't break our own screen or fall into the void
             if root then
-                root.Velocity = savedVelocity
+                root.Velocity = savedVel
+                root.RotVelocity = savedRot
             end
         end)
     else
-        FlingBtn.Text = "🌪️ Sys Fling: OFF"
+        FlingBtn.Text = "🌪️ Max Fling: OFF"
         FlingBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
         
         if systemFlingLoop then
@@ -543,7 +555,16 @@ FlingBtn.MouseButton1Click:Connect(function()
         end
         if root then
             root.Velocity = Vector3.zero
+            root.RotVelocity = Vector3.zero
         end
+        
+        -- Restore original avatar mass
+        for part, props in pairs(originalProperties) do
+            if part and part.Parent then
+                part.CustomPhysicalProperties = props
+            end
+        end
+        table.clear(originalProperties)
     end
 end)
 
