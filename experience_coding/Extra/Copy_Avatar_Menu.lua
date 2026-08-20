@@ -488,11 +488,10 @@ LtAntiSitBtn.MouseButton1Click:Connect(function()
 end)
 
 ----------
--- ========== ULTIMATE INTERNET WALK FLING ==========
+-- ========== SYSTEM BROKEN FLING (Negative Y-Axis Desync) ==========
 local RunService = game:GetService("RunService")
-local isWalkFlinging = false
-local flingLoop = nil
-local originalProperties = {}
+local isSystemFlinging = false
+local systemFlingLoop = nil
 
 local FlingBtn = Instance.new("TextButton")
 FlingBtn.Size = UDim2.new(1, -5, 0, 40)
@@ -500,84 +499,54 @@ FlingBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
 FlingBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 FlingBtn.Font = Enum.Font.SourceSansBold
 FlingBtn.TextSize = 16
-FlingBtn.Text = "🌪️ Ultimate Fling: OFF"
+FlingBtn.Text = "🌪️ Sys Fling: OFF"
 FlingBtn.BorderSizePixel = 0
 FlingBtn.Parent = ToolsScroll
 
-local function stopUltimateFling()
-    isWalkFlinging = false
-    if flingLoop then 
-        flingLoop:Disconnect() 
-        flingLoop = nil 
-    end
-    
-    local char = LocalPlayer.Character
-    if char then
-        local root = char:FindFirstChild("HumanoidRootPart")
-        if root then 
-            root.RotVelocity = Vector3.zero
-            root.Velocity = Vector3.zero
-        end
-        
-        -- Restore original physics seamlessly
-        for part, props in pairs(originalProperties) do
-            if part and part.Parent then
-                part.CustomPhysicalProperties = props
-                part.CanCollide = true
-            end
-        end
-        table.clear(originalProperties)
-    end
-end
-
-local function startUltimateFling()
+FlingBtn.MouseButton1Click:Connect(function()
     local char = LocalPlayer.Character
     if not char then return end
     local root = char:FindFirstChild("HumanoidRootPart")
     if not root then return end
 
-    isWalkFlinging = true
-    table.clear(originalProperties)
-    
-    -- 1. The Secret Sauce: Infinite Density & Zero Friction
-    for _, part in ipairs(char:GetChildren()) do
-        if part:IsA("BasePart") then
-            -- Save the original properties so we don't break the avatar later
-            originalProperties[part] = part.CustomPhysicalProperties
-            -- Density 100 makes you an immovable object. Friction 0 makes you glide into their hitbox.
-            part.CustomPhysicalProperties = PhysicalProperties.new(100, 0, 0, 100, 100)
-        end
-    end
+    isSystemFlinging = not isSystemFlinging
 
-    -- 2. Frame-Forced Rotation & Noclip Loop
-    flingLoop = RunService.Stepped:Connect(function()
-        if not isWalkFlinging then return end
-        
-        -- Force NoClip locally so we can walk directly inside their vehicle or avatar
-        for _, part in ipairs(char:GetChildren()) do
-            if part:IsA("BasePart") then
-                part.CanCollide = false
-            end
-        end
-        
-        -- Force rotation velocity every frame (This doesn't spin your screen, only your physics hitbox)
-        if root then
-            root.RotVelocity = Vector3.new(0, 50000, 0)
-        end
-    end)
-end
-
-FlingBtn.MouseButton1Click:Connect(function()
-    if isWalkFlinging then
-        FlingBtn.Text = "🌪️ Ultimate Fling: OFF"
-        FlingBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-        stopUltimateFling()
-    else
-        FlingBtn.Text = "🌪️ Ultimate Fling: ON"
+    if isSystemFlinging then
+        FlingBtn.Text = "🌪️ Sys Fling: ON"
         FlingBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-        startUltimateFling()
+        
+        -- Exact logic ripped from the "System Broken" script
+        systemFlingLoop = RunService.Heartbeat:Connect(function()
+            if not char or not root then return end
+            
+            -- Save your real movement
+            local savedVelocity = root.Velocity
+            
+            -- Violently spike the hitbox 25,000 studs downward into the floor/target
+            root.Velocity = Vector3.new(math.random(-150, 150), -25000, math.random(-150, 150))
+            
+            -- Wait for the engine to process the massive collision
+            RunService.RenderStepped:Wait()
+            
+            -- Instantly restore real velocity so you don't actually fall through the map
+            if root then
+                root.Velocity = savedVelocity
+            end
+        end)
+    else
+        FlingBtn.Text = "🌪️ Sys Fling: OFF"
+        FlingBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+        
+        if systemFlingLoop then
+            systemFlingLoop:Disconnect()
+            systemFlingLoop = nil
+        end
+        if root then
+            root.Velocity = Vector3.zero
+        end
     end
 end)
+
 -- ========== AVATAR SCALER TOOL (Collapsible) ==========
 local ScalerFrame = Instance.new("Frame")
 ScalerFrame.Size = UDim2.new(1, -5, 0, 30) -- Starts collapsed
