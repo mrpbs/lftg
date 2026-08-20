@@ -567,6 +567,132 @@ FlingBtn.MouseButton1Click:Connect(function()
         table.clear(originalProperties)
     end
 end)
+-- ========== VEHICLE BLENDER (Orbit Fling) ==========
+local RunService = game:GetService("RunService")
+local isVehicleBlender = false
+local vehicleBlenderLoop = nil
+local originalVehicleProps = {}
+
+local VehBlenderBtn = Instance.new("TextButton")
+VehBlenderBtn.Size = UDim2.new(1, -5, 0, 40)
+VehBlenderBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+VehBlenderBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+VehBlenderBtn.Font = Enum.Font.SourceSansBold
+VehBlenderBtn.TextSize = 16
+VehBlenderBtn.Text = "🚗 Vehicle Blender: OFF"
+VehBlenderBtn.BorderSizePixel = 0
+VehBlenderBtn.Parent = ToolsScroll
+
+-- Find the vehicle using the exact method from Flames Hub
+local function getMyVehicle()
+    local vehiclesFolder = workspace:FindFirstChild("Vehicles")
+    if not vehiclesFolder then return nil end
+    for _, v in pairs(vehiclesFolder:GetChildren()) do
+        local ownerObj = v:FindFirstChild("owner") or v:FindFirstChild("owner", true)
+        if ownerObj and ownerObj.Value == LocalPlayer then
+            return v
+        end
+    end
+    return nil
+end
+
+local function stopVehicleBlender()
+    isVehicleBlender = false
+    if vehicleBlenderLoop then
+        vehicleBlenderLoop:Disconnect()
+        vehicleBlenderLoop = nil
+    end
+    
+    local car = getMyVehicle()
+    if car then
+        local base = car:FindFirstChild("Base") or car.PrimaryPart
+        if base then
+            base.RotVelocity = Vector3.zero
+            base.Velocity = Vector3.zero
+        end
+        -- Restore original physics
+        for part, props in pairs(originalVehicleProps) do
+            if part and part.Parent then
+                part.CustomPhysicalProperties = props
+                part.CanCollide = true
+            end
+        end
+    end
+    table.clear(originalVehicleProps)
+end
+
+local function startVehicleBlender()
+    local car = getMyVehicle()
+    if not car then return false end
+    local base = car:FindFirstChild("Base") or car.PrimaryPart
+    if not base then return false end
+
+    isVehicleBlender = true
+    table.clear(originalVehicleProps)
+
+    -- 1. Maximize mass for maximum kinetic transfer
+    for _, part in ipairs(car:GetDescendants()) do
+        if part:IsA("BasePart") then
+            originalVehicleProps[part] = part.CustomPhysicalProperties
+            part.CustomPhysicalProperties = PhysicalProperties.new(100, 0, 0, 100, 100)
+        end
+    end
+
+    local angle = 0
+    vehicleBlenderLoop = RunService.Heartbeat:Connect(function()
+        local char = LocalPlayer.Character
+        local root = char and char:FindFirstChild("HumanoidRootPart")
+        
+        -- Auto-disable if your car despawns or you die
+        if not root or not car.Parent then
+            VehBlenderBtn.Text = "🚗 Vehicle Blender: OFF"
+            VehBlenderBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+            stopVehicleBlender()
+            return
+        end
+
+        -- 2. Force NoClip on the vehicle so it phases through you
+        for _, part in ipairs(car:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = false
+            end
+        end
+
+        -- 3. Calculate rapid erratic orbit
+        angle = angle + 0.4 -- Orbit speed
+        local radius = 12 -- Distance from your body
+        local offsetX = math.cos(angle) * radius
+        local offsetZ = math.sin(angle) * radius
+        local randomY = math.random(-3, 8) -- Bounces up and down slightly
+
+        -- 4. Teleport and apply violent rotation
+        base.CFrame = root.CFrame * CFrame.new(offsetX, randomY, offsetZ)
+        base.RotVelocity = Vector3.new(math.random(-50000, 50000), 50000, math.random(-50000, 50000))
+    end)
+    return true
+end
+
+VehBlenderBtn.MouseButton1Click:Connect(function()
+    if isVehicleBlender then
+        VehBlenderBtn.Text = "🚗 Vehicle Blender: OFF"
+        VehBlenderBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+        stopVehicleBlender()
+    else
+        local success = startVehicleBlender()
+        if success then
+            VehBlenderBtn.Text = "🚗 Vehicle Blender: ON"
+            VehBlenderBtn.BackgroundColor3 = Color3.fromRGB(200, 100, 0)
+        else
+            -- Flash red briefly if they don't have a car spawned
+            VehBlenderBtn.Text = "⚠️ SPAWN CAR FIRST"
+            VehBlenderBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+            task.wait(1.5)
+            VehBlenderBtn.Text = "🚗 Vehicle Blender: OFF"
+            VehBlenderBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+        end
+    end
+end)
+
 
 -- ========== AVATAR SCALER TOOL (Collapsible) ==========
 local ScalerFrame = Instance.new("Frame")
