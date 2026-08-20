@@ -567,7 +567,7 @@ FlingBtn.MouseButton1Click:Connect(function()
         table.clear(originalProperties)
     end
 end)
--- ========== MASS AUTO-FLING (Roll & Glue Version) ==========
+-- ========== MASS SERVER FLING (Physics Wake Version) ==========
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 local isMassFlinging = false
@@ -610,7 +610,7 @@ WhitelistToggleBtn.BorderSizePixel = 0
 WhitelistToggleBtn.Parent = MassFlingFrame
 
 local WhitelistScroll = Instance.new("ScrollingFrame")
-WhitelistScroll.Size = UDim2.new(1, -10, 0, 95)
+WhitelistScroll.Size = UDim2.new(1, -10, 0, 150)
 WhitelistScroll.Position = UDim2.new(0, 5, 0, 90)
 WhitelistScroll.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 WhitelistScroll.BorderSizePixel = 0
@@ -628,7 +628,7 @@ local whitelistExpanded = false
 WhitelistToggleBtn.MouseButton1Click:Connect(function()
     whitelistExpanded = not whitelistExpanded
     if whitelistExpanded then
-        MassFlingFrame.Size = UDim2.new(1, -5, 0, 195)
+        MassFlingFrame.Size = UDim2.new(1, -5, 0, 250)
         WhitelistScroll.Visible = true
         WhitelistToggleBtn.Text = "  📜 Whitelist [ ▲ ]"
     else
@@ -694,6 +694,7 @@ local function stopMassFling()
     if massFlingLoop then massFlingLoop:Disconnect(); massFlingLoop = nil end
     if targetCycler then task.cancel(targetCycler); targetCycler = nil end
     
+    -- Restore original physical properties so the car is drivable again
     for part, props in pairs(originalCarProps) do
         if part and part.Parent then part.CustomPhysicalProperties = props end
     end
@@ -705,7 +706,6 @@ local function stopMassFling()
         if base then
             base.Velocity = Vector3.zero
             base.RotVelocity = Vector3.zero
-            base.AssemblyAngularVelocity = Vector3.zero
         end
     end
 end
@@ -722,17 +722,17 @@ local function startMassFling()
     isMassFlinging = true
     table.clear(originalCarProps)
 
-    -- Max density for extreme impact force
+    -- Force maximum density so targets absorb the kinetic transfer
     for _, part in ipairs(car:GetDescendants()) do
         if part:IsA("BasePart") then
             originalCarProps[part] = part.CustomPhysicalProperties
             part.CustomPhysicalProperties = PhysicalProperties.new(100, 0, 0, 100, 100)
-            -- Turn off collisions for everything except the base so the car doesn't get stuck on walls
-            if part ~= base then part.CanCollide = false end
+            -- CRITICAL: Must be true so the server processes the hit
+            part.CanCollide = true 
         end
     end
 
-    -- 1. THE CYCLER: Aggressively switches targets the millisecond they are flung
+    -- 1. THE CYCLER: Locks onto a target until they are flung
     targetCycler = task.spawn(function()
         while isMassFlinging do
             for _, plr in ipairs(Players:GetPlayers()) do
@@ -741,26 +741,24 @@ local function startMassFling()
                 if plr ~= LocalPlayer and not massWhitelist[plr.Name] and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
                     massFlingTarget = plr
                     
-                    local maxTime = tick() + 3 -- Move on if they somehow survive for 3 seconds
+                    local maxTime = tick() + 4
                     while isMassFlinging and massFlingTarget == plr and tick() < maxTime do
-                        task.wait()
+                        task.wait(0.1)
                         local tRoot = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
-                        -- If they are destroyed, shot to the sky (> 500), or shoved under the map (< -50), they are dead
-                        if not tRoot or tRoot.Position.Y > 500 or tRoot.Position.Y < -50 or tRoot.Velocity.Magnitude > 1500 then
+                        -- If velocity spikes or they fall below map, they are dealt with
+                        if not tRoot or tRoot.Velocity.Magnitude > 1000 or tRoot.Position.Y < -50 then
                             break
                         end
                     end
                 end
             end
-            task.wait() -- Instantly loop back to catch respawns
+            task.wait() 
         end
     end)
 
-    -- 2. THE ROLLING BALL ATTACK
+    -- 2. THE STRIKER: Teleports if far, relies purely on physics if close
     massFlingLoop = RunService.Heartbeat:Connect(function()
         if not isMassFlinging then return end
-        
-        -- Seat Detection: Aborts safely if you hop out or get knocked out
         if not hum.SeatPart then
             MassFlingBtn.Text = "🚗 START SERVER FLING"
             MassFlingBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
@@ -771,18 +769,18 @@ local function startMassFling()
         local tRoot = massFlingTarget and massFlingTarget.Character and massFlingTarget.Character:FindFirstChild("HumanoidRootPart")
         
         if tRoot then
-            -- Glue the car to the target's center and rotate it randomly on all 3 axes
-            local angleX = math.random() * math.pi * 2
-            local angleY = math.random() * math.pi * 2
-            local angleZ = math.random() * math.pi * 2
+            -- If we are more than 5 studs away, or the car bounced too far, teleport onto them
+            local dist = (base.Position - tRoot.Position).Magnitude
+            if dist > 5 then
+                base.CFrame = tRoot.CFrame * CFrame.new(0, 0.5, 0)
+            end
             
-            base.CFrame = tRoot.CFrame * CFrame.Angles(angleX, angleY, angleZ)
-            
-            -- Prevent downward velocity so the car doesn't dive into the void
-            base.Velocity = Vector3.new(0, 1000, 0)
+            -- Inject pure rotational and directional physics.
+            -- Because we STOP CFraming when we are close, the server processes this impact!
+            base.Velocity = Vector3.new(math.random(-25000, 25000), -25000, math.random(-25000, 25000))
             base.RotVelocity = Vector3.new(50000, 50000, 50000)
         else
-            -- If no target is alive, hover safely directly above your own character's last location
+            -- No target? Wait in the air
             local myRoot = char:FindFirstChild("HumanoidRootPart")
             if myRoot then
                 base.CFrame = myRoot.CFrame * CFrame.new(0, 15, 0)
