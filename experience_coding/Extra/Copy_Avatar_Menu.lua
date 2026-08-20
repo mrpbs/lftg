@@ -567,125 +567,104 @@ FlingBtn.MouseButton1Click:Connect(function()
         table.clear(originalProperties)
     end
 end)
--- ========== TRUE FE VEHICLE BLENDER (Server-Sided) ==========
+-- ========== DRIVABLE TORNADO (Camera-Safe Vehicle Fling) ==========
 local RunService = game:GetService("RunService")
-local isVehicleBlender = false
-local vehicleBlenderLoop = nil
-local activeMovers = {}
+local isCarFlinging = false
+local carFlingLoop = nil
+local originalCarProps = {}
 
-local VehBlenderBtn = Instance.new("TextButton")
-VehBlenderBtn.Size = UDim2.new(1, -5, 0, 40)
-VehBlenderBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-VehBlenderBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-VehBlenderBtn.Font = Enum.Font.SourceSansBold
-VehBlenderBtn.TextSize = 16
-VehBlenderBtn.Text = "🚗 Server Blender: OFF"
-VehBlenderBtn.BorderSizePixel = 0
-VehBlenderBtn.Parent = ToolsScroll
+local CarFlingBtn = Instance.new("TextButton")
+CarFlingBtn.Size = UDim2.new(1, -5, 0, 40)
+CarFlingBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+CarFlingBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+CarFlingBtn.Font = Enum.Font.SourceSansBold
+CarFlingBtn.TextSize = 16
+CarFlingBtn.Text = "🚗 Drivable Tornado: OFF"
+CarFlingBtn.BorderSizePixel = 0
+CarFlingBtn.Parent = ToolsScroll
 
-local function getMyVehicle()
-    local vehiclesFolder = workspace:FindFirstChild("Vehicles")
-    if not vehiclesFolder then return nil end
-    for _, v in pairs(vehiclesFolder:GetChildren()) do
-        local ownerObj = v:FindFirstChild("owner") or v:FindFirstChild("owner", true)
-        if ownerObj and ownerObj.Value == LocalPlayer then return v end
-    end
-    return nil
-end
-
-local function stopVehicleBlender()
-    isVehicleBlender = false
-    if vehicleBlenderLoop then
-        vehicleBlenderLoop:Disconnect()
-        vehicleBlenderLoop = nil
+local function stopCarFling()
+    isCarFlinging = false
+    if carFlingLoop then 
+        carFlingLoop:Disconnect() 
+        carFlingLoop = nil 
     end
     
-    -- Destroy the physics movers and collision constraints
-    for _, obj in pairs(activeMovers) do
-        if obj and obj.Parent then obj:Destroy() end
-    end
-    table.clear(activeMovers)
-end
-
-local function startVehicleBlender()
-    local car = getMyVehicle()
-    if not car then return false end
-    local base = car:FindFirstChild("Base") or car.PrimaryPart
-    if not base then return false end
-
-    local char = LocalPlayer.Character
-    local root = char and char:FindFirstChild("HumanoidRootPart")
-    if not root then return false end
-
-    isVehicleBlender = true
-    table.clear(activeMovers)
-
-    -- 1. Protect yourself: Add NoCollisionConstraints between you and the car
-    for _, carPart in ipairs(car:GetDescendants()) do
-        if carPart:IsA("BasePart") then
-            -- We leave CanCollide = true so it hits enemies!
-            for _, myPart in ipairs(char:GetChildren()) do
-                if myPart:IsA("BasePart") then
-                    local ncc = Instance.new("NoCollisionConstraint")
-                    ncc.Part0 = myPart
-                    ncc.Part1 = carPart
-                    ncc.Parent = myPart
-                    table.insert(activeMovers, ncc)
-                end
-            end
+    -- Restore normal physics and collisions
+    for part, props in pairs(originalCarProps) do
+        if part and part.Parent then 
+            part.CustomPhysicalProperties = props 
+            part.CanCollide = true
         end
     end
+    table.clear(originalCarProps)
+    
+    local char = LocalPlayer.Character
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    local vehicle = hum and hum.SeatPart and hum.SeatPart:FindFirstAncestorOfClass("Model")
+    local base = vehicle and (vehicle.PrimaryPart or vehicle:FindFirstChild("Base"))
+    if base then
+        base.RotVelocity = Vector3.zero
+        base.AssemblyAngularVelocity = Vector3.zero
+    end
+end
 
-    -- 2. Inject Physical Server Movers instead of local CFraming
-    local bp = Instance.new("BodyPosition")
-    bp.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-    bp.P = 50000 -- Aggressive tracking speed
-    bp.Parent = base
-    table.insert(activeMovers, bp)
-
-    local bav = Instance.new("BodyAngularVelocity")
-    bav.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
-    bav.AngularVelocity = Vector3.new(math.random(-50000, 50000), 50000, math.random(-50000, 50000))
-    bav.Parent = base
-    table.insert(activeMovers, bav)
-
-    -- 3. Update the Target Position for the BodyPosition
-    local angle = 0
-    vehicleBlenderLoop = RunService.Heartbeat:Connect(function()
-        if not char or not root or not car.Parent then
-            VehBlenderBtn.Text = "🚗 Server Blender: OFF"
-            VehBlenderBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-            stopVehicleBlender()
+CarFlingBtn.MouseButton1Click:Connect(function()
+    if isCarFlinging then
+        CarFlingBtn.Text = "🚗 Drivable Tornado: OFF"
+        CarFlingBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+        stopCarFling()
+    else
+        local char = LocalPlayer.Character
+        local hum = char and char:FindFirstChildOfClass("Humanoid")
+        
+        -- You MUST be seated to have Network Ownership of the vehicle
+        if not hum or not hum.SeatPart then
+            CarFlingBtn.Text = "⚠️ SIT IN DRIVER SEAT FIRST"
+            CarFlingBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+            task.wait(1.5)
+            CarFlingBtn.Text = "🚗 Drivable Tornado: OFF"
+            CarFlingBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
             return
         end
-
-        angle = angle + 0.15 -- Orbit speed (Keep slightly lower so physics don't break)
-        local radius = 15 -- Distance from your body
         
-        local targetPos = root.Position + Vector3.new(math.cos(angle) * radius, math.random(-2, 5), math.sin(angle) * radius)
-        bp.Position = targetPos
-    end)
-    
-    return true
-end
-
-VehBlenderBtn.MouseButton1Click:Connect(function()
-    if isVehicleBlender then
-        VehBlenderBtn.Text = "🚗 Server Blender: OFF"
-        VehBlenderBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-        stopVehicleBlender()
-    else
-        local success = startVehicleBlender()
-        if success then
-            VehBlenderBtn.Text = "🚗 Server Blender: ON"
-            VehBlenderBtn.BackgroundColor3 = Color3.fromRGB(200, 100, 0)
-        else
-            VehBlenderBtn.Text = "⚠️ SPAWN CAR FIRST"
-            VehBlenderBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-            task.wait(1.5)
-            VehBlenderBtn.Text = "🚗 Server Blender: OFF"
-            VehBlenderBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+        local vehicle = hum.SeatPart:FindFirstAncestorOfClass("Model")
+        local base = vehicle and (vehicle.PrimaryPart or vehicle:FindFirstChild("Base") or hum.SeatPart)
+        if not base then return end
+        
+        isCarFlinging = true
+        CarFlingBtn.Text = "🚗 Drivable Tornado: ON"
+        CarFlingBtn.BackgroundColor3 = Color3.fromRGB(200, 100, 0)
+        
+        -- Max out vehicle density so targets absorb 100% of the kinetic impact
+        table.clear(originalCarProps)
+        for _, part in ipairs(vehicle:GetDescendants()) do
+            if part:IsA("BasePart") then
+                originalCarProps[part] = part.CustomPhysicalProperties
+                part.CustomPhysicalProperties = PhysicalProperties.new(100, 0, 0, 100, 100)
+            end
         end
+        
+        carFlingLoop = RunService.Stepped:Connect(function()
+            -- Auto-disable if you jump out of the car
+            if not hum.SeatPart then 
+                stopCarFling()
+                CarFlingBtn.Text = "🚗 Drivable Tornado: OFF"
+                CarFlingBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+                return 
+            end
+            
+            -- Phasing: Turn off collisions so you can drive through buildings to reach targets
+            for _, part in ipairs(vehicle:GetDescendants()) do
+                if part:IsA("BasePart") and part ~= hum.SeatPart then
+                    part.CanCollide = false
+                end
+            end
+            
+            -- Camera-Safe Rotation: Applies lethal physics spin to the hitbox without spinning your screen
+            base.RotVelocity = Vector3.new(0, 50000, 0)
+            base.AssemblyAngularVelocity = Vector3.new(0, 50000, 0)
+        end)
     end
 end)
 
