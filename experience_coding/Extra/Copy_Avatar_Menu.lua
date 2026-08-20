@@ -247,10 +247,11 @@ ToolsListLayout.Parent = ToolsScroll
 ToolsListLayout.SortOrder = Enum.SortOrder.LayoutOrder
 ToolsListLayout.Padding = UDim.new(0, 6)
 
--- ========== NO CLIP TOOL ==========
+-- ========== NO CLIP TOOL (State-Saving Hybrid) ==========
 local RunService = game:GetService("RunService")
 local noclipEnabled = false
 local noclipConnection = nil
+local originalCollisions = {}
 
 local NoclipBtn = Instance.new("TextButton")
 NoclipBtn.Size = UDim2.new(1, -5, 0, 40)
@@ -263,24 +264,48 @@ NoclipBtn.BorderSizePixel = 0
 NoclipBtn.Parent = ToolsScroll
 
 NoclipBtn.MouseButton1Click:Connect(function()
+    local char = LocalPlayer.Character
+    if not char then return end
+
     noclipEnabled = not noclipEnabled
+
     if noclipEnabled then
         NoclipBtn.Text = "👻 No Clip: ON"
         NoclipBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
+        
+        -- 1. Save the original collision states exactly like the reference script
+        table.clear(originalCollisions)
+        for _, v in ipairs(char:GetDescendants()) do
+            if v:IsA("BasePart") then
+                originalCollisions[v] = v.CanCollide
+            end
+        end
+
+        -- 2. Force it false continuously to fight the Humanoid's auto-physics
         noclipConnection = RunService.Stepped:Connect(function()
-            local char = LocalPlayer.Character
-            if char then
-                for _, v in pairs(char:GetDescendants()) do
-                    if v:IsA("BasePart") and v.CanCollide then
-                        v.CanCollide = false
-                    end
+            for _, v in ipairs(char:GetDescendants()) do
+                if v:IsA("BasePart") then
+                    v.CanCollide = false
                 end
             end
         end)
     else
         NoclipBtn.Text = "👻 No Clip: OFF"
         NoclipBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-        if noclipConnection then noclipConnection:Disconnect() end
+        
+        -- Stop the forced loop
+        if noclipConnection then 
+            noclipConnection:Disconnect() 
+            noclipConnection = nil 
+        end
+        
+        -- 3. Restore original collisions cleanly like the reference script
+        for part, originalState in pairs(originalCollisions) do
+            if part and part.Parent then
+                part.CanCollide = originalState
+            end
+        end
+        table.clear(originalCollisions)
     end
 end)
 -- ========== FE INVISIBLE TOOL (Desync Method) ==========
