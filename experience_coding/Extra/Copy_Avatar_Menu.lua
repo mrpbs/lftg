@@ -488,9 +488,9 @@ LtAntiSitBtn.MouseButton1Click:Connect(function()
 end)
 
 ----------
--- ========== UNIVERSAL WALK FLING TOOL ==========
-local isFlinging = false
-local flingConnections = {}
+-- ========== TORNADO WALK FLING (Stable Version) ==========
+local isTornadoFlinging = false
+local flingSpin = nil
 
 local FlingBtn = Instance.new("TextButton")
 FlingBtn.Size = UDim2.new(1, -5, 0, 40)
@@ -498,92 +498,53 @@ FlingBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
 FlingBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 FlingBtn.Font = Enum.Font.SourceSansBold
 FlingBtn.TextSize = 16
-FlingBtn.Text = "🌪️ Walk Fling: OFF"
+FlingBtn.Text = "🌪️ Tornado Fling: OFF"
 FlingBtn.BorderSizePixel = 0
 FlingBtn.Parent = ToolsScroll
 
-local function stopFling()
-    isFlinging = false
-    
-    for _, conn in pairs(flingConnections) do
-        if conn.Connected then conn:Disconnect() end
+local function stopTornadoFling()
+    isTornadoFlinging = false
+    if flingSpin then
+        flingSpin:Destroy()
+        flingSpin = nil
     end
-    table.clear(flingConnections)
     
     local char = LocalPlayer.Character
     if char then
         local root = char:FindFirstChild("HumanoidRootPart")
-        if root then root.Velocity = Vector3.zero end
-        
-        local hum = char:FindFirstChildOfClass("Humanoid")
-        if hum then 
-            hum.PlatformStand = false 
-            hum:ChangeState(Enum.HumanoidStateType.GettingUp) 
+        if root then 
+            -- Reset the spinning momentum so you stop cleanly
+            root.AssemblyAngularVelocity = Vector3.zero 
         end
     end
 end
 
-local function startFling()
-    isFlinging = true
+local function startTornadoFling()
     local char = LocalPlayer.Character
     if not char then return end
+    local root = char:FindFirstChild("HumanoidRootPart")
+    if not root then return end
+
+    isTornadoFlinging = true
     
-    -- 1. Hook touches to fling EVERYTHING (Players, Hackers, Vehicles)
-    for _, part in ipairs(char:GetChildren()) do
-        if part:IsA("BasePart") then
-            local touchConn = part.Touched:Connect(function(hit)
-                if not isFlinging then return end
-                if hit:IsDescendantOf(char) then return end
-                
-                -- Find the main root part of whatever we just touched
-                local targetRoot = hit
-                local hitModel = hit:FindFirstAncestorOfClass("Model")
-                if hitModel then
-                    targetRoot = hitModel.PrimaryPart or hitModel:FindFirstChild("HumanoidRootPart") or hit
-                end
-                
-                if targetRoot and not targetRoot.Anchored then
-                    local myRoot = char:FindFirstChild("HumanoidRootPart")
-                    local v = myRoot and myRoot.CFrame.LookVector or (Vector3.new(math.random(), math.random(), math.random()).Unit)
-                    local power = 15000 -- Massive force multiplier
-                    
-                    -- Inject the physics velocity
-                    targetRoot.Velocity = v * power + Vector3.new(0, power, 0)
-                    RunService.RenderStepped:Wait()
-                    if targetRoot then targetRoot.Velocity = v * power end
-                end
-            end)
-            table.insert(flingConnections, touchConn)
-        end
-    end
-    
-    -- 2. The Physics Desync Loop (Turns your body into a physical hazard)
-    local loopConn = RunService.Heartbeat:Connect(function()
-        if not isFlinging then return end
-        local root = char:FindFirstChild("HumanoidRootPart")
-        if not root then return end
-        
-        local v = root.Velocity
-        root.Velocity = v * 10000 + Vector3.new(0, 10000, 0)
-        
-        -- Trick the server, but snap back locally so your camera doesn't break
-        RunService.RenderStepped:Wait()
-        if root then root.Velocity = v end
-        RunService.RenderStepped:Wait()
-        if root then root.Velocity = v + Vector3.new(0, 0.1, 0) end
-    end)
-    table.insert(flingConnections, loopConn)
+    -- Create the massive spinning force
+    flingSpin = Instance.new("BodyAngularVelocity")
+    flingSpin.Name = "LethalSpin"
+    -- Lock the X and Z axes so you don't flip over, only spin on the Y axis
+    flingSpin.MaxTorque = Vector3.new(0, math.huge, 0)
+    flingSpin.AngularVelocity = Vector3.new(0, 50000, 0)
+    flingSpin.Parent = root
 end
 
 FlingBtn.MouseButton1Click:Connect(function()
-    if isFlinging then
-        FlingBtn.Text = "🌪️ Walk Fling: OFF"
+    if isTornadoFlinging then
+        FlingBtn.Text = "🌪️ Tornado Fling: OFF"
         FlingBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-        stopFling()
+        stopTornadoFling()
     else
-        FlingBtn.Text = "🌪️ Walk Fling: ON"
+        FlingBtn.Text = "🌪️ Tornado Fling: ON"
         FlingBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-        startFling()
+        startTornadoFling()
     end
 end)
 
