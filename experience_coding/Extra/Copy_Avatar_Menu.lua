@@ -704,7 +704,7 @@ VisPlusBtn.MouseButton1Click:Connect(function()
         TurnInvisiblePlus()
     end
 end)
--- ========== MASS SERVER FLING (Underground Uppercut Version) ==========
+-- ========== MASS SERVER FLING (Looping + Status Bar Version) ==========
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 local isMassFlinging = false
@@ -714,29 +714,57 @@ local massFlingTarget = nil
 local massWhitelist = {}
 local originalCarProps = {}
 
--- Main Container (Starts Collapsed)
+-- Main Container (Adjusted Height for Status Bar)
 local MassFlingFrame = Instance.new("Frame")
-MassFlingFrame.Size = UDim2.new(1, -5, 0, 95)
+MassFlingFrame.Size = UDim2.new(1, -5, 0, 135)
 MassFlingFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 38)
 MassFlingFrame.BorderSizePixel = 0
 MassFlingFrame.ClipsDescendants = true
 MassFlingFrame.Parent = ToolsScroll
 
+local MassFlingTitle = Instance.new("TextLabel")
+MassFlingTitle.Size = UDim2.new(1, -10, 0, 20)
+MassFlingTitle.Position = UDim2.new(0, 5, 0, 5)
+MassFlingTitle.Text = "🚗 Mass Orbital Strike"
+MassFlingTitle.TextColor3 = Color3.fromRGB(0, 255, 200)
+MassFlingTitle.Font = Enum.Font.SourceSansBold
+MassFlingTitle.TextSize = 14
+MassFlingTitle.TextXAlignment = Enum.TextXAlignment.Left
+MassFlingTitle.BackgroundTransparency = 1
+MassFlingTitle.Parent = MassFlingFrame
+
 local MassFlingBtn = Instance.new("TextButton")
-MassFlingBtn.Size = UDim2.new(1, -10, 0, 40)
-MassFlingBtn.Position = UDim2.new(0, 5, 0, 5)
+MassFlingBtn.Size = UDim2.new(1, -10, 0, 35)
+MassFlingBtn.Position = UDim2.new(0, 5, 0, 25)
 MassFlingBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
 MassFlingBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 MassFlingBtn.Font = Enum.Font.SourceSansBold
 MassFlingBtn.TextSize = 16
-MassFlingBtn.Text = "🚗 START SERVER FLING"
+MassFlingBtn.Text = "START SERVER FLING"
 MassFlingBtn.BorderSizePixel = 0
 MassFlingBtn.Parent = MassFlingFrame
+
+-- Live Status Bar
+local StatusBar = Instance.new("TextLabel")
+StatusBar.Size = UDim2.new(1, -10, 0, 25)
+StatusBar.Position = UDim2.new(0, 5, 0, 65)
+StatusBar.Text = "Status: Waiting..."
+StatusBar.TextColor3 = Color3.fromRGB(150, 150, 150)
+StatusBar.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+StatusBar.Font = Enum.Font.Code
+StatusBar.TextSize = 12
+StatusBar.BorderSizePixel = 0
+StatusBar.Parent = MassFlingFrame
+
+local function updateStatus(text, color)
+    StatusBar.Text = " " .. text
+    StatusBar.TextColor3 = color or Color3.fromRGB(255, 255, 255)
+end
 
 -- Whitelist Dropdown Button
 local WhitelistToggleBtn = Instance.new("TextButton")
 WhitelistToggleBtn.Size = UDim2.new(1, -10, 0, 30)
-WhitelistToggleBtn.Position = UDim2.new(0, 5, 0, 55)
+WhitelistToggleBtn.Position = UDim2.new(0, 5, 0, 95)
 WhitelistToggleBtn.BackgroundColor3 = Color3.fromRGB(25, 25, 32)
 WhitelistToggleBtn.TextColor3 = Color3.fromRGB(0, 255, 200)
 WhitelistToggleBtn.Font = Enum.Font.SourceSansBold
@@ -748,7 +776,7 @@ WhitelistToggleBtn.Parent = MassFlingFrame
 
 local WhitelistScroll = Instance.new("ScrollingFrame")
 WhitelistScroll.Size = UDim2.new(1, -10, 0, 150)
-WhitelistScroll.Position = UDim2.new(0, 5, 0, 90)
+WhitelistScroll.Position = UDim2.new(0, 5, 0, 130)
 WhitelistScroll.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 WhitelistScroll.BorderSizePixel = 0
 WhitelistScroll.ScrollBarThickness = 4
@@ -770,11 +798,11 @@ local whitelistExpanded = false
 WhitelistToggleBtn.MouseButton1Click:Connect(function()
     whitelistExpanded = not whitelistExpanded
     if whitelistExpanded then
-        MassFlingFrame.Size = UDim2.new(1, -5, 0, 250)
+        MassFlingFrame.Size = UDim2.new(1, -5, 0, 290)
         WhitelistScroll.Visible = true
         WhitelistToggleBtn.Text = "  📜 Whitelist [ ▲ ]"
     else
-        MassFlingFrame.Size = UDim2.new(1, -5, 0, 95)
+        MassFlingFrame.Size = UDim2.new(1, -5, 0, 135)
         WhitelistScroll.Visible = false
         WhitelistToggleBtn.Text = "  📜 Whitelist [ ▼ ]"
     end
@@ -844,6 +872,7 @@ end
 local function stopMassFling()
     isMassFlinging = false
     massFlingTarget = nil
+    updateStatus("Stopped.", Color3.fromRGB(200, 50, 50))
     
     if massFlingLoop then massFlingLoop:Disconnect(); massFlingLoop = nil end
     if targetCycler then task.cancel(targetCycler); targetCycler = nil end
@@ -884,46 +913,93 @@ local function startMassFling()
             part.CanCollide = true
         end
     end
+    
+    local vehiclesFolder = workspace:FindFirstChild("Vehicles")
 
-    -- 1. LIGHTNING CYCLER
+    -- 1. LOOPING CYCLER
     targetCycler = task.spawn(function()
         while isMassFlinging do
-            for _, plr in ipairs(Players:GetPlayers()) do
+            local playerList = Players:GetPlayers()
+            
+            for _, plr in ipairs(playerList) do
                 if not isMassFlinging then break end
+                if plr == LocalPlayer or massWhitelist[plr.Name] then continue end
                 
-                if plr ~= LocalPlayer and not massWhitelist[plr.Name] and plr.Character then
-                    local tRoot = plr.Character:FindFirstChild("HumanoidRootPart")
-                    local tHum = plr.Character:FindFirstChildOfClass("Humanoid")
+                local tChar = plr.Character
+                local tRoot = tChar and tChar:FindFirstChild("HumanoidRootPart")
+                local tHum = tChar and tChar:FindFirstChildOfClass("Humanoid")
+                
+                -- Dead or no character
+                if not tChar or not tRoot or not tHum then 
+                    updateStatus("❌ Skipped " .. plr.Name .. " (No Char)", Color3.fromRGB(150, 150, 150))
+                    task.wait(0.1)
+                    continue 
+                end
+                
+                -- Void or Sky
+                if tRoot.Position.Y < -40 or tRoot.Position.Y > 400 then
+                    updateStatus("❌ Skipped " .. plr.Name .. " (Void/Sky)", Color3.fromRGB(150, 150, 150))
+                    task.wait(0.1)
+                    continue
+                end
+                
+                -- Sitting Logic
+                if tHum.Sit and tHum.SeatPart then
+                    local isSittingInCar = false
+                    local vehicleAncestor = tHum.SeatPart:FindFirstAncestorOfClass("Model")
+                    -- If their seat is inside the Vehicles folder, it's a car, attack!
+                    if vehiclesFolder and vehicleAncestor and vehicleAncestor:IsDescendantOf(vehiclesFolder) then
+                        isSittingInCar = true
+                    end
                     
-                    if tRoot and tHum and not tHum.Sit and tRoot.Position.Y > -40 and tRoot.Position.Y < 400 then
-                        massFlingTarget = plr
-                        
-                        local ticks = 0
-                        while isMassFlinging and massFlingTarget == plr and ticks < 10 do
-                            task.wait(0.03) 
-                            ticks = ticks + 1
-                            
-                            local currentRoot = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
-                            local currentHum = plr.Character and plr.Character:FindFirstChildOfClass("Humanoid")
-                            
-                            if not currentRoot or not currentHum or currentHum.Sit or currentRoot.Velocity.Magnitude > 300 or currentRoot.Position.Y < -40 then
-                                break 
-                            end
-                        end
+                    -- If they are sitting, but NOT in a car (normal chair/bench), skip them.
+                    if not isSittingInCar then
+                        updateStatus("❌ Skipped " .. plr.Name .. " (In Chair)", Color3.fromRGB(200, 150, 50))
+                        task.wait(0.1)
+                        continue
                     end
                 end
+
+                -- Valid Target! Lock on.
+                massFlingTarget = plr
+                updateStatus("🎯 Targeting: " .. plr.Name, Color3.fromRGB(200, 200, 50))
+                
+                local ticks = 0
+                local wasFlung = false
+                
+                -- Bomb them for up to ~0.5 seconds
+                while isMassFlinging and massFlingTarget == plr and ticks < 15 do
+                    task.wait(0.03) 
+                    ticks = ticks + 1
+                    
+                    local currentRoot = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
+                    if not currentRoot or currentRoot.Velocity.Magnitude > 300 or currentRoot.Position.Y < -40 or currentRoot.Position.Y > 400 then
+                        wasFlung = true
+                        break 
+                    end
+                end
+                
+                if wasFlung then
+                    updateStatus("✅ Flung: " .. plr.Name, Color3.fromRGB(50, 200, 100))
+                else
+                    updateStatus("⚠️ Timeout: " .. plr.Name, Color3.fromRGB(200, 100, 100))
+                end
+                
+                task.wait(0.1) -- Breathe before the next target
             end
-            task.wait(0.05) 
+            
+            updateStatus("🔄 Restarting list...", Color3.fromRGB(100, 150, 255))
+            task.wait(0.5) -- Finished all players, wait half a second before starting from the top again
         end
     end)
 
-    -- 2. UNDERGROUND UPPERCUT DESYNC
+    -- 2. ORBITAL STRIKE
     massFlingLoop = RunService.Heartbeat:Connect(function()
         if not isMassFlinging then return end
         
         -- Auto-abort if user jumps out of car
         if not hum.SeatPart then
-            MassFlingBtn.Text = "🚗 START SERVER FLING"
+            MassFlingBtn.Text = "START SERVER FLING"
             MassFlingBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
             stopMassFling()
             return
@@ -932,12 +1008,18 @@ local function startMassFling()
         local tRoot = massFlingTarget and massFlingTarget.Character and massFlingTarget.Character:FindFirstChild("HumanoidRootPart")
         local tHum = massFlingTarget and massFlingTarget.Character and massFlingTarget.Character:FindFirstChildOfClass("Humanoid")
         
-        if tRoot and tHum and not tHum.Sit then
-            -- THE SAFE ZONE: Hidden 18 studs directly beneath the target's feet (safe from the -50 void kill layer)
-            local undergroundPos = tRoot.CFrame * CFrame.new(0, -18, 0)
+        -- Use the SeatPart as the target if they are in a car, otherwise use HumanoidRootPart
+        local strikeTarget = tRoot
+        if tHum and tHum.Sit and tHum.SeatPart then
+            strikeTarget = tHum.SeatPart
+        end
+        
+        if strikeTarget then
+            -- THE SAFE ZONE: Hidden 18 studs directly beneath the target
+            local undergroundPos = strikeTarget.CFrame * CFrame.new(0, -18, 0)
             
-            -- THE STRIKE ZONE: Placed directly onto their torso from beneath
-            local strikePos = tRoot.CFrame * CFrame.new(0, -1.5, 0)
+            -- THE STRIKE ZONE: Placed directly onto them from beneath
+            local strikePos = strikeTarget.CFrame * CFrame.new(0, -1.5, 0)
             
             -- Teleport to strike zone and launch UPWARD
             base.CFrame = strikePos
@@ -968,19 +1050,19 @@ end
 
 MassFlingBtn.MouseButton1Click:Connect(function()
     if isMassFlinging then
-        MassFlingBtn.Text = "🚗 START SERVER FLING"
+        MassFlingBtn.Text = "START SERVER FLING"
         MassFlingBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
         stopMassFling()
     else
         local success = startMassFling()
         if success then
-            MassFlingBtn.Text = "🛑 STOP SERVER FLING"
+            MassFlingBtn.Text = "STOP SERVER FLING"
             MassFlingBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
         else
             MassFlingBtn.Text = "⚠️ SIT IN DRIVER SEAT FIRST"
             MassFlingBtn.BackgroundColor3 = Color3.fromRGB(200, 100, 0)
             task.wait(1.5)
-            MassFlingBtn.Text = "🚗 START SERVER FLING"
+            MassFlingBtn.Text = "START SERVER FLING"
             MassFlingBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
         end
     end
