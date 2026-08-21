@@ -567,6 +567,192 @@ FlingBtn.MouseButton1Click:Connect(function()
         table.clear(originalProperties)
     end
 end)
+-- ========== ANTI-SPIN SPECTATE (Dropdown Version) ==========
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+local isViewing = false
+local viewLoop = nil
+local viewPart = nil
+local selectedSpectateTarget = nil
+
+-- Main Container
+local SpectateFrame = Instance.new("Frame")
+SpectateFrame.Size = UDim2.new(1, -5, 0, 105)
+SpectateFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 38)
+SpectateFrame.BorderSizePixel = 0
+SpectateFrame.ClipsDescendants = true
+SpectateFrame.Parent = ToolsScroll
+
+local SpectateTitle = Instance.new("TextLabel")
+SpectateTitle.Size = UDim2.new(1, -10, 0, 20)
+SpectateTitle.Position = UDim2.new(0, 5, 0, 5)
+SpectateTitle.Text = "👁️ Anti-Spin Spectate"
+SpectateTitle.TextColor3 = Color3.fromRGB(0, 255, 200)
+SpectateTitle.Font = Enum.Font.SourceSansBold
+SpectateTitle.TextSize = 14
+SpectateTitle.TextXAlignment = Enum.TextXAlignment.Left
+SpectateTitle.BackgroundTransparency = 1
+SpectateTitle.Parent = SpectateFrame
+
+-- Dropdown Toggle Button
+local DropdownBtn = Instance.new("TextButton")
+DropdownBtn.Size = UDim2.new(1, -10, 0, 30)
+DropdownBtn.Position = UDim2.new(0, 5, 0, 30)
+DropdownBtn.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
+DropdownBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+DropdownBtn.Font = Enum.Font.SourceSansBold
+DropdownBtn.TextSize = 14
+DropdownBtn.Text = "  👤 Select Player [ ▼ ]"
+DropdownBtn.TextXAlignment = Enum.TextXAlignment.Left
+DropdownBtn.BorderSizePixel = 0
+DropdownBtn.Parent = SpectateFrame
+
+-- View / Unview Toggle Button
+local ViewBtn = Instance.new("TextButton")
+ViewBtn.Size = UDim2.new(1, -10, 0, 30)
+ViewBtn.Position = UDim2.new(0, 5, 0, 65)
+ViewBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+ViewBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ViewBtn.Font = Enum.Font.SourceSansBold
+ViewBtn.TextSize = 14
+ViewBtn.Text = "👁️ VIEW"
+ViewBtn.BorderSizePixel = 0
+ViewBtn.Parent = SpectateFrame
+
+-- Dropdown List Container
+local DropdownScroll = Instance.new("ScrollingFrame")
+DropdownScroll.Size = UDim2.new(1, -10, 0, 120)
+DropdownScroll.Position = UDim2.new(0, 5, 0, 100)
+DropdownScroll.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+DropdownScroll.BorderSizePixel = 0
+DropdownScroll.ScrollBarThickness = 4
+DropdownScroll.Visible = false
+DropdownScroll.Parent = SpectateFrame
+
+local DropdownLayout = Instance.new("UIListLayout")
+DropdownLayout.SortOrder = Enum.SortOrder.LayoutOrder
+DropdownLayout.Padding = UDim.new(0, 2)
+DropdownLayout.Parent = DropdownScroll
+
+-- Dropdown Animation Logic
+local dropdownExpanded = false
+local function toggleDropdown()
+    dropdownExpanded = not dropdownExpanded
+    if dropdownExpanded then
+        SpectateFrame.Size = UDim2.new(1, -5, 0, 225)
+        DropdownScroll.Visible = true
+        DropdownBtn.Text = DropdownBtn.Text:gsub("▼", "▲")
+    else
+        SpectateFrame.Size = UDim2.new(1, -5, 0, 105)
+        DropdownScroll.Visible = false
+        DropdownBtn.Text = DropdownBtn.Text:gsub("▲", "▼")
+    end
+end
+DropdownBtn.MouseButton1Click:Connect(toggleDropdown)
+
+-- Populate Player List
+local function refreshPlayerList()
+    -- Clear old buttons
+    for _, child in ipairs(DropdownScroll:GetChildren()) do
+        if child:IsA("TextButton") then child:Destroy() end
+    end
+    
+    -- 1. Add Pinned Refresh Button
+    local refreshBtn = Instance.new("TextButton")
+    refreshBtn.Size = UDim2.new(1, -5, 0, 25)
+    refreshBtn.BackgroundColor3 = Color3.fromRGB(40, 100, 170)
+    refreshBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    refreshBtn.Font = Enum.Font.SourceSansBold
+    refreshBtn.TextSize = 13
+    refreshBtn.Text = "🔄 Refresh Users"
+    refreshBtn.LayoutOrder = 0
+    refreshBtn.BorderSizePixel = 0
+    refreshBtn.Parent = DropdownScroll
+    
+    refreshBtn.MouseButton1Click:Connect(refreshPlayerList)
+
+    -- 2. Add Players
+    local order = 1
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr ~= LocalPlayer then
+            local pBtn = Instance.new("TextButton")
+            pBtn.Size = UDim2.new(1, -5, 0, 22)
+            pBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
+            pBtn.TextColor3 = Color3.fromRGB(220, 220, 220)
+            pBtn.Font = Enum.Font.SourceSans
+            pBtn.TextSize = 13
+            pBtn.Text = "  " .. plr.Name
+            pBtn.TextXAlignment = Enum.TextXAlignment.Left
+            pBtn.LayoutOrder = order
+            pBtn.BorderSizePixel = 0
+            pBtn.Parent = DropdownScroll
+            
+            pBtn.MouseButton1Click:Connect(function()
+                selectedSpectateTarget = plr
+                DropdownBtn.Text = "  👤 " .. plr.Name .. " [ ▼ ]"
+                toggleDropdown() -- Auto-close dropdown after selection
+            end)
+            order = order + 1
+        end
+    end
+    DropdownScroll.CanvasSize = UDim2.new(0, 0, 0, DropdownLayout.AbsoluteContentSize.Y)
+end
+refreshPlayerList()
+
+-- View Logic
+local function stopView()
+    isViewing = false
+    if viewLoop then viewLoop:Disconnect() viewLoop = nil end
+    if viewPart then viewPart:Destroy() viewPart = nil end
+    
+    local cam = workspace.CurrentCamera
+    local char = LocalPlayer.Character
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    if cam and hum then
+        cam.CameraSubject = hum
+    end
+end
+
+ViewBtn.MouseButton1Click:Connect(function()
+    if isViewing then
+        ViewBtn.Text = "👁️ VIEW"
+        ViewBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+        stopView()
+    else
+        if selectedSpectateTarget and selectedSpectateTarget.Parent then
+            isViewing = true
+            ViewBtn.Text = "🛑 UNVIEW"
+            ViewBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+            
+            -- THE STABILIZER: Invisible part to mount the camera safely
+            viewPart = Instance.new("Part")
+            viewPart.Transparency = 1
+            viewPart.CanCollide = false
+            viewPart.Anchored = true
+            viewPart.Parent = workspace
+            
+            workspace.CurrentCamera.CameraSubject = viewPart
+            
+            viewLoop = RunService.RenderStepped:Connect(function()
+                if not selectedSpectateTarget or not selectedSpectateTarget.Character then return end
+                local tRoot = selectedSpectateTarget.Character:FindFirstChild("HumanoidRootPart")
+                if tRoot then
+                    -- Extract purely the position, ignoring all rotation/spins
+                    viewPart.CFrame = CFrame.new(tRoot.Position)
+                end
+            end)
+        else
+            ViewBtn.Text = "⚠️ SELECT A TARGET"
+            ViewBtn.BackgroundColor3 = Color3.fromRGB(200, 100, 0)
+            task.wait(1.5)
+            if not isViewing then
+                ViewBtn.Text = "👁️ VIEW"
+                ViewBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+            end
+        end
+    end
+end)
+
 -- ========== LIGHTNING MASS FLING & DROPDOWN WHITELIST ==========
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
