@@ -1038,7 +1038,7 @@ end
 local function startMassFling()
     local char = LocalPlayer.Character
     local hum = char and char:FindFirstChildOfClass("Humanoid")
-    if not hum or not hum.SeatPart then return false end -- Must be seated
+    if not hum or not hum.SeatPart then return false end -- Must be seated initially
     
     local car = getMyVehicle()
     local base = car and (car.PrimaryPart or car:FindFirstChild("Base") or hum.SeatPart)
@@ -1072,13 +1072,12 @@ local function startMassFling()
                         local ticks = 0
                         -- Extremely fast check loop (gives up after ~0.3 seconds if it misses)
                         while isMassFlinging and massFlingTarget == plr and ticks < 10 do
-                            task.wait(0.03) -- 3x faster than the old loop
+                            task.wait(0.03)
                             ticks = ticks + 1
                             
                             local currentRoot = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
                             local currentHum = plr.Character and plr.Character:FindFirstChildOfClass("Humanoid")
                             
-                            -- Move on instantly if they sit down, die, or their velocity spikes (successfully hit)
                             if not currentRoot or not currentHum or currentHum.Sit or currentRoot.Velocity.Magnitude > 300 or currentRoot.Position.Y < -40 then
                                 break 
                             end
@@ -1086,46 +1085,57 @@ local function startMassFling()
                     end
                 end
             end
-            task.wait(0.05) -- Minimal pause between server sweeps
+            task.wait(0.05) 
         end
     end)
 
-    -- 2. THE PHYSICS DESYNC: Teleports the car down for 1 frame, then back to the sky
+    -- 2. PHYSICS DESYNC & AUTO-REMOUNT
     massFlingLoop = RunService.Heartbeat:Connect(function()
         if not isMassFlinging then return end
         
-        -- Abort if user jumps out of car
-        if not hum.SeatPart then
+        -- Abort if car is completely destroyed/despawned
+        if not car or not car.Parent or not char then
             MassFlingBtn.Text = "🚗 START SERVER FLING"
             MassFlingBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
             stopMassFling()
             return
         end
 
+        -- AUTO-REMOUNT LOGIC: If we get knocked out of the seat, freeze and teleport back into it
+        if not hum.SeatPart then
+            local myRoot = char:FindFirstChild("HumanoidRootPart")
+            local vehicleSeat = car:FindFirstChildOfClass("VehicleSeat") or car:FindFirstChildWhichIsA("Seat", true) or base
+            
+            if myRoot and vehicleSeat then
+                -- Stabilize car so we don't chase it
+                base.Velocity = Vector3.zero
+                base.RotVelocity = Vector3.zero
+                
+                -- Teleport directly onto the seat
+                myRoot.CFrame = vehicleSeat.CFrame * CFrame.new(0, 1.5, 0)
+            end
+            return -- Skip the attack phase this frame while we remount
+        end
+
         local tRoot = massFlingTarget and massFlingTarget.Character and massFlingTarget.Character:FindFirstChild("HumanoidRootPart")
         local tHum = massFlingTarget and massFlingTarget.Character and massFlingTarget.Character:FindFirstChildOfClass("Humanoid")
         
-        -- Ensure target is still valid for physics strike
+        -- STRIKE LOGIC
         if tRoot and tHum and not tHum.Sit then
-            -- Safe hover point: 150 studs above the current victim
             local skyPos = tRoot.CFrame * CFrame.new(0, 150, 0)
             
-            -- STRIKE: Teleport into victim and inject lethal velocity
             base.CFrame = tRoot.CFrame
             base.Velocity = Vector3.new(math.random(-50000, 50000), -50000, math.random(-50000, 50000))
             base.RotVelocity = Vector3.new(50000, 50000, 50000)
             
-            -- Wait for the engine to register the hit
             RunService.RenderStepped:Wait()
             
-            -- RECOVERY: Instantly warp back to the safe hover point
             if base then
                 base.CFrame = skyPos
                 base.Velocity = Vector3.zero
                 base.RotVelocity = Vector3.zero
             end
         else
-            -- If no target is currently selected, just hover high up at the center of the map
             base.CFrame = CFrame.new(0, 1000, 0)
             base.Velocity = Vector3.zero
             base.RotVelocity = Vector3.zero
