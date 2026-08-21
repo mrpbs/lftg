@@ -567,6 +567,144 @@ FlingBtn.MouseButton1Click:Connect(function()
         table.clear(originalProperties)
     end
 end)
+-- ========== INVISIBLE+ (AmokahFox Clone Method) ==========
+local isVisPlusOn = false
+local invisRunning = false
+local invisFix = nil
+local invisDied = nil
+local RealCharacter = nil
+local FakeCharacter = nil
+
+local VisPlusBtn = Instance.new("TextButton")
+VisPlusBtn.Size = UDim2.new(1, -5, 0, 40)
+VisPlusBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+VisPlusBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+VisPlusBtn.Font = Enum.Font.SourceSansBold
+VisPlusBtn.TextSize = 16
+VisPlusBtn.Text = "👻 Invisible+: OFF"
+VisPlusBtn.BorderSizePixel = 0
+VisPlusBtn.Parent = ToolsScroll
+
+local function TurnVisible()
+    if not invisRunning then return end
+    
+    if invisFix then invisFix:Disconnect() end
+    if invisDied then invisDied:Disconnect() end
+    
+    local Player = game.Players.LocalPlayer
+    if RealCharacter and RealCharacter.Parent == game.Lighting then
+        local CF_1 = Player.Character and Player.Character:FindFirstChild("HumanoidRootPart") and Player.Character.HumanoidRootPart.CFrame
+        
+        FakeCharacter:Destroy()
+        Player.Character = RealCharacter
+        RealCharacter.Parent = workspace
+        
+        if CF_1 and RealCharacter:FindFirstChild("HumanoidRootPart") then
+            RealCharacter.HumanoidRootPart.CFrame = CF_1
+        end
+        
+        local anim = RealCharacter:FindFirstChild("Animate")
+        if anim then
+            anim.Disabled = true
+            anim.Disabled = false
+        end
+    end
+    invisRunning = false
+    isVisPlusOn = false
+    VisPlusBtn.Text = "👻 Invisible+: OFF"
+    VisPlusBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+end
+
+local function Respawn()
+    if not invisRunning then return end
+    local Player = game.Players.LocalPlayer
+    pcall(function()
+        Player.Character = RealCharacter
+        task.wait()
+        RealCharacter.Parent = workspace
+        local hum = RealCharacter:FindFirstChildWhichIsA('Humanoid')
+        if hum then hum:Destroy() end
+        TurnVisible()
+    end)
+end
+
+local function TurnInvisiblePlus()
+    if invisRunning then return end
+    invisRunning = true
+    isVisPlusOn = true
+    VisPlusBtn.Text = "👻 Invisible+: ON"
+    VisPlusBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
+
+    local Player = game.Players.LocalPlayer
+    RealCharacter = Player.Character
+    if not RealCharacter then return TurnVisible() end
+    
+    RealCharacter.Archivable = true
+    FakeCharacter = RealCharacter:Clone()
+    FakeCharacter.Parent = game.Lighting
+    FakeCharacter.Name = ""
+    
+    local Void = workspace.FallenPartsDestroyHeight
+
+    invisFix = game:GetService("RunService").Stepped:Connect(function()
+        pcall(function()
+            local root = Player.Character and Player.Character:FindFirstChild("HumanoidRootPart")
+            if root then
+                if root.Position.Y <= Void then
+                    Respawn()
+                end
+            end
+        end)
+    end)
+
+    for _, v in ipairs(FakeCharacter:GetDescendants()) do
+        if v:IsA("BasePart") then
+            if v.Name == "HumanoidRootPart" then
+                v.Transparency = 1
+            else
+                v.Transparency = 0.5
+            end
+        end
+    end
+
+    local fakeHum = FakeCharacter:FindFirstChildOfClass('Humanoid')
+    if fakeHum then
+        invisDied = fakeHum.Died:Connect(function()
+            Respawn()
+        end)
+    end
+
+    local CF_1 = RealCharacter:FindFirstChild("HumanoidRootPart") and RealCharacter.HumanoidRootPart.CFrame
+    RealCharacter:MoveTo(Vector3.new(0, math.pi * 1000000, 0))
+    
+    workspace.CurrentCamera.CameraType = Enum.CameraType.Scriptable
+    task.wait(0.2)
+    workspace.CurrentCamera.CameraType = Enum.CameraType.Custom
+    
+    RealCharacter.Parent = game.Lighting
+    FakeCharacter.Parent = workspace
+    if CF_1 and FakeCharacter:FindFirstChild("HumanoidRootPart") then
+        FakeCharacter.HumanoidRootPart.CFrame = CF_1
+    end
+    Player.Character = FakeCharacter
+    
+    workspace.CurrentCamera.CameraSubject = FakeCharacter:FindFirstChildWhichIsA('Humanoid')
+    
+    local anim = FakeCharacter:FindFirstChild("Animate")
+    if anim then
+        anim.Disabled = true
+        anim.Disabled = false
+    end
+end
+
+VisPlusBtn.MouseButton1Click:Connect(function()
+    if isVisPlusOn then
+        TurnVisible()
+    else
+        TurnInvisiblePlus()
+    end
+end)
+
 -- ========== ANTI-SPIN SPECTATE (Dropdown Version) ==========
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
