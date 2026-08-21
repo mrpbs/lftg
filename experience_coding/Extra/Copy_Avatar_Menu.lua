@@ -704,7 +704,7 @@ VisPlusBtn.MouseButton1Click:Connect(function()
         TurnInvisiblePlus()
     end
 end)
--- ========== MASS SERVER FLING (Orbital Strike & Dropdown) ==========
+-- ========== MASS SERVER FLING (Underground Uppercut Version) ==========
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 local isMassFlinging = false
@@ -714,7 +714,7 @@ local massFlingTarget = nil
 local massWhitelist = {}
 local originalCarProps = {}
 
--- Main Container
+-- Main Container (Starts Collapsed)
 local MassFlingFrame = Instance.new("Frame")
 MassFlingFrame.Size = UDim2.new(1, -5, 0, 95)
 MassFlingFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 38)
@@ -729,7 +729,7 @@ MassFlingBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
 MassFlingBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 MassFlingBtn.Font = Enum.Font.SourceSansBold
 MassFlingBtn.TextSize = 16
-MassFlingBtn.Text = "🚗 START ORBITAL STRIKE"
+MassFlingBtn.Text = "🚗 START SERVER FLING"
 MassFlingBtn.BorderSizePixel = 0
 MassFlingBtn.Parent = MassFlingFrame
 
@@ -752,6 +752,7 @@ WhitelistScroll.Position = UDim2.new(0, 5, 0, 90)
 WhitelistScroll.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 WhitelistScroll.BorderSizePixel = 0
 WhitelistScroll.ScrollBarThickness = 4
+WhitelistScroll.Active = true 
 WhitelistScroll.Visible = false
 WhitelistScroll.Parent = MassFlingFrame
 
@@ -759,6 +760,10 @@ local WhitelistLayout = Instance.new("UIListLayout")
 WhitelistLayout.SortOrder = Enum.SortOrder.Name
 WhitelistLayout.Padding = UDim.new(0, 4)
 WhitelistLayout.Parent = WhitelistScroll
+
+WhitelistLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    WhitelistScroll.CanvasSize = UDim2.new(0, 0, 0, WhitelistLayout.AbsoluteContentSize.Y)
+end)
 
 -- Dropdown Logic
 local whitelistExpanded = false
@@ -820,7 +825,6 @@ local function refreshWhitelist()
             end)
         end
     end
-    WhitelistScroll.CanvasSize = UDim2.new(0, 0, 0, WhitelistLayout.AbsoluteContentSize.Y)
 end
 
 Players.PlayerAdded:Connect(refreshWhitelist)
@@ -872,7 +876,7 @@ local function startMassFling()
     isMassFlinging = true
     table.clear(originalCarProps)
 
-    -- Max out density so targets get crushed
+    -- Max out density
     for _, part in ipairs(car:GetDescendants()) do
         if part:IsA("BasePart") then
             originalCarProps[part] = part.CustomPhysicalProperties
@@ -913,13 +917,13 @@ local function startMassFling()
         end
     end)
 
-    -- 2. ORBITAL STRIKE DESYNC
+    -- 2. UNDERGROUND UPPERCUT DESYNC
     massFlingLoop = RunService.Heartbeat:Connect(function()
         if not isMassFlinging then return end
         
         -- Auto-abort if user jumps out of car
         if not hum.SeatPart then
-            MassFlingBtn.Text = "🚗 START ORBITAL STRIKE"
+            MassFlingBtn.Text = "🚗 START SERVER FLING"
             MassFlingBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
             stopMassFling()
             return
@@ -929,30 +933,30 @@ local function startMassFling()
         local tHum = massFlingTarget and massFlingTarget.Character and massFlingTarget.Character:FindFirstChildOfClass("Humanoid")
         
         if tRoot and tHum and not tHum.Sit then
-            -- THE SAFE ZONE: Hidden 10,000 studs in the sky directly above the target
-            local skyPos = tRoot.CFrame * CFrame.new(0, 10000, 0)
+            -- THE SAFE ZONE: Hidden 18 studs directly beneath the target's feet (safe from the -50 void kill layer)
+            local undergroundPos = tRoot.CFrame * CFrame.new(0, -18, 0)
             
-            -- THE STRIKE ZONE: Exactly 3.5 studs above their head
-            local strikePos = tRoot.CFrame * CFrame.new(0, 3.5, 0)
+            -- THE STRIKE ZONE: Placed directly onto their torso from beneath
+            local strikePos = tRoot.CFrame * CFrame.new(0, -1.5, 0)
             
-            -- Teleport to strike zone and plunge straight DOWNward
+            -- Teleport to strike zone and launch UPWARD
             base.CFrame = strikePos
-            base.Velocity = Vector3.new(0, -25000, 0) 
+            base.Velocity = Vector3.new(math.random(-50000, 50000), 50000, math.random(-50000, 50000)) 
             base.RotVelocity = Vector3.new(50000, 50000, 50000)
             
             RunService.RenderStepped:Wait()
             
-            -- Instantly teleport back to the extreme high sky to prevent the car from voiding
+            -- Instantly teleport back underground
             if base then
-                base.CFrame = skyPos
+                base.CFrame = undergroundPos
                 base.Velocity = Vector3.zero
                 base.RotVelocity = Vector3.zero
             end
         else
-            -- No target? Hover safely 10,000 studs above yourself
+            -- No target? Hover safely 18 studs below your own character
             local myRoot = char:FindFirstChild("HumanoidRootPart")
             if myRoot then
-                base.CFrame = myRoot.CFrame * CFrame.new(0, 10000, 0)
+                base.CFrame = myRoot.CFrame * CFrame.new(0, -18, 0)
                 base.Velocity = Vector3.zero
                 base.RotVelocity = Vector3.zero
             end
@@ -964,24 +968,23 @@ end
 
 MassFlingBtn.MouseButton1Click:Connect(function()
     if isMassFlinging then
-        MassFlingBtn.Text = "🚗 START ORBITAL STRIKE"
+        MassFlingBtn.Text = "🚗 START SERVER FLING"
         MassFlingBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
         stopMassFling()
     else
         local success = startMassFling()
         if success then
-            MassFlingBtn.Text = "🛑 STOP ORBITAL STRIKE"
+            MassFlingBtn.Text = "🛑 STOP SERVER FLING"
             MassFlingBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
         else
             MassFlingBtn.Text = "⚠️ SIT IN DRIVER SEAT FIRST"
             MassFlingBtn.BackgroundColor3 = Color3.fromRGB(200, 100, 0)
             task.wait(1.5)
-            MassFlingBtn.Text = "🚗 START ORBITAL STRIKE"
+            MassFlingBtn.Text = "🚗 START SERVER FLING"
             MassFlingBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
         end
     end
 end)
-
 -- ========== ANTI-SPIN SPECTATE (Dropdown Version) ==========
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
