@@ -1912,41 +1912,53 @@ outfitData.WalkAnimation = getVal("WalkAnimation")
         -- LOGIC CONNECTIONS
         -- ==========================================
         
-        -- Try & Share Logic
-      tryShareBtn.MouseButton1Click:Connect(function()
+           tryShareBtn.MouseButton1Click:Connect(function()
             local payload = buildBatchPayload(outfitData)
             local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
 
             if Send then
-                tryShareBtn.Text = "Testing Share..."
+                tryShareBtn.Text = "Testing 1 User..."
                 tryShareBtn.BackgroundColor3 = Color3.fromRGB(150, 50, 150)
                 task.spawn(function()
-                    -- 1. Try On
+                    -- 1. Try On & Save
                     for i = 1, 3 do Send("wear_outfit_from_desc", payload) task.wait(0.1) end
                     pcall(function() Send("save_outfit", payload) end)
                     
-                    -- 2. Test Share on EXACTLY 1 user, passing the user as an array {p}
-                    local success = false
+                    local shared = false
+                    
+                    -- 2. Test Share on EXACTLY 1 user using brute-force formats
                     local playersList = Players:GetPlayers()
                     for _, p in ipairs(playersList) do
                         if p ~= LocalPlayer then
-                            local ok, err = pcall(function()
-                                -- Since the game UI selects multiple users, we wrap the player in a table
+                            pcall(function()
+                                -- Format 1: Table of Player Objects (What we tried last time)
                                 Send("share_outfit", {p}, payload)
-                                Send("share_outfits", {p}, payload)
-                                Send("send_outfit", {p}, payload)
+                                
+                                -- Format 2: Table of UserIds (Extremely common for multi-select UIs)
+                                Send("share_outfit", {p.UserId}, payload)
+                                
+                                -- Format 3: Table of Names (Sometimes used instead of IDs)
+                                Send("share_outfit", {p.Name}, payload)
+                                
+                                -- Format 4: Reversed order (Payload first, then target array)
+                                Send("share_outfit", payload, {p})
+                                
+                                -- Format 5: Alternative remote names just in case
+                                Send("share_outfits", {p.UserId}, payload)
+                                Send("send_outfit", {p.UserId}, payload)
                             end)
                             
-                            if ok then success = true end
-                            break -- Stop after 1 user for testing
+                            shared = true
+                            break -- Force stop after 1 user for testing
                         end
                     end
                     
-                    if success then
+                    -- 3. Update Button State
+                    if shared then
                         tryShareBtn.Text = "Successfully shared"
                         tryShareBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
                     else
-                        tryShareBtn.Text = "Failed"
+                        tryShareBtn.Text = "Failed (No Players)"
                         tryShareBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
                     end
                     
