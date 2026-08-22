@@ -1031,12 +1031,19 @@ local function startMassFling()
             task.spawn(function()
                 updateStatus("⚠️ Car Lost! Respawning " .. lastVehicleName .. "...", Color3.fromRGB(255, 120, 50))
                 
-                -- Fire Flames Hub remote to respawn exactly what you had
-                local Net = getgenv().Net or (getgenv().g and getgenv().g.Net)
-                if Net and Net.get then pcall(function() Net.get("spawn_vehicle", lastVehicleName) end) end
+                       -- Force require the game's actual Net module if global fails
+                local g = getgenv()
+                local Net = g.Net or (g.g and g.g.Net)
+                if not Net then pcall(function() Net = require(game:GetService("ReplicatedStorage"):FindFirstChild("Net", true)) end) end
                 
-                task.wait(2) -- Wait for network to spawn the vehicle
+                if Net and type(Net.get) == "function" then 
+                    pcall(function() Net.get("spawn_vehicle", lastVehicleName) end) 
+                elseif g.Get then
+                    pcall(function() g.Get("spawn_vehicle", lastVehicleName) end)
+                end
                 
+                task.wait(3) -- Increased wait time so the server finishes dropping the car
+         
                 car = getMyVehicle()
                 if car then
                     base = car.PrimaryPart or car:FindFirstChild("Base")
