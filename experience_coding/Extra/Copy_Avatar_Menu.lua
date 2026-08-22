@@ -1912,49 +1912,51 @@ outfitData.WalkAnimation = getVal("WalkAnimation")
         -- LOGIC CONNECTIONS
         -- ==========================================
         
-           tryShareBtn.MouseButton1Click:Connect(function()
+          tryShareBtn.MouseButton1Click:Connect(function()
             local payload = buildBatchPayload(outfitData)
             local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
 
             if Send then
-                tryShareBtn.Text = "Testing 1 User..."
+                tryShareBtn.Text = "Sharing..."
                 tryShareBtn.BackgroundColor3 = Color3.fromRGB(150, 50, 150)
                 task.spawn(function()
-                    -- 1. Try On & Save
+                    -- 1. Try On (Wear it yourself)
                     for i = 1, 3 do Send("wear_outfit_from_desc", payload) task.wait(0.1) end
                     pcall(function() Send("save_outfit", payload) end)
                     
-                    local shared = false
+                    -- 2. Build the exact "Embed" payload the game's phone system expects
+                    local embedData = {
+                        outfit_id = -2,
+                        app = "Avatar",
+                        accept = "View",
+                        content = "Custom Outfit",
+                        func = "view_outfit",
+                        desc = payload -- Our generated outfit data slots in perfectly here
+                    }
+                    local embedJson = HttpService:JSONEncode(embedData)
                     
-                    -- 2. Test Share on EXACTLY 1 user using brute-force formats
+                    -- 3. Gather up to 20 UserIds and join them with spaces
+                    local targetIds = {}
                     local playersList = Players:GetPlayers()
                     for _, p in ipairs(playersList) do
-                        if p ~= LocalPlayer then
-                            pcall(function()
-                                -- Format 1: Table of Player Objects (What we tried last time)
-                                Send("share_outfit", {p}, payload)
-                                
-                                -- Format 2: Table of UserIds (Extremely common for multi-select UIs)
-                                Send("share_outfit", {p.UserId}, payload)
-                                
-                                -- Format 3: Table of Names (Sometimes used instead of IDs)
-                                Send("share_outfit", {p.Name}, payload)
-                                
-                                -- Format 4: Reversed order (Payload first, then target array)
-                                Send("share_outfit", payload, {p})
-                                
-                                -- Format 5: Alternative remote names just in case
-                                Send("share_outfits", {p.UserId}, payload)
-                                Send("send_outfit", {p.UserId}, payload)
-                            end)
-                            
-                            shared = true
-                            break -- Force stop after 1 user for testing
+                        if p ~= LocalPlayer and #targetIds < 20 then
+                            table.insert(targetIds, tostring(p.UserId))
                         end
                     end
+                    local targetString = table.concat(targetIds, " ")
+
+                    -- 4. Fire the EXACT remote you captured in SimpleSpy
+                    local success = false
+                    if #targetIds > 0 then
+                        local ok, err = pcall(function()
+                            local RemoteGet = game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Get")
+                            RemoteGet:InvokeServer(8, "out_embed", targetString, embedJson, "!EMBED")
+                        end)
+                        if ok then success = true end
+                    end
                     
-                    -- 3. Update Button State
-                    if shared then
+                    -- 5. Provide visual feedback
+                    if success then
                         tryShareBtn.Text = "Successfully shared"
                         tryShareBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
                     else
