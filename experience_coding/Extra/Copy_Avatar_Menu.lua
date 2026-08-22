@@ -1907,34 +1907,7 @@ outfitData.WalkAnimation = getVal("WalkAnimation")
         wlBtn.LayoutOrder = 6
         wlBtn.Parent = actionLayout
  -- ==========================================
-        -- CUSTOM ERROR POPUP UI
-        -- ==========================================
-        local function ShowErrorPopup(errMessage)
-            local errGui = Instance.new("ScreenGui", CoreGui)
-            local errFrame = Instance.new("Frame", errGui)
-            errFrame.Size = UDim2.new(0, 300, 0, 150)
-            errFrame.Position = UDim2.new(0.5, -150, 0.5, -75)
-            errFrame.BackgroundColor3 = Color3.fromRGB(40, 10, 10)
-            Instance.new("UICorner", errFrame)
-            
-            local errTxt = Instance.new("TextLabel", errFrame)
-            errTxt.Size = UDim2.new(1, -20, 1, -40)
-            errTxt.Position = UDim2.new(0, 10, 0, 10)
-            errTxt.Text = "SHARE DIAGNOSTIC:\n" .. tostring(errMessage)
-            errTxt.TextColor3 = Color3.new(1, 0, 0)
-            errTxt.Font = Enum.Font.Code
-            errTxt.TextWrapped = true
-            errTxt.BackgroundTransparency = 1
-            
-            local close = Instance.new("TextButton", errFrame)
-            close.Size = UDim2.new(0.5, 0, 0, 30)
-            close.Position = UDim2.new(0.25, 0, 1, -35)
-            close.Text = "Close"
-            close.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-            close.TextColor3 = Color3.new(1,1,1)
-            close.MouseButton1Click:Connect(function() errGui:Destroy() end)
-        end
-
+   
      -- ==========================================
         -- LOGIC CONNECTIONS
         -- ==========================================
@@ -1943,26 +1916,17 @@ outfitData.WalkAnimation = getVal("WalkAnimation")
         tryShareBtn.MouseButton1Click:Connect(function()
             local payload = buildBatchPayload(outfitData)
             local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
+            local notifyUI = getgenv().notify or (getgenv().g and getgenv().g.notify)
 
             if Send then
-                tryShareBtn.Text = "Sharing..."
+                tryShareBtn.Text = "Testing 1 User..."
                 tryShareBtn.BackgroundColor3 = Color3.fromRGB(150, 50, 150)
                 task.spawn(function()
-                    -- 1. Try On (Wear it)
+                    -- Try On & Save
                     for i = 1, 3 do Send("wear_outfit_from_desc", payload) task.wait(0.1) end
-                    
-                    if outfitData.SkinTone then 
-                        pcall(function()
-                            local c = Color3.new(outfitData.SkinTone[1], outfitData.SkinTone[2], outfitData.SkinTone[3]) 
-                            for i=1,3 do Send("skin_tone", c) task.wait(0.1) end 
-                        end)
-                    end
-                    if outfitData.HeightScale then for i=1,3 do Send("body_scale", "HeightScale", outfitData.HeightScale * 100) task.wait(0.1) end end
-                    
-                    -- 2. Save In-Game 
                     pcall(function() Send("save_outfit", payload) end)
                     
-                -- Test Share on exactly ONE other player to catch errors
+                    -- Test Share on exactly ONE other player and push error to in-game phone
                     local playersList = Players:GetPlayers()
                     for _, p in ipairs(playersList) do
                         if p ~= LocalPlayer then
@@ -1971,9 +1935,9 @@ outfitData.WalkAnimation = getVal("WalkAnimation")
                             end)
                             
                             if not success then
-                                ShowErrorPopup("FAILED: " .. tostring(err))
+                                if notifyUI then notifyUI("Error", "Share failed: " .. tostring(err), 15) end
                             else
-                                ShowErrorPopup("Executed without script errors. Did they get the request?")
+                                if notifyUI then notifyUI("Success", "Request fired! Did " .. p.Name .. " get it?", 8) end
                             end
                             break -- Stop after 1 player for testing
                         end
@@ -1984,8 +1948,8 @@ outfitData.WalkAnimation = getVal("WalkAnimation")
                 end)
             end
         end)
-  
-      
+
+
       -- [NEW CONNECTIONS FOR VIEW & WHITELIST]
         viewBtn.MouseButton1Click:Connect(function()
             startView(targetPlayer)
