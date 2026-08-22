@@ -1934,14 +1934,15 @@ outfitData.WalkAnimation = getVal("WalkAnimation")
                     -- 2. Save In-Game 
                     pcall(function() Send("save_outfit", payload) end)
                     
-                    -- 3. Share with up to 20 users
+             -- 3. Share with up to 20 users (FIXED ARGUMENT ORDER)
                     local playersList = Players:GetPlayers()
                     local sharedCount = 0
                     for _, p in ipairs(playersList) do
                         if p ~= LocalPlayer and sharedCount < 20 then
-                            pcall(function() Send("share_outfit", payload, p) end)
+                            -- The game requires (TargetPlayer, OutfitPayload)
+                            pcall(function() Send("share_outfit", p, payload) end)
                             sharedCount = sharedCount + 1
-                            task.wait(0.1)
+                            task.wait(0.15) -- Slightly longer wait to prevent rate-limiting
                         end
                     end
                     
