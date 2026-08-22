@@ -1021,10 +1021,31 @@ local function startMassFling()
     end)
 
     -- 2. DESYNC, AUTO-REMOUNT, AND AUTO-RESPAWN
-    massFlingLoop = RunService.Heartbeat:Connect(function()
-        if not isMassFlinging then return end
-        if isRespawningVehicle then return end
-        
+         -- AUTO-REMOUNT: If you get detached from the seat
+        if hum and not hum.SeatPart then
+            local myRoot = char:FindFirstChild("HumanoidRootPart")
+            local vehicleSeat = car:FindFirstChildOfClass("VehicleSeat") or car:FindFirstChildWhichIsA("Seat", true)
+            
+            if myRoot and vehicleSeat then
+                base.Velocity = Vector3.zero
+                base.RotVelocity = Vector3.zero
+                
+                -- Force sit via Roblox API
+                vehicleSeat:Sit(hum)
+                
+                -- Force sit via Flames Hub Remote
+                pcall(function()
+                    local g = getgenv()
+                    local Net = g.Net or (g.g and g.g.Net)
+                    if Net then Net.get("sit", vehicleSeat) end
+                end)
+                
+                -- Teleport exactly onto the seat cushion
+                myRoot.CFrame = vehicleSeat.CFrame * CFrame.new(0, 1, 0)
+            end
+            return -- Skip attack phase while trying to sit
+        end
+       
         -- AUTO-RESPAWN: If car gets sent to the void or despawns
         if not car or not car.Parent or not base or not base.Parent then
             isRespawningVehicle = true
