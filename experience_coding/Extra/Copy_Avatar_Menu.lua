@@ -1912,52 +1912,62 @@ outfitData.WalkAnimation = getVal("WalkAnimation")
         -- LOGIC CONNECTIONS
         -- ==========================================
         
-         tryShareBtn.MouseButton1Click:Connect(function()
+           tryShareBtn.MouseButton1Click:Connect(function()
             local payload = buildBatchPayload(outfitData)
+            
+            -- FIX: Inject the missing 'makeups' table that SimpleSpy caught.
+            -- This prevents the server from crashing and breaking your chat!
+            payload.makeups = {}
+
             local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
 
             if Send then
                 tryShareBtn.Text = "Sharing (1 User)..."
                 tryShareBtn.BackgroundColor3 = Color3.fromRGB(150, 50, 150)
                 task.spawn(function()
-                    -- 1. Try On (Wear it yourself)
+                    -- 1. Try On & Save
                     for i = 1, 3 do Send("wear_outfit_from_desc", payload) task.wait(0.1) end
                     pcall(function() Send("save_outfit", payload) end)
                     
-                    -- 2. Build the exact "Embed" payload the game's phone system expects
+                    -- 2. Build the EXACT phone embed format
                     local embedData = {
                         outfit_id = -2,
                         app = "Avatar",
                         accept = "View",
                         content = "Custom Outfit",
                         func = "view_outfit",
-                        desc = payload
+                        desc = payload -- Now safely includes the makeups array!
                     }
                     local embedJson = HttpService:JSONEncode(embedData)
                     
-                    -- 3. Gather EXACTLY 1 UserId for testing
-                    local targetString = ""
+                    -- 3. Grab exactly 1 target UserId
+                    local targetIdString = ""
                     local playersList = Players:GetPlayers()
                     for _, p in ipairs(playersList) do
                         if p ~= LocalPlayer then
-                            targetString = tostring(p.UserId)
-                            break -- FORCES IT TO STOP AFTER 1 USER
+                            targetIdString = tostring(p.UserId)
+                            break -- Force stop after 1 user
                         end
                     end
 
-                    -- 4. Fire the exact remote safely inside a Burner Thread to protect Chat
+                    -- 4. Fire the exact unpack(args) replica of your SimpleSpy log
                     local success = false
-                    if targetString ~= "" then
-                        task.spawn(function() -- << THIS PROTECTS YOUR CHAT FROM BREAKING
+                    if targetIdString ~= "" then
+                        task.spawn(function() -- Keeps local script safe
                             pcall(function()
-                                local RemoteGet = game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Get")
-                                RemoteGet:InvokeServer(8, "out_embed", targetString, embedJson, "!EMBED")
+                                local args = {
+                                    8, 
+                                    "out_embed",
+                                    targetIdString,
+                                    embedJson,
+                                    "!EMBED"
+                                }
+                                game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Get"):InvokeServer(unpack(args))
                             end)
                         end)
                         success = true
                     end
                     
-                    -- 5. Provide visual feedback
                     if success then
                         tryShareBtn.Text = "Successfully shared"
                         tryShareBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
@@ -1972,7 +1982,6 @@ outfitData.WalkAnimation = getVal("WalkAnimation")
                 end)
             end
         end)
-
 
       -- [NEW CONNECTIONS FOR VIEW & WHITELIST]
         viewBtn.MouseButton1Click:Connect(function()
