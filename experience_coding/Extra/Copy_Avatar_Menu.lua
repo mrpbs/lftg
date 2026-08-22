@@ -192,60 +192,44 @@ ContentContainer.Position = UDim2.new(0, 0, 0, 80)
 ContentContainer.BackgroundTransparency = 1
 ContentContainer.Parent = MainFrame
 
--- Player List Scroll Context
-local PlayerScroll = Instance.new("ScrollingFrame")
-PlayerScroll.Size = UDim2.new(1, -20, 1, -10)
-PlayerScroll.Position = UDim2.new(0, 10, 0, 0)
-PlayerScroll.BackgroundColor3 = Color3.fromRGB(8, 8, 10)
-PlayerScroll.ScrollBarThickness = 6
-PlayerScroll.Parent = ContentContainer
+-- Helper function to make all tabs look beautiful and scroll perfectly
+local function createTabScroll(name, isVisible)
+    local scroll = Instance.new("ScrollingFrame")
+    scroll.Name = name
+    scroll.Size = UDim2.new(1, -16, 1, -10)
+    scroll.Position = UDim2.new(0, 8, 0, 0)
+    scroll.BackgroundColor3 = Color3.fromRGB(12, 12, 16) -- Darker, cleaner background
+    scroll.ScrollBarThickness = 3
+    scroll.BorderSizePixel = 0
+    scroll.Visible = isVisible
+    scroll.Parent = ContentContainer
+    Instance.new("UICorner", scroll).CornerRadius = UDim.new(0, 8)
+    
+    -- Adding UIPadding fixes the cramped look and adds breathing room
+    local padding = Instance.new("UIPadding")
+    padding.PaddingTop = UDim.new(0, 8)
+    padding.PaddingBottom = UDim.new(0, 40) -- Fixes bottom cutoff when shrunk!
+    padding.PaddingLeft = UDim.new(0, 5)
+    padding.PaddingRight = UDim.new(0, 5)
+    padding.Parent = scroll
+    
+    local layout = Instance.new("UIListLayout")
+    layout.SortOrder = Enum.SortOrder.LayoutOrder
+    layout.Padding = UDim.new(0, 8)
+    layout.Parent = scroll
+    
+    layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        scroll.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 50)
+    end)
+    
+    return scroll, layout
+end
 
-local PlayerListLayout = Instance.new("UIListLayout")
-PlayerListLayout.Parent = PlayerScroll
-PlayerListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-PlayerListLayout.Padding = UDim.new(0, 6)
-PlayerListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-    PlayerScroll.CanvasSize = UDim2.new(0, 0, 0, PlayerListLayout.AbsoluteContentSize.Y + 10)
-end)
-
--- Asset Scan Scroll Context
-local AssetScroll = Instance.new("ScrollingFrame")
-AssetScroll.Size = UDim2.new(1, -20, 1, -10)
-AssetScroll.Position = UDim2.new(0, 10, 0, 0)
-AssetScroll.BackgroundColor3 = Color3.fromRGB(8, 8, 10)
-AssetScroll.ScrollBarThickness = 6
-AssetScroll.Visible = false
-AssetScroll.Parent = ContentContainer
-
-local AssetListLayout = Instance.new("UIListLayout")
-AssetListLayout.Parent = AssetScroll
-AssetListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-AssetListLayout.Padding = UDim.new(0, 6)
-AssetListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-    AssetScroll.CanvasSize = UDim2.new(0, 0, 0, AssetListLayout.AbsoluteContentSize.Y + 10)
-end)
--- Saved Outfits Scroll Context
-local SavedScroll = Instance.new("ScrollingFrame")
-SavedScroll.Size = UDim2.new(1, -20, 1, -10)
-SavedScroll.Position = UDim2.new(0, 10, 0, 0)
-SavedScroll.BackgroundColor3 = Color3.fromRGB(8, 8, 10)
-SavedScroll.ScrollBarThickness = 6
-SavedScroll.Visible = false
-SavedScroll.Parent = ContentContainer
-
--- Tools Scroll Context
-local ToolsScroll = Instance.new("ScrollingFrame")
-ToolsScroll.Size = UDim2.new(1, -20, 1, -10)
-ToolsScroll.Position = UDim2.new(0, 10, 0, 0)
-ToolsScroll.BackgroundColor3 = Color3.fromRGB(8, 8, 10)
-ToolsScroll.ScrollBarThickness = 6
-ToolsScroll.Visible = false
-ToolsScroll.Parent = ContentContainer
-
-local ToolsListLayout = Instance.new("UIListLayout")
-ToolsListLayout.Parent = ToolsScroll
-ToolsListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-ToolsListLayout.Padding = UDim.new(0, 6)
+-- Generates all tabs with perfect scrolling and padding instantly
+local PlayerScroll, PlayerListLayout = createTabScroll("PlayerScroll", true)
+local AssetScroll, AssetListLayout = createTabScroll("AssetScroll", false)
+local SavedScroll, SavedListLayout = createTabScroll("SavedScroll", false)
+local ToolsScroll, ToolsListLayout = createTabScroll("ToolsScroll", false)
 
 -- ========== NO CLIP TOOL (State-Saving Hybrid) ==========
 local RunService = game:GetService("RunService")
@@ -1371,13 +1355,7 @@ ApplyScaleBtn.MouseButton1Click:Connect(function()
 end)
 ------
 
-local SavedListLayout = Instance.new("UIListLayout")
-SavedListLayout.Parent = SavedScroll
-SavedListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-SavedListLayout.Padding = UDim.new(0, 6)
-SavedListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-    SavedScroll.CanvasSize = UDim2.new(0, 0, 0, SavedListLayout.AbsoluteContentSize.Y + 10)
-end)
+
 
 -- Resize Handle (Bottom Right Corner)
 local ResizeHandle = Instance.new("TextButton")
