@@ -1822,55 +1822,70 @@ outfitData.WalkAnimation = getVal("WalkAnimation")
         rawBox.MultiLine = true
         rawBox.Parent = rawFrame
 
-         -- Button Layout Container
+   -- Expanded Action Panel to fit two rows
+        rawFrame.Size = UDim2.new(1, -5, 0, 225) 
+
+        -- Button Layout Container
         local actionLayout = Instance.new("Frame")
-        actionLayout.Size = UDim2.new(1, -10, 0, 28)
+        actionLayout.Size = UDim2.new(1, -10, 0, 56) -- Taller to fit 2 rows
         actionLayout.Position = UDim2.new(0, 5, 0, 160)
         actionLayout.BackgroundTransparency = 1
         actionLayout.Parent = rawFrame
 
-        -- Shrunk the cells slightly so all 5 buttons fit perfectly
+        -- Grid Layout specifically designed for 4 buttons per row
         local uigrid = Instance.new("UIGridLayout")
-        uigrid.CellSize = UDim2.new(0.184, 0, 1, 0) 
-        uigrid.CellPadding = UDim2.new(0.02, 0, 0, 0)
+        uigrid.CellSize = UDim2.new(0.235, 0, 0, 26) 
+        uigrid.CellPadding = UDim2.new(0.02, 0, 0.05, 0)
         uigrid.SortOrder = Enum.SortOrder.LayoutOrder
+        uigrid.FillDirectionMaxCells = 4 -- Forces wrap to next line after 4 buttons
         uigrid.Parent = actionLayout
 
-
-        -- 1. Copy Button
+        -- ==========================================
+        -- ROW 1: COPY, SAVE, TRY ON, TRY & SHARE
+        -- ==========================================
         local copyBtn = Instance.new("TextButton")
         copyBtn.Text = "Copy JSON"
         copyBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 90)
         copyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
         copyBtn.Font = Enum.Font.SourceSansBold
-        copyBtn.TextSize = 12
+        copyBtn.TextSize = 11
         copyBtn.BorderSizePixel = 0
         copyBtn.LayoutOrder = 1
         copyBtn.Parent = actionLayout
 
-        -- 2. Save Outfit Button
         local saveBtn = Instance.new("TextButton")
-        saveBtn.Text = "Save Outfit"
+        saveBtn.Text = "Save File"
         saveBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
         saveBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
         saveBtn.Font = Enum.Font.SourceSansBold
-        saveBtn.TextSize = 12
+        saveBtn.TextSize = 11
         saveBtn.BorderSizePixel = 0
         saveBtn.LayoutOrder = 2
         saveBtn.Parent = actionLayout
 
-        -- 3. Wear Outfit Button (Server-Sided via Network Hook)
         local wearBtn = Instance.new("TextButton")
-        wearBtn.Text = "Try On (Server)"
+        wearBtn.Text = "Try On"
         wearBtn.BackgroundColor3 = Color3.fromRGB(249, 180, 0)
         wearBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
         wearBtn.Font = Enum.Font.SourceSansBold
-        wearBtn.TextSize = 12
+        wearBtn.TextSize = 11
         wearBtn.BorderSizePixel = 0
         wearBtn.LayoutOrder = 3
         wearBtn.Parent = actionLayout
-       
-    -- 4. View Player Button
+
+        local tryShareBtn = Instance.new("TextButton")
+        tryShareBtn.Text = "Try & Share"
+        tryShareBtn.BackgroundColor3 = Color3.fromRGB(200, 100, 200)
+        tryShareBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        tryShareBtn.Font = Enum.Font.SourceSansBold
+        tryShareBtn.TextSize = 11
+        tryShareBtn.BorderSizePixel = 0
+        tryShareBtn.LayoutOrder = 4
+        tryShareBtn.Parent = actionLayout
+
+        -- ==========================================
+        -- ROW 2: VIEW, WHITELIST
+        -- ==========================================
         local viewBtn = Instance.new("TextButton")
         viewBtn.Text = "View"
         viewBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 150)
@@ -1878,10 +1893,9 @@ outfitData.WalkAnimation = getVal("WalkAnimation")
         viewBtn.Font = Enum.Font.SourceSansBold
         viewBtn.TextSize = 11
         viewBtn.BorderSizePixel = 0
-        viewBtn.LayoutOrder = 4
+        viewBtn.LayoutOrder = 5
         viewBtn.Parent = actionLayout
 
-        -- 5. Whitelist Button
         local isWl = massWhitelist[targetPlayer.Name]
         local wlBtn = Instance.new("TextButton")
         wlBtn.Text = isWl and "Safe" or "Whitelist"
@@ -1890,10 +1904,58 @@ outfitData.WalkAnimation = getVal("WalkAnimation")
         wlBtn.Font = Enum.Font.SourceSansBold
         wlBtn.TextSize = 11
         wlBtn.BorderSizePixel = 0
-        wlBtn.LayoutOrder = 5
+        wlBtn.LayoutOrder = 6
         wlBtn.Parent = actionLayout
 
-        -- [NEW CONNECTIONS FOR VIEW & WHITELIST]
+     -- ==========================================
+        -- LOGIC CONNECTIONS
+        -- ==========================================
+        
+        -- Try & Share Logic
+        tryShareBtn.MouseButton1Click:Connect(function()
+            local payload = buildBatchPayload(outfitData)
+            local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
+
+            if Send then
+                tryShareBtn.Text = "Sharing..."
+                tryShareBtn.BackgroundColor3 = Color3.fromRGB(150, 50, 150)
+                task.spawn(function()
+                    -- 1. Try On (Wear it)
+                    for i = 1, 3 do Send("wear_outfit_from_desc", payload) task.wait(0.1) end
+                    
+                    if outfitData.SkinTone then 
+                        pcall(function()
+                            local c = Color3.new(outfitData.SkinTone[1], outfitData.SkinTone[2], outfitData.SkinTone[3]) 
+                            for i=1,3 do Send("skin_tone", c) task.wait(0.1) end 
+                        end)
+                    end
+                    if outfitData.HeightScale then for i=1,3 do Send("body_scale", "HeightScale", outfitData.HeightScale * 100) task.wait(0.1) end end
+                    
+                    -- 2. Save In-Game 
+                    pcall(function() Send("save_outfit", payload) end)
+                    
+                    -- 3. Share with up to 20 users
+                    local playersList = Players:GetPlayers()
+                    local sharedCount = 0
+                    for _, p in ipairs(playersList) do
+                        if p ~= LocalPlayer and sharedCount < 20 then
+                            pcall(function() Send("share_outfit", payload, p) end)
+                            sharedCount = sharedCount + 1
+                            task.wait(0.1)
+                        end
+                    end
+                    
+                    tryShareBtn.Text = "Shared!"
+                    tryShareBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
+                    task.wait(1.5)
+                    tryShareBtn.Text = "Try & Share"
+                    tryShareBtn.BackgroundColor3 = Color3.fromRGB(200, 100, 200)
+                end)
+            end
+        end)
+  
+      
+      -- [NEW CONNECTIONS FOR VIEW & WHITELIST]
         viewBtn.MouseButton1Click:Connect(function()
             startView(targetPlayer)
             viewBtn.Text = "Viewing!"
