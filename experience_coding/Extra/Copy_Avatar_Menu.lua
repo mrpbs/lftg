@@ -704,7 +704,7 @@ VisPlusBtn.MouseButton1Click:Connect(function()
         TurnInvisiblePlus()
     end
 end)
--- ========== MASS SERVER FLING (Autonomous Auto-Respawn & Stack Logs) ==========
+-- ========== MASS SERVER FLING (Underground Uppercut + Auto-Respawn & Stack Logs) ==========
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 local isMassFlinging = false
@@ -714,7 +714,7 @@ local massFlingTarget = nil
 local massWhitelist = {}
 local originalCarProps = {}
 
--- Main Container
+-- Main Container (Adjusted to fit Status Console)
 local MassFlingFrame = Instance.new("Frame")
 MassFlingFrame.Size = UDim2.new(1, -5, 0, 165)
 MassFlingFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 38)
@@ -888,7 +888,7 @@ local function getMyVehicle()
     local vehiclesFolder = workspace:FindFirstChild("Vehicles")
     if not vehiclesFolder then return nil end
     for _, v in pairs(vehiclesFolder:GetChildren()) do
-        local ownerObj = v:FindFirstChild("owner") or v:FindFirstChild("owner", true)
+        local ownerObj = v:FindFirstChild("owner") or v:FindFirstChild("owner", true)[span_1](start_span)[span_1](end_span)
         if ownerObj and ownerObj.Value == LocalPlayer then return v end
     end
     return nil
@@ -902,6 +902,7 @@ local function stopMassFling()
     if massFlingLoop then massFlingLoop:Disconnect(); massFlingLoop = nil end
     if targetCycler then task.cancel(targetCycler); targetCycler = nil end
     
+    -- Restore original physics
     for part, props in pairs(originalCarProps) do
         if part and part.Parent then part.CustomPhysicalProperties = props end
     end
@@ -943,10 +944,11 @@ local function startMassFling()
     
     local vehiclesFolder = workspace:FindFirstChild("Vehicles")
 
-    -- 1. LOOPING CYCLER
+    -- 1. LOOPING CYCLER (Fast & Checks every user)
     targetCycler = task.spawn(function()
         while isMassFlinging do
             local playerList = Players:GetPlayers()
+            -- Automatically clears logs on every new sweep
             updateStatus("🔄 Sweeping Server (" .. #playerList .. " players)...", Color3.fromRGB(100, 150, 255), true)
             
             for _, plr in ipairs(playerList) do
@@ -963,18 +965,16 @@ local function startMassFling()
                 -- Dead or no character
                 if not tChar or not tRoot or not tHum then 
                     updateStatus("⏩ Skipped " .. plr.Name .. " (No Char)", Color3.fromRGB(120, 120, 120))
-                    task.wait(0.05)
                     continue 
                 end
                 
                 -- Void or Sky
                 if tRoot.Position.Y < -40 or tRoot.Position.Y > 400 then
                     updateStatus("⏩ Skipped " .. plr.Name .. " (Void/Sky)", Color3.fromRGB(120, 120, 120))
-                    task.wait(0.05)
                     continue
                 end
                 
-                -- Sitting Logic (Only attack if sitting in a car, ignore if sitting on a normal bench)
+                -- Sitting Logic (Ignore normal chairs, attack vehicles)
                 if tHum.Sit and tHum.SeatPart then
                     local isSittingInCar = false
                     local vehicleAncestor = tHum.SeatPart:FindFirstAncestorOfClass("Model")
@@ -983,8 +983,7 @@ local function startMassFling()
                     end
                     
                     if not isSittingInCar then
-                        updateStatus("🪑 Skipped " .. plr.Name .. " (Sitting)", Color3.fromRGB(200, 150, 50))
-                        task.wait(0.05)
+                        updateStatus("🪑 Skipped " .. plr.Name .. " (In Chair)", Color3.fromRGB(200, 150, 50))
                         continue
                     end
                 end
@@ -996,12 +995,13 @@ local function startMassFling()
                 local ticks = 0
                 local wasFlung = false
                 
-                -- Bomb them for up to ~0.5 seconds
-                while isMassFlinging and massFlingTarget == plr and ticks < 15 do
+                -- Bomb them fast (max ~0.3 seconds before giving up)
+                while isMassFlinging and massFlingTarget == plr and ticks < 10 do
                     task.wait(0.03) 
                     ticks = ticks + 1
                     
                     local currentRoot = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
+                    -- Stop hitting if they fall out of bounds or their velocity spikes heavily
                     if not currentRoot or currentRoot.Velocity.Magnitude > 300 or currentRoot.Position.Y < -40 or currentRoot.Position.Y > 400 then
                         wasFlung = true
                         break 
@@ -1013,12 +1013,10 @@ local function startMassFling()
                 else
                     updateStatus("⚠️ Timeout: " .. plr.Name, Color3.fromRGB(200, 100, 100))
                 end
-                
-                task.wait(0.1) 
             end
             
-            updateStatus("⏳ List finished. Restarting in 1s...", Color3.fromRGB(100, 150, 255))
-            task.wait(1) 
+            updateStatus("⏳ List finished. Restarting...", Color3.fromRGB(100, 150, 255))
+            task.wait(0.5) 
         end
     end)
 
@@ -1033,8 +1031,9 @@ local function startMassFling()
             task.spawn(function()
                 updateStatus("⚠️ Car Lost! Respawning " .. lastVehicleName .. "...", Color3.fromRGB(255, 120, 50))
                 
+                -- Fire Flames Hub remote to respawn exactly what you had
                 local GetFunc = getgenv().Get or (getgenv().g and getgenv().g.Get)
-                if GetFunc then GetFunc("spawn_vehicle", lastVehicleName) end
+                if GetFunc then GetFunc("spawn_vehicle", lastVehicleName) end[span_2](start_span)[span_2](end_span)
                 
                 task.wait(1.5) -- Wait for network to spawn the vehicle
                 
@@ -1079,9 +1078,13 @@ local function startMassFling()
         end
         
         if strikeTarget then
+            -- THE SAFE ZONE: Hidden 18 studs directly beneath the target
             local undergroundPos = strikeTarget.CFrame * CFrame.new(0, -18, 0)
+            
+            -- THE STRIKE ZONE: Placed directly onto them from beneath
             local strikePos = strikeTarget.CFrame * CFrame.new(0, -1.5, 0)
             
+            -- Teleport to strike zone and launch UPWARD
             base.CFrame = strikePos
             base.Velocity = Vector3.new(math.random(-50000, 50000), 50000, math.random(-50000, 50000)) 
             base.RotVelocity = Vector3.new(50000, 50000, 50000)
@@ -1125,7 +1128,6 @@ MassFlingBtn.MouseButton1Click:Connect(function()
         end
     end
 end)
-
 -- ========== ANTI-SPIN SPECTATE (Dropdown Version) ==========
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
