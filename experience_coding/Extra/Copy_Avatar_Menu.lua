@@ -1912,12 +1912,12 @@ outfitData.WalkAnimation = getVal("WalkAnimation")
         -- LOGIC CONNECTIONS
         -- ==========================================
         
-          tryShareBtn.MouseButton1Click:Connect(function()
+         tryShareBtn.MouseButton1Click:Connect(function()
             local payload = buildBatchPayload(outfitData)
             local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
 
             if Send then
-                tryShareBtn.Text = "Sharing..."
+                tryShareBtn.Text = "Sharing (1 User)..."
                 tryShareBtn.BackgroundColor3 = Color3.fromRGB(150, 50, 150)
                 task.spawn(function()
                     -- 1. Try On (Wear it yourself)
@@ -1931,28 +1931,30 @@ outfitData.WalkAnimation = getVal("WalkAnimation")
                         accept = "View",
                         content = "Custom Outfit",
                         func = "view_outfit",
-                        desc = payload -- Our generated outfit data slots in perfectly here
+                        desc = payload
                     }
                     local embedJson = HttpService:JSONEncode(embedData)
                     
-                    -- 3. Gather up to 20 UserIds and join them with spaces
-                    local targetIds = {}
+                    -- 3. Gather EXACTLY 1 UserId for testing
+                    local targetString = ""
                     local playersList = Players:GetPlayers()
                     for _, p in ipairs(playersList) do
-                        if p ~= LocalPlayer and #targetIds < 20 then
-                            table.insert(targetIds, tostring(p.UserId))
+                        if p ~= LocalPlayer then
+                            targetString = tostring(p.UserId)
+                            break -- FORCES IT TO STOP AFTER 1 USER
                         end
                     end
-                    local targetString = table.concat(targetIds, " ")
 
-                    -- 4. Fire the EXACT remote you captured in SimpleSpy
+                    -- 4. Fire the exact remote safely inside a Burner Thread to protect Chat
                     local success = false
-                    if #targetIds > 0 then
-                        local ok, err = pcall(function()
-                            local RemoteGet = game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Get")
-                            RemoteGet:InvokeServer(8, "out_embed", targetString, embedJson, "!EMBED")
+                    if targetString ~= "" then
+                        task.spawn(function() -- << THIS PROTECTS YOUR CHAT FROM BREAKING
+                            pcall(function()
+                                local RemoteGet = game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Get")
+                                RemoteGet:InvokeServer(8, "out_embed", targetString, embedJson, "!EMBED")
+                            end)
                         end)
-                        if ok then success = true end
+                        success = true
                     end
                     
                     -- 5. Provide visual feedback
