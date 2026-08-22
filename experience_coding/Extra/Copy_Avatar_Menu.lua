@@ -888,7 +888,7 @@ local function getMyVehicle()
     local vehiclesFolder = workspace:FindFirstChild("Vehicles")
     if not vehiclesFolder then return nil end
     for _, v in pairs(vehiclesFolder:GetChildren()) do
-        local ownerObj = v:FindFirstChild("owner") or v:FindFirstChild("owner", true)[span_1](start_span)[span_1](end_span)
+        local ownerObj = v:FindFirstChild("owner") or v:FindFirstChild("owner", true)
         if ownerObj and ownerObj.Value == LocalPlayer then return v end
     end
     return nil
@@ -1033,7 +1033,7 @@ local function startMassFling()
                 
                 -- Fire Flames Hub remote to respawn exactly what you had
                 local GetFunc = getgenv().Get or (getgenv().g and getgenv().g.Get)
-                if GetFunc then GetFunc("spawn_vehicle", lastVehicleName) end[span_2](start_span)[span_2](end_span)
+                if GetFunc then GetFunc("spawn_vehicle", lastVehicleName) end
                 
                 task.wait(1.5) -- Wait for network to spawn the vehicle
                 
