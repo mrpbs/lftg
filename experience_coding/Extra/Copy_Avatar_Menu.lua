@@ -1025,16 +1025,17 @@ local function startMassFling()
         if not isMassFlinging then return end
         if isRespawningVehicle then return end
         
-        -- AUTO-RESPAWN: If car gets sent to the void or despawns
+            -- AUTO-RESPAWN: If car gets sent to the void or despawns
         if not car or not car.Parent or not base or not base.Parent then
             isRespawningVehicle = true
             task.spawn(function()
                 updateStatus("⚠️ Car Lost! Respawning " .. lastVehicleName .. "...", Color3.fromRGB(255, 120, 50))
                 
-                -- Use Flames Hub native spawn remote
-                pcall(function() getgenv().Get("spawn_vehicle", lastVehicleName) end)
+                -- Reverted back to the working spawner code
+                local GetFunc = getgenv().Get or (getgenv().g and getgenv().g.Get)
+                if GetFunc then pcall(function() GetFunc("spawn_vehicle", lastVehicleName) end) end
                 
-                task.wait(2.5) -- Extra time to let the server physically drop the car
+                task.wait(2.5) -- Wait for network to drop the vehicle
                 
                 car = getMyVehicle()
                 if car then
@@ -1064,11 +1065,12 @@ local function startMassFling()
                 base.Velocity = Vector3.zero
                 base.RotVelocity = Vector3.zero
                 
-                -- Force sit using Flames Hub native seat remote
-                pcall(function() getgenv().Get("sit", vehicleSeat) end) 
-                
-                -- Keep character locked to the seat area
+                -- Teleport onto the seat
                 myRoot.CFrame = vehicleSeat.CFrame * CFrame.new(0, 1, 0)
+                
+                -- Use Flames Hub native remote to force sit
+                local GetFunc = getgenv().Get or (getgenv().g and getgenv().g.Get)
+                if GetFunc then pcall(function() GetFunc("sit", vehicleSeat) end) end
             end
             return -- Skip attack phase while trying to sit
         end
