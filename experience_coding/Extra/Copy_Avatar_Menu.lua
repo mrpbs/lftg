@@ -1934,17 +1934,26 @@ outfitData.WalkAnimation = getVal("WalkAnimation")
                     -- 2. Save In-Game 
                     pcall(function() Send("save_outfit", payload) end)
                     
-             -- 3. Share with up to 20 users (FIXED ARGUMENT ORDER)
+                                -- 3. Share with up to 20 users (WITH DELTA CONSOLE LOGGING)
                     local playersList = Players:GetPlayers()
                     local sharedCount = 0
                     for _, p in ipairs(playersList) do
                         if p ~= LocalPlayer and sharedCount < 20 then
-                            -- The game requires (TargetPlayer, OutfitPayload)
-                            pcall(function() Send("share_outfit", p, payload) end)
+                            -- Capture the success status and the error message
+                            local success, errMessage = pcall(function() 
+                                Send("share_outfit", p, payload) 
+                            end)
+                            
+                            -- If it fails, print a warning to the Delta/F9 Console
+                            if not success then
+                                warn("⚠️ [Flames Hub] Share Failed for " .. p.Name .. ": " .. tostring(errMessage))
+                            end
+                            
                             sharedCount = sharedCount + 1
-                            task.wait(0.15) -- Slightly longer wait to prevent rate-limiting
+                            task.wait(0.15)
                         end
                     end
+
                     
                     tryShareBtn.Text = "Shared!"
                     tryShareBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
