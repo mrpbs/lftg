@@ -1906,6 +1906,34 @@ outfitData.WalkAnimation = getVal("WalkAnimation")
         wlBtn.BorderSizePixel = 0
         wlBtn.LayoutOrder = 6
         wlBtn.Parent = actionLayout
+ -- ==========================================
+        -- CUSTOM ERROR POPUP UI
+        -- ==========================================
+        local function ShowErrorPopup(errMessage)
+            local errGui = Instance.new("ScreenGui", CoreGui)
+            local errFrame = Instance.new("Frame", errGui)
+            errFrame.Size = UDim2.new(0, 300, 0, 150)
+            errFrame.Position = UDim2.new(0.5, -150, 0.5, -75)
+            errFrame.BackgroundColor3 = Color3.fromRGB(40, 10, 10)
+            Instance.new("UICorner", errFrame)
+            
+            local errTxt = Instance.new("TextLabel", errFrame)
+            errTxt.Size = UDim2.new(1, -20, 1, -40)
+            errTxt.Position = UDim2.new(0, 10, 0, 10)
+            errTxt.Text = "SHARE DIAGNOSTIC:\n" .. tostring(errMessage)
+            errTxt.TextColor3 = Color3.new(1, 0, 0)
+            errTxt.Font = Enum.Font.Code
+            errTxt.TextWrapped = true
+            errTxt.BackgroundTransparency = 1
+            
+            local close = Instance.new("TextButton", errFrame)
+            close.Size = UDim2.new(0.5, 0, 0, 30)
+            close.Position = UDim2.new(0.25, 0, 1, -35)
+            close.Text = "Close"
+            close.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+            close.TextColor3 = Color3.new(1,1,1)
+            close.MouseButton1Click:Connect(function() errGui:Destroy() end)
+        end
 
      -- ==========================================
         -- LOGIC CONNECTIONS
@@ -1934,30 +1962,23 @@ outfitData.WalkAnimation = getVal("WalkAnimation")
                     -- 2. Save In-Game 
                     pcall(function() Send("save_outfit", payload) end)
                     
-                                -- 3. Share with up to 20 users (WITH DELTA CONSOLE LOGGING)
+                -- Test Share on exactly ONE other player to catch errors
                     local playersList = Players:GetPlayers()
-                    local sharedCount = 0
                     for _, p in ipairs(playersList) do
-                        if p ~= LocalPlayer and sharedCount < 20 then
-                            -- Capture the success status and the error message
-                            local success, errMessage = pcall(function() 
+                        if p ~= LocalPlayer then
+                            local success, err = pcall(function()
                                 Send("share_outfit", p, payload) 
                             end)
                             
-                            -- If it fails, print a warning to the Delta/F9 Console
                             if not success then
-                                warn("⚠️ [Flames Hub] Share Failed for " .. p.Name .. ": " .. tostring(errMessage))
+                                ShowErrorPopup("FAILED: " .. tostring(err))
+                            else
+                                ShowErrorPopup("Executed without script errors. Did they get the request?")
                             end
-                            
-                            sharedCount = sharedCount + 1
-                            task.wait(0.15)
+                            break -- Stop after 1 player for testing
                         end
                     end
-
                     
-                    tryShareBtn.Text = "Shared!"
-                    tryShareBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
-                    task.wait(1.5)
                     tryShareBtn.Text = "Try & Share"
                     tryShareBtn.BackgroundColor3 = Color3.fromRGB(200, 100, 200)
                 end)
