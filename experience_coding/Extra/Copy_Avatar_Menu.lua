@@ -1031,19 +1031,11 @@ local function startMassFling()
             task.spawn(function()
                 updateStatus("⚠️ Car Lost! Respawning " .. lastVehicleName .. "...", Color3.fromRGB(255, 120, 50))
                 
-                       -- Force require the game's actual Net module if global fails
-                local g = getgenv()
-                local Net = g.Net or (g.g and g.g.Net)
-                if not Net then pcall(function() Net = require(game:GetService("ReplicatedStorage"):FindFirstChild("Net", true)) end) end
+                -- Use Flames Hub native spawn remote
+                pcall(function() getgenv().Get("spawn_vehicle", lastVehicleName) end)
                 
-                if Net and type(Net.get) == "function" then 
-                    pcall(function() Net.get("spawn_vehicle", lastVehicleName) end) 
-                elseif g.Get then
-                    pcall(function() g.Get("spawn_vehicle", lastVehicleName) end)
-                end
+                task.wait(2.5) -- Extra time to let the server physically drop the car
                 
-                task.wait(3) -- Increased wait time so the server finishes dropping the car
-         
                 car = getMyVehicle()
                 if car then
                     base = car.PrimaryPart or car:FindFirstChild("Base")
@@ -1063,7 +1055,7 @@ local function startMassFling()
             return
         end
 
-            -- AUTO-REMOUNT: If you get detached from the seat
+        -- AUTO-REMOUNT: If you get detached from the seat
         if hum and not hum.SeatPart then
             local myRoot = char:FindFirstChild("HumanoidRootPart")
             local vehicleSeat = car:FindFirstChildOfClass("VehicleSeat") or car:FindFirstChildWhichIsA("Seat", true)
@@ -1072,17 +1064,10 @@ local function startMassFling()
                 base.Velocity = Vector3.zero
                 base.RotVelocity = Vector3.zero
                 
-                -- Force sit via Roblox API
-                vehicleSeat:Sit(hum)
+                -- Force sit using Flames Hub native seat remote
+                pcall(function() getgenv().Get("sit", vehicleSeat) end) 
                 
-                -- Force sit via Flames Hub Remote
-                pcall(function()
-                    local g = getgenv()
-                    local Net = g.Net or (g.g and g.g.Net)
-                    if Net then Net.get("sit", vehicleSeat) end
-                end)
-                
-                -- Teleport exactly onto the seat cushion
+                -- Keep character locked to the seat area
                 myRoot.CFrame = vehicleSeat.CFrame * CFrame.new(0, 1, 0)
             end
             return -- Skip attack phase while trying to sit
