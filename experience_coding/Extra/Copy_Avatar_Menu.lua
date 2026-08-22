@@ -1032,10 +1032,10 @@ local function startMassFling()
                 updateStatus("⚠️ Car Lost! Respawning " .. lastVehicleName .. "...", Color3.fromRGB(255, 120, 50))
                 
                 -- Fire Flames Hub remote to respawn exactly what you had
-                local GetFunc = getgenv().Get or (getgenv().g and getgenv().g.Get)
-                if GetFunc then GetFunc("spawn_vehicle", lastVehicleName) end
+                local Net = getgenv().Net or (getgenv().g and getgenv().g.Net)
+                if Net and Net.get then pcall(function() Net.get("spawn_vehicle", lastVehicleName) end) end
                 
-                task.wait(1.5) -- Wait for network to spawn the vehicle
+                task.wait(2) -- Wait for network to spawn the vehicle
                 
                 car = getMyVehicle()
                 if car then
@@ -1078,8 +1078,8 @@ local function startMassFling()
         end
         
         if strikeTarget then
-            -- THE SAFE ZONE: Hidden 18 studs directly beneath the target
-            local undergroundPos = strikeTarget.CFrame * CFrame.new(0, -18, 0)
+            -- THE SAFE ZONE: Hidden 45 studs directly beneath the target (deep enough to bypass water)
+            local undergroundPos = strikeTarget.CFrame * CFrame.new(0, -45, 0)
             
             -- THE STRIKE ZONE: Placed directly onto them from beneath
             local strikePos = strikeTarget.CFrame * CFrame.new(0, -1.5, 0)
@@ -1099,7 +1099,7 @@ local function startMassFling()
         else
             local myRoot = char:FindFirstChild("HumanoidRootPart")
             if myRoot then
-                base.CFrame = myRoot.CFrame * CFrame.new(0, -18, 0)
+                base.CFrame = myRoot.CFrame * CFrame.new(0, -45, 0)
                 base.Velocity = Vector3.zero
                 base.RotVelocity = Vector3.zero
             end
@@ -1128,6 +1128,7 @@ MassFlingBtn.MouseButton1Click:Connect(function()
         end
     end
 end)
+
 -- ========== ANTI-SPIN SPECTATE (Dropdown Version) ==========
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
