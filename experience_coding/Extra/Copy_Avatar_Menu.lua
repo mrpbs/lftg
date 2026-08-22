@@ -786,103 +786,7 @@ local function updateStatus(text, color, clearLogs)
     statusOrder = statusOrder + 1
 end
 
--- Whitelist Dropdown Button
-local WhitelistToggleBtn = Instance.new("TextButton")
-WhitelistToggleBtn.Size = UDim2.new(1, -10, 0, 30)
-WhitelistToggleBtn.Position = UDim2.new(0, 5, 0, 130)
-WhitelistToggleBtn.BackgroundColor3 = Color3.fromRGB(25, 25, 32)
-WhitelistToggleBtn.TextColor3 = Color3.fromRGB(0, 255, 200)
-WhitelistToggleBtn.Font = Enum.Font.SourceSansBold
-WhitelistToggleBtn.TextSize = 14
-WhitelistToggleBtn.TextXAlignment = Enum.TextXAlignment.Left
-WhitelistToggleBtn.Text = "  📜 Whitelist [ ▼ ]"
-WhitelistToggleBtn.BorderSizePixel = 0
-WhitelistToggleBtn.Parent = MassFlingFrame
 
-local WhitelistScroll = Instance.new("ScrollingFrame")
-WhitelistScroll.Size = UDim2.new(1, -10, 0, 150)
-WhitelistScroll.Position = UDim2.new(0, 5, 0, 165)
-WhitelistScroll.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
-WhitelistScroll.BorderSizePixel = 0
-WhitelistScroll.ScrollBarThickness = 4
-WhitelistScroll.Active = true 
-WhitelistScroll.Visible = false
-WhitelistScroll.Parent = MassFlingFrame
-
-local WhitelistLayout = Instance.new("UIListLayout")
-WhitelistLayout.SortOrder = Enum.SortOrder.Name
-WhitelistLayout.Padding = UDim.new(0, 4)
-WhitelistLayout.Parent = WhitelistScroll
-
-WhitelistLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-    WhitelistScroll.CanvasSize = UDim2.new(0, 0, 0, WhitelistLayout.AbsoluteContentSize.Y)
-end)
-
--- Dropdown Logic
-local whitelistExpanded = false
-WhitelistToggleBtn.MouseButton1Click:Connect(function()
-    whitelistExpanded = not whitelistExpanded
-    if whitelistExpanded then
-        MassFlingFrame.Size = UDim2.new(1, -5, 0, 320)
-        WhitelistScroll.Visible = true
-        WhitelistToggleBtn.Text = "  📜 Whitelist [ ▲ ]"
-    else
-        MassFlingFrame.Size = UDim2.new(1, -5, 0, 165)
-        WhitelistScroll.Visible = false
-        WhitelistToggleBtn.Text = "  📜 Whitelist [ ▼ ]"
-    end
-end)
-
--- Refresh Whitelist UI
-local function refreshWhitelist()
-    for _, child in ipairs(WhitelistScroll:GetChildren()) do
-        if child:IsA("TextButton") then child:Destroy() end
-    end
-    
-    local refreshBtn = Instance.new("TextButton")
-    refreshBtn.Size = UDim2.new(1, -5, 0, 25)
-    refreshBtn.BackgroundColor3 = Color3.fromRGB(40, 100, 170)
-    refreshBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    refreshBtn.Font = Enum.Font.SourceSansBold
-    refreshBtn.TextSize = 13
-    refreshBtn.Text = "🔄 Refresh Users"
-    refreshBtn.LayoutOrder = 0
-    refreshBtn.BorderSizePixel = 0
-    refreshBtn.Parent = WhitelistScroll
-    refreshBtn.MouseButton1Click:Connect(refreshWhitelist)
-
-    for _, plr in ipairs(Players:GetPlayers()) do
-        if plr ~= LocalPlayer then
-            local btn = Instance.new("TextButton")
-            btn.Name = plr.Name
-            btn.Size = UDim2.new(1, -5, 0, 22)
-            btn.Font = Enum.Font.SourceSansBold
-            btn.TextSize = 13
-            btn.Text = "  " .. plr.Name
-            btn.TextXAlignment = Enum.TextXAlignment.Left
-            btn.BorderSizePixel = 0
-            btn.LayoutOrder = 1
-            btn.Parent = WhitelistScroll
-            
-            if massWhitelist[plr.Name] then
-                btn.BackgroundColor3 = Color3.fromRGB(40, 170, 90) 
-                btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-            else
-                btn.BackgroundColor3 = Color3.fromRGB(50, 50, 60) 
-                btn.TextColor3 = Color3.fromRGB(200, 200, 200)
-            end
-            
-            btn.MouseButton1Click:Connect(function()
-                massWhitelist[plr.Name] = not massWhitelist[plr.Name]
-                refreshWhitelist()
-            end)
-        end
-    end
-end
-
-Players.PlayerAdded:Connect(refreshWhitelist)
-Players.PlayerRemoving:Connect(refreshWhitelist)
-refreshWhitelist()
 
 local function getMyVehicle()
     local vehiclesFolder = workspace:FindFirstChild("Vehicles")
@@ -1940,18 +1844,20 @@ outfitData.WalkAnimation = getVal("WalkAnimation")
         rawBox.MultiLine = true
         rawBox.Parent = rawFrame
 
-        -- Button Layout Container
+         -- Button Layout Container
         local actionLayout = Instance.new("Frame")
         actionLayout.Size = UDim2.new(1, -10, 0, 28)
         actionLayout.Position = UDim2.new(0, 5, 0, 160)
         actionLayout.BackgroundTransparency = 1
         actionLayout.Parent = rawFrame
 
+        -- Shrunk the cells slightly so all 5 buttons fit perfectly
         local uigrid = Instance.new("UIGridLayout")
-        uigrid.CellSize = UDim2.new(0.32, 0, 1, 0)
+        uigrid.CellSize = UDim2.new(0.184, 0, 1, 0) 
         uigrid.CellPadding = UDim2.new(0.02, 0, 0, 0)
         uigrid.SortOrder = Enum.SortOrder.LayoutOrder
         uigrid.Parent = actionLayout
+
 
         -- 1. Copy Button
         local copyBtn = Instance.new("TextButton")
