@@ -1913,36 +1913,43 @@ outfitData.WalkAnimation = getVal("WalkAnimation")
         -- ==========================================
         
         -- Try & Share Logic
+        
         tryShareBtn.MouseButton1Click:Connect(function()
             local payload = buildBatchPayload(outfitData)
             local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
-            local notifyUI = getgenv().notify or (getgenv().g and getgenv().g.notify)
 
             if Send then
-                tryShareBtn.Text = "Testing 1 User..."
+                tryShareBtn.Text = "Sharing..."
                 tryShareBtn.BackgroundColor3 = Color3.fromRGB(150, 50, 150)
                 task.spawn(function()
-                    -- Try On & Save
+                    -- 1. Try On
                     for i = 1, 3 do Send("wear_outfit_from_desc", payload) task.wait(0.1) end
+                    
+                    if outfitData.SkinTone then 
+                        pcall(function()
+                            local c = Color3.new(outfitData.SkinTone[1], outfitData.SkinTone[2], outfitData.SkinTone[3]) 
+                            for i=1,3 do Send("skin_tone", c) task.wait(0.1) end 
+                        end)
+                    end
+                    if outfitData.HeightScale then for i=1,3 do Send("body_scale", "HeightScale", outfitData.HeightScale * 100) task.wait(0.1) end end
+                    
+                    -- 2. Save In-Game 
                     pcall(function() Send("save_outfit", payload) end)
                     
-                    -- Test Share on exactly ONE other player and push error to in-game phone
+                    -- 3. Share with up to 20 users
                     local playersList = Players:GetPlayers()
+                    local sharedCount = 0
                     for _, p in ipairs(playersList) do
-                        if p ~= LocalPlayer then
-                            local success, err = pcall(function()
-                                Send("share_outfit", p, payload) 
-                            end)
-                            
-                            if not success then
-                                if notifyUI then notifyUI("Error", "Share failed: " .. tostring(err), 15) end
-                            else
-                                if notifyUI then notifyUI("Success", "Request fired! Did " .. p.Name .. " get it?", 8) end
-                            end
-                            break -- Stop after 1 player for testing
+                        if p ~= LocalPlayer and sharedCount < 20 then
+                            pcall(function() Send("share_outfit", p, payload) end)
+                            sharedCount = sharedCount + 1
                         end
                     end
                     
+                    -- 4. Success Feedback
+                    tryShareBtn.Text = "Successfully shared"
+                    tryShareBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
+                    task.wait(2)
                     tryShareBtn.Text = "Try & Share"
                     tryShareBtn.BackgroundColor3 = Color3.fromRGB(200, 100, 200)
                 end)
