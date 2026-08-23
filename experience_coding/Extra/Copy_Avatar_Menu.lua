@@ -7,6 +7,7 @@ local InsertService = game:GetService("InsertService")
 local HttpService = game:GetService("HttpService")
 local UserInputService = game:GetService("UserInputService")
 
+
 -- Life Together RP Payload Formatter
 local function buildBatchPayload(data)
     local accessories = {}
@@ -28,20 +29,14 @@ local function buildBatchPayload(data)
         end
     end
 
-   -- Custom Byte Encoder for LT's secret color formatting
-    local function encodeSkin(rgb)
-        if not rgb then return ";<,#" end -- Default fallback
-        -- Convert Roblox 0-1 Color3 values back to 1-255 byte characters
-        -- (We clamp to min 1 because a 0/null byte breaks JSON encoding)
-        local r = math.clamp(math.floor(rgb[1] * 255), 1, 255)
-        local g = math.clamp(math.floor(rgb[2] * 255), 1, 255)
-        local b = math.clamp(math.floor(rgb[3] * 255), 1, 255)
-        return string.char(r, g, b, 255)
+    -- Smart Skin Tone Encoder using captured valid strings
+    local safeSkinString = ":&#A" -- Default to White
+    if data.SkinTone then
+        local r, g, b = data.SkinTone[1], data.SkinTone[2], data.SkinTone[3]
+        if ((r + g + b) / 3) < 0.4 then
+            safeSkinString = ";<,#" -- Dark Skin String
+        end
     end
-    
-    local encodedColor = encodeSkin(data.SkinTone)
-
-     
 
     return {
         accessories = accessories,
@@ -59,13 +54,12 @@ local function buildBatchPayload(data)
            
             RunAnimation = data.RunAnimation or 0,
             WalkAnimation = data.WalkAnimation or 0,
-
-            
             JumpAnimation = data.JumpAnimation or 0,
             FallAnimation = data.FallAnimation or 0,
             ClimbAnimation = data.ClimbAnimation or 0,
             IdleAnimation = data.IdleAnimation or 0,
             SwimAnimation = data.SwimAnimation or 0,
+            
             HeightScale = data.HeightScale or 1,
             WidthScale = data.WidthScale or 1,
             DepthScale = data.DepthScale or 1,
@@ -73,17 +67,17 @@ local function buildBatchPayload(data)
             BodyTypeScale = data.BodyTypeScale or 0.25,
             ProportionScale = data.ProportionScale or 0,
 
-       -- Dynamically insert the target's true skin tone!
-            HeadColor = ";<,#",
-            TorsoColor = ";<,#",
-            LeftArmColor = ";<,#",
-            RightArmColor = ";<,#",
-            LeftLegColor = ";<,#",
-            RightLegColor = ";<,#",
-   
+            -- Automatically applies the safe string without crashing JSON
+            HeadColor = safeSkinString,
+            TorsoColor = safeSkinString,
+            LeftArmColor = safeSkinString,
+            RightArmColor = safeSkinString,
+            LeftLegColor = safeSkinString,
+            RightLegColor = safeSkinString,
         }
     }
 end
+
 -- Reusable Outfit Sharing Function
 local function shareOutfitToAll(rawOutfitData, buttonElement, defaultText, defaultColor)
     local payload = buildBatchPayload(rawOutfitData)
