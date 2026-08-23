@@ -1874,7 +1874,46 @@ outfitData.WalkAnimation = getVal("WalkAnimation")
         local ok, jsonText = pcall(function()
             return HttpService:JSONEncode(safeOutfit)
         end)
-   -- Button Layout Container
+
+        -- Action Panel & Raw JSON Output Box
+        local rawFrame = Instance.new("Frame")
+        rawFrame.Size = UDim2.new(1, -5, 0, 195) 
+        rawFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
+        rawFrame.BorderSizePixel = 0
+        rawFrame.Parent = AssetScroll
+
+        local rawTitle = Instance.new("TextLabel")
+        rawTitle.Size = UDim2.new(1, -10, 0, 18)
+        rawTitle.Position = UDim2.new(0, 5, 0, 6)
+        rawTitle.Text = "Outfit Output & Actions"
+        rawTitle.BackgroundTransparency = 1
+        rawTitle.TextColor3 = Color3.fromRGB(0, 255, 200)
+        rawTitle.Font = Enum.Font.SourceSansBold
+        rawTitle.TextSize = 13
+        rawTitle.TextXAlignment = Enum.TextXAlignment.Left
+        rawTitle.Parent = rawFrame
+
+        local rawBox = Instance.new("TextBox")
+        rawBox.Size = UDim2.new(1, -10, 0, 130)
+        rawBox.Position = UDim2.new(0, 5, 0, 26)
+        rawBox.Text = ok and jsonText or "{}"
+        rawBox.TextWrapped = true
+        rawBox.TextXAlignment = Enum.TextXAlignment.Left
+        rawBox.TextYAlignment = Enum.TextYAlignment.Top
+        rawBox.BackgroundColor3 = Color3.fromRGB(12, 12, 16)
+        rawBox.TextColor3 = Color3.fromRGB(220, 220, 220)
+        rawBox.Font = Enum.Font.Code
+        rawBox.TextSize = 11
+        rawBox.ClearTextOnFocus = false
+        rawBox.TextEditable = false
+        rawBox.TextScaled = false
+        rawBox.MultiLine = true
+        rawBox.Parent = rawFrame
+
+   -- Expanded Action Panel to fit two rows
+        rawFrame.Size = UDim2.new(1, -5, 0, 225) 
+
+        -- Button Layout Container
         local actionLayout = Instance.new("Frame")
         actionLayout.Size = UDim2.new(1, -10, 0, 56) -- Taller to fit 2 rows
         actionLayout.Position = UDim2.new(0, 5, 0, 160)
@@ -1957,45 +1996,6 @@ outfitData.WalkAnimation = getVal("WalkAnimation")
         wlBtn.Parent = actionLayout
  -- ==========================================
    
-        -- Action Panel & Raw JSON Output Box
-        local rawFrame = Instance.new("Frame")
-        rawFrame.Size = UDim2.new(1, -5, 0, 195) 
-        rawFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
-        rawFrame.BorderSizePixel = 0
-        rawFrame.Parent = AssetScroll
-
-        local rawTitle = Instance.new("TextLabel")
-        rawTitle.Size = UDim2.new(1, -10, 0, 18)
-        rawTitle.Position = UDim2.new(0, 5, 0, 6)
-        rawTitle.Text = "Outfit Output & Actions"
-        rawTitle.BackgroundTransparency = 1
-        rawTitle.TextColor3 = Color3.fromRGB(0, 255, 200)
-        rawTitle.Font = Enum.Font.SourceSansBold
-        rawTitle.TextSize = 13
-        rawTitle.TextXAlignment = Enum.TextXAlignment.Left
-        rawTitle.Parent = rawFrame
-
-        local rawBox = Instance.new("TextBox")
-        rawBox.Size = UDim2.new(1, -10, 0, 130)
-        rawBox.Position = UDim2.new(0, 5, 0, 26)
-        rawBox.Text = ok and jsonText or "{}"
-        rawBox.TextWrapped = true
-        rawBox.TextXAlignment = Enum.TextXAlignment.Left
-        rawBox.TextYAlignment = Enum.TextYAlignment.Top
-        rawBox.BackgroundColor3 = Color3.fromRGB(12, 12, 16)
-        rawBox.TextColor3 = Color3.fromRGB(220, 220, 220)
-        rawBox.Font = Enum.Font.Code
-        rawBox.TextSize = 11
-        rawBox.ClearTextOnFocus = false
-        rawBox.TextEditable = false
-        rawBox.TextScaled = false
-        rawBox.MultiLine = true
-        rawBox.Parent = rawFrame
-
-   -- Expanded Action Panel to fit two rows
-        rawFrame.Size = UDim2.new(1, -5, 0, 225) 
-
-     
      -- ==========================================
         -- LOGIC CONNECTIONS
         -- ==========================================
