@@ -1767,73 +1767,6 @@ local function deepScanPlayerOutfit(targetPlayer)
             if ok and val ~= nil then return val else return nil end
         end
 
-   -- ==========================================
-        -- ROW 1: COPY, SAVE, TRY ON, TRY & SHARE
-        -- ==========================================
-        local copyBtn = Instance.new("TextButton")
-        copyBtn.Text = "Copy JSON"
-        copyBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 90)
-        copyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-        copyBtn.Font = Enum.Font.SourceSansBold
-        copyBtn.TextSize = 11
-        copyBtn.BorderSizePixel = 0
-        copyBtn.LayoutOrder = 1
-        copyBtn.Parent = actionLayout
-
-        local saveBtn = Instance.new("TextButton")
-        saveBtn.Text = "Save File"
-        saveBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
-        saveBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-        saveBtn.Font = Enum.Font.SourceSansBold
-        saveBtn.TextSize = 11
-        saveBtn.BorderSizePixel = 0
-        saveBtn.LayoutOrder = 2
-        saveBtn.Parent = actionLayout
-
-        local wearBtn = Instance.new("TextButton")
-        wearBtn.Text = "Try On"
-        wearBtn.BackgroundColor3 = Color3.fromRGB(249, 180, 0)
-        wearBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
-        wearBtn.Font = Enum.Font.SourceSansBold
-        wearBtn.TextSize = 11
-        wearBtn.BorderSizePixel = 0
-        wearBtn.LayoutOrder = 3
-        wearBtn.Parent = actionLayout
-
-        local tryShareBtn = Instance.new("TextButton")
-        tryShareBtn.Text = "Share All"
-        tryShareBtn.BackgroundColor3 = Color3.fromRGB(200, 100, 200)
-        tryShareBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-        tryShareBtn.Font = Enum.Font.SourceSansBold
-        tryShareBtn.TextSize = 11
-        tryShareBtn.BorderSizePixel = 0
-        tryShareBtn.LayoutOrder = 4
-        tryShareBtn.Parent = actionLayout
-
-        -- ==========================================
-        -- ROW 2: VIEW, WHITELIST
-        -- ==========================================
-        local viewBtn = Instance.new("TextButton")
-        viewBtn.Text = "View"
-        viewBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 150)
-        viewBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-        viewBtn.Font = Enum.Font.SourceSansBold
-        viewBtn.TextSize = 11
-        viewBtn.BorderSizePixel = 0
-        viewBtn.LayoutOrder = 5
-        viewBtn.Parent = actionLayout
-
-        local isWl = massWhitelist[targetPlayer.Name]
-        local wlBtn = Instance.new("TextButton")
-        wlBtn.Text = isWl and "Safe" or "Whitelist"
-        wlBtn.BackgroundColor3 = isWl and Color3.fromRGB(40, 170, 90) or Color3.fromRGB(50, 50, 60)
-        wlBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-        wlBtn.Font = Enum.Font.SourceSansBold
-        wlBtn.TextSize = 11
-        wlBtn.BorderSizePixel = 0
-        wlBtn.LayoutOrder = 6
-        wlBtn.Parent = actionLayout
- -- ==========================================
    
       
         local headScale = safeGet("HeadScale")
@@ -1941,7 +1874,89 @@ outfitData.WalkAnimation = getVal("WalkAnimation")
         local ok, jsonText = pcall(function()
             return HttpService:JSONEncode(safeOutfit)
         end)
+   -- Button Layout Container
+        local actionLayout = Instance.new("Frame")
+        actionLayout.Size = UDim2.new(1, -10, 0, 56) -- Taller to fit 2 rows
+        actionLayout.Position = UDim2.new(0, 5, 0, 160)
+        actionLayout.BackgroundTransparency = 1
+        actionLayout.Parent = rawFrame
 
+        -- Grid Layout specifically designed for 4 buttons per row
+        local uigrid = Instance.new("UIGridLayout")
+        uigrid.CellSize = UDim2.new(0.235, 0, 0, 26) 
+        uigrid.CellPadding = UDim2.new(0.02, 0, 0.05, 0)
+        uigrid.SortOrder = Enum.SortOrder.LayoutOrder
+        uigrid.FillDirectionMaxCells = 4 -- Forces wrap to next line after 4 buttons
+        uigrid.Parent = actionLayout
+
+     -- ==========================================
+        -- ROW 1: COPY, SAVE, TRY ON, TRY & SHARE
+        -- ==========================================
+        local copyBtn = Instance.new("TextButton")
+        copyBtn.Text = "Copy JSON"
+        copyBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 90)
+        copyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        copyBtn.Font = Enum.Font.SourceSansBold
+        copyBtn.TextSize = 11
+        copyBtn.BorderSizePixel = 0
+        copyBtn.LayoutOrder = 1
+        copyBtn.Parent = actionLayout
+
+        local saveBtn = Instance.new("TextButton")
+        saveBtn.Text = "Save File"
+        saveBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
+        saveBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        saveBtn.Font = Enum.Font.SourceSansBold
+        saveBtn.TextSize = 11
+        saveBtn.BorderSizePixel = 0
+        saveBtn.LayoutOrder = 2
+        saveBtn.Parent = actionLayout
+
+        local wearBtn = Instance.new("TextButton")
+        wearBtn.Text = "Try On"
+        wearBtn.BackgroundColor3 = Color3.fromRGB(249, 180, 0)
+        wearBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
+        wearBtn.Font = Enum.Font.SourceSansBold
+        wearBtn.TextSize = 11
+        wearBtn.BorderSizePixel = 0
+        wearBtn.LayoutOrder = 3
+        wearBtn.Parent = actionLayout
+
+        local tryShareBtn = Instance.new("TextButton")
+        tryShareBtn.Text = "Share All"
+        tryShareBtn.BackgroundColor3 = Color3.fromRGB(200, 100, 200)
+        tryShareBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        tryShareBtn.Font = Enum.Font.SourceSansBold
+        tryShareBtn.TextSize = 11
+        tryShareBtn.BorderSizePixel = 0
+        tryShareBtn.LayoutOrder = 4
+        tryShareBtn.Parent = actionLayout
+
+        -- ==========================================
+        -- ROW 2: VIEW, WHITELIST
+        -- ==========================================
+        local viewBtn = Instance.new("TextButton")
+        viewBtn.Text = "View"
+        viewBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 150)
+        viewBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        viewBtn.Font = Enum.Font.SourceSansBold
+        viewBtn.TextSize = 11
+        viewBtn.BorderSizePixel = 0
+        viewBtn.LayoutOrder = 5
+        viewBtn.Parent = actionLayout
+
+        local isWl = massWhitelist[targetPlayer.Name]
+        local wlBtn = Instance.new("TextButton")
+        wlBtn.Text = isWl and "Safe" or "Whitelist"
+        wlBtn.BackgroundColor3 = isWl and Color3.fromRGB(40, 170, 90) or Color3.fromRGB(50, 50, 60)
+        wlBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        wlBtn.Font = Enum.Font.SourceSansBold
+        wlBtn.TextSize = 11
+        wlBtn.BorderSizePixel = 0
+        wlBtn.LayoutOrder = 6
+        wlBtn.Parent = actionLayout
+ -- ==========================================
+   
         -- Action Panel & Raw JSON Output Box
         local rawFrame = Instance.new("Frame")
         rawFrame.Size = UDim2.new(1, -5, 0, 195) 
@@ -1979,21 +1994,6 @@ outfitData.WalkAnimation = getVal("WalkAnimation")
 
    -- Expanded Action Panel to fit two rows
         rawFrame.Size = UDim2.new(1, -5, 0, 225) 
-
-        -- Button Layout Container
-        local actionLayout = Instance.new("Frame")
-        actionLayout.Size = UDim2.new(1, -10, 0, 56) -- Taller to fit 2 rows
-        actionLayout.Position = UDim2.new(0, 5, 0, 160)
-        actionLayout.BackgroundTransparency = 1
-        actionLayout.Parent = rawFrame
-
-        -- Grid Layout specifically designed for 4 buttons per row
-        local uigrid = Instance.new("UIGridLayout")
-        uigrid.CellSize = UDim2.new(0.235, 0, 0, 26) 
-        uigrid.CellPadding = UDim2.new(0.02, 0, 0.05, 0)
-        uigrid.SortOrder = Enum.SortOrder.LayoutOrder
-        uigrid.FillDirectionMaxCells = 4 -- Forces wrap to next line after 4 buttons
-        uigrid.Parent = actionLayout
 
      
      -- ==========================================
