@@ -1911,14 +1911,14 @@ outfitData.WalkAnimation = getVal("WalkAnimation")
      -- ==========================================
         -- LOGIC CONNECTIONS
         -- ==========================================
-           tryShareBtn.MouseButton1Click:Connect(function()
+          tryShareBtn.MouseButton1Click:Connect(function()
             local payload = buildBatchPayload(outfitData)
             payload.makeups = {} -- Vital to prevent server crash
 
             local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
 
             if Send then
-                tryShareBtn.Text = "Sharing (1 User)..."
+                tryShareBtn.Text = "Sharing to Server..."
                 tryShareBtn.BackgroundColor3 = Color3.fromRGB(150, 50, 150)
                 task.spawn(function()
                     -- 1. Try On & Save
@@ -1936,41 +1936,39 @@ outfitData.WalkAnimation = getVal("WalkAnimation")
                     }
                     local embedJson = HttpService:JSONEncode(embedData)
                     
-                    -- 3. Grab exactly 1 target player
-                    local targetPlayer = nil
+                    -- 3. Mass-Share Loop (Up to 20 Users)
+                    local sharedCount = 0
+                    local myId = LocalPlayer.UserId
+                    
                     for _, p in ipairs(Players:GetPlayers()) do
-                        if p ~= LocalPlayer then
-                            targetPlayer = p
-                            break -- Force stop after 1 user for testing
+                        if p ~= LocalPlayer and sharedCount < 20 then
+                            task.spawn(function() -- Protective thread per user
+                                pcall(function()
+                                    local targetId = p.UserId
+                                    
+                                    -- A. Fire the mandatory pre-check safely through the wrapper
+                                    Send("can_users_direct_chat", myId, targetId)
+                                    
+                                    -- B. Build the secret Chat Channel ID (Lowest ID first, Highest ID second)
+                                    local channelStr = ""
+                                    if myId < targetId then
+                                        channelStr = tostring(myId) .. " " .. tostring(targetId)
+                                    else
+                                        channelStr = tostring(targetId) .. " " .. tostring(myId)
+                                    end
+                                    
+                                    -- C. Fire the outfit embed safely through the wrapper
+                                    Send("out_embed", channelStr, embedJson, "!EMBED")
+                                end)
+                            end)
+                            
+                            sharedCount = sharedCount + 1
+                            task.wait(0.1) -- Slight delay to prevent rate-limiting/kicks
                         end
-                    end
-
-                    local success = false
-                    if targetPlayer then
-                        pcall(function()
-                            local myId = LocalPlayer.UserId
-                            local targetId = targetPlayer.UserId
-                            
-                            -- A. Fire the mandatory pre-check safely through the wrapper!
-                            Send("can_users_direct_chat", myId, targetId)
-                            
-                            -- B. Build the secret Chat Channel ID (Lowest ID first, Highest ID second)
-                            local channelStr = ""
-                            if myId < targetId then
-                                channelStr = tostring(myId) .. " " .. tostring(targetId)
-                            else
-                                channelStr = tostring(targetId) .. " " .. tostring(myId)
-                            end
-                            
-                            -- C. Fire the outfit embed safely through the wrapper!
-                            -- (No need to pass Request IDs; Send handles it automatically to protect your chat)
-                            Send("out_embed", channelStr, embedJson, "!EMBED")
-                        end)
-                        success = true
                     end
                     
                     -- 4. Visual Feedback
-                    if success then
+                    if sharedCount > 0 then
                         tryShareBtn.Text = "Successfully shared"
                         tryShareBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
                     else
