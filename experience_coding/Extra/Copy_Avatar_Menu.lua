@@ -1559,6 +1559,7 @@ local function createDetailedAssetCard(categoryName, assetId, rawPropertySource)
     CardFrame.Size = UDim2.new(1, -5, 0, 105)
     CardFrame.BackgroundColor3 = Color3.fromRGB(24, 24, 30)
     CardFrame.BorderSizePixel = 0
+    CardFrame.LayoutOrder = 5
     CardFrame.Parent = AssetScroll
 
     local PreviewImg = Instance.new("ImageLabel")
@@ -1688,6 +1689,7 @@ local function deepScanPlayerOutfit(targetPlayer)
     avatarFrame.Size = UDim2.new(1, -5, 0, 250)
     avatarFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
     avatarFrame.BorderSizePixel = 1
+   avatarFrame.LayoutOrder = 1
     avatarFrame.BorderColor3 = Color3.fromRGB(0, 255, 150)
     avatarFrame.Parent = AssetScroll
 
@@ -1734,6 +1736,7 @@ local function deepScanPlayerOutfit(targetPlayer)
         infoFrame.Size = UDim2.new(1, -5, 0, 80)
         infoFrame.BackgroundColor3 = Color3.fromRGB(22, 22, 26)
         infoFrame.BorderSizePixel = 0
+      infoFrame.LayoutOrder = 3
         infoFrame.Parent = AssetScroll
 
         local infoTitle = Instance.new("TextLabel")
@@ -1874,16 +1877,18 @@ outfitData.WalkAnimation = getVal("WalkAnimation")
         end)
 
         -- Action Panel & Raw JSON Output Box
+            -- Raw JSON Output Box
         local rawFrame = Instance.new("Frame")
-        rawFrame.Size = UDim2.new(1, -5, 0, 195) 
+        rawFrame.Size = UDim2.new(1, -5, 0, 165) 
         rawFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
         rawFrame.BorderSizePixel = 0
+        rawFrame.LayoutOrder = 4 -- Puts JSON at the very bottom
         rawFrame.Parent = AssetScroll
 
         local rawTitle = Instance.new("TextLabel")
         rawTitle.Size = UDim2.new(1, -10, 0, 18)
         rawTitle.Position = UDim2.new(0, 5, 0, 6)
-        rawTitle.Text = "Outfit Output & Actions"
+        rawTitle.Text = "Raw JSON Data"
         rawTitle.BackgroundTransparency = 1
         rawTitle.TextColor3 = Color3.fromRGB(0, 255, 200)
         rawTitle.Font = Enum.Font.SourceSansBold
@@ -1908,28 +1913,34 @@ outfitData.WalkAnimation = getVal("WalkAnimation")
         rawBox.MultiLine = true
         rawBox.Parent = rawFrame
 
-   -- Expanded Action Panel to fit two rows
-        rawFrame.Size = UDim2.new(1, -5, 0, 225) 
+        -- ==========================================
+        -- NEW ACTION PANEL (Moved Above Avatar Info!)
+        -- ==========================================
+        local actionFrame = Instance.new("Frame")
+        actionFrame.Size = UDim2.new(1, -5, 0, 60)
+        actionFrame.BackgroundTransparency = 1
+        actionFrame.LayoutOrder = 2 -- Magically places it right below the 3D Avatar!
+        actionFrame.Parent = AssetScroll
 
         -- Button Layout Container
         local actionLayout = Instance.new("Frame")
-        actionLayout.Size = UDim2.new(1, -10, 0, 56) -- Taller to fit 2 rows
-        actionLayout.Position = UDim2.new(0, 5, 0, 160)
+        actionLayout.Size = UDim2.new(1, -10, 1, 0)
+        actionLayout.Position = UDim2.new(0, 5, 0, 0)
         actionLayout.BackgroundTransparency = 1
-        actionLayout.Parent = rawFrame
+        actionLayout.Parent = actionFrame
 
         -- Grid Layout specifically designed for 4 buttons per row
         local uigrid = Instance.new("UIGridLayout")
         uigrid.CellSize = UDim2.new(0.235, 0, 0, 26) 
-        uigrid.CellPadding = UDim2.new(0.02, 0, 0.05, 0)
+        uigrid.CellPadding = UDim2.new(0.02, 0, 0.08, 0)
         uigrid.SortOrder = Enum.SortOrder.LayoutOrder
-        uigrid.FillDirectionMaxCells = 4 -- Forces wrap to next line after 4 buttons
+        uigrid.FillDirectionMaxCells = 4
         uigrid.Parent = actionLayout
 
         -- ==========================================
         -- ROW 1: COPY, SAVE, TRY ON, TRY & SHARE
         -- ==========================================
-        local copyBtn = Instance.new("TextButton")
+    local copyBtn = Instance.new("TextButton")
         copyBtn.Text = "Copy JSON"
         copyBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 90)
         copyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
