@@ -74,12 +74,12 @@ local function buildBatchPayload(data)
             ProportionScale = data.ProportionScale or 0,
 
        -- Dynamically insert the target's true skin tone!
-            HeadColor = encodedColor,
-            TorsoColor = encodedColor,
-            LeftArmColor = encodedColor,
-            RightArmColor = encodedColor,
-            LeftLegColor = encodedColor,
-            RightLegColor = encodedColor,
+            HeadColor = ";<,#",
+            TorsoColor = ";<,#",
+            LeftArmColor = ";<,#",
+            RightArmColor = ";<,#",
+            LeftLegColor = ";<,#",
+            RightLegColor = ";<,#",
    
         }
     }
