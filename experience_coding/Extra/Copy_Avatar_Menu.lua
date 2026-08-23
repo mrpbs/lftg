@@ -455,6 +455,77 @@ FeInvisBtn.MouseButton1Click:Connect(function()
 end)
 
 ---
+-- ========== ANTI-FLING & ANTI-VEHICLE FLING ==========
+local antiFlingEnabled = false
+local antiFlingConnection = nil
+
+local AntiFlingBtn = Instance.new("TextButton")
+AntiFlingBtn.Size = UDim2.new(1, -5, 0, 40)
+AntiFlingBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+AntiFlingBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+AntiFlingBtn.Font = Enum.Font.SourceSansBold
+AntiFlingBtn.TextSize = 16
+AntiFlingBtn.Text = "🛡️ Anti-Fling: OFF"
+AntiFlingBtn.BorderSizePixel = 0
+AntiFlingBtn.Parent = ToolsScroll
+
+AntiFlingBtn.MouseButton1Click:Connect(function()
+    antiFlingEnabled = not antiFlingEnabled
+
+    if antiFlingEnabled then
+        AntiFlingBtn.Text = "🛡️ Anti-Fling: ON"
+        AntiFlingBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
+        
+        -- Runs before physics calculate to prevent touches
+        antiFlingConnection = RunService.Stepped:Connect(function()
+            local myChar = LocalPlayer.Character
+            if not myChar then return end
+
+            -- 1. PURE ANTI-FLING: Disable collisions for all other players globally
+            for _, p in ipairs(Players:GetPlayers()) do
+                if p ~= LocalPlayer and p.Character then
+                    for _, part in ipairs(p.Character:GetDescendants()) do
+                        if part:IsA("BasePart") and part.CanCollide then
+                            part.CanCollide = false
+                        end
+                    end
+                end
+            end
+
+            -- 2. VELOCITY STABILIZER: Protects you and your vehicle from physics spikes
+            local myRoot = myChar:FindFirstChild("HumanoidRootPart")
+            local myHum = myChar:FindFirstChildOfClass("Humanoid")
+            
+            if myHum and myHum.SeatPart then
+                -- Anti-Vehicle Fling Logic
+                local vehicle = myHum.SeatPart:FindFirstAncestorOfClass("Model")
+                if vehicle then
+                    local pPart = vehicle.PrimaryPart or myHum.SeatPart
+                    if pPart then
+                        if pPart.AssemblyAngularVelocity.Magnitude > 50 or pPart.AssemblyLinearVelocity.Magnitude > 400 then
+                            pPart.AssemblyAngularVelocity = Vector3.zero
+                            pPart.AssemblyLinearVelocity = Vector3.new(0, -10, 0)
+                        end
+                    end
+                end
+            elseif myRoot then
+                -- Standard Player Anti-Fling Fallback
+                if myRoot.AssemblyAngularVelocity.Magnitude > 50 or myRoot.AssemblyLinearVelocity.Magnitude > 250 then
+                    myRoot.AssemblyAngularVelocity = Vector3.zero
+                    myRoot.AssemblyLinearVelocity = Vector3.new(0, -10, 0)
+                end
+            end
+        end)
+    else
+        AntiFlingBtn.Text = "🛡️ Anti-Fling: OFF"
+        AntiFlingBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+        
+        if antiFlingConnection then
+            antiFlingConnection:Disconnect()
+            antiFlingConnection = nil
+        end
+    end
+end)
 
 -- ========== LIFE TOGETHER RP ANTI-SIT TOOL ==========
 local ltAntiSitEnabled = false
