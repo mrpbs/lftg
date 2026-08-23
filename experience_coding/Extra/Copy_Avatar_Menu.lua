@@ -1767,8 +1767,6 @@ local function deepScanPlayerOutfit(targetPlayer)
             if ok and val ~= nil then return val else return nil end
         end
 
-   
-      
         local headScale = safeGet("HeadScale")
         local heightScale = safeGet("HeightScale")
         local widthScale = safeGet("WidthScale")
@@ -1928,7 +1926,7 @@ outfitData.WalkAnimation = getVal("WalkAnimation")
         uigrid.FillDirectionMaxCells = 4 -- Forces wrap to next line after 4 buttons
         uigrid.Parent = actionLayout
 
-     -- ==========================================
+        -- ==========================================
         -- ROW 1: COPY, SAVE, TRY ON, TRY & SHARE
         -- ==========================================
         local copyBtn = Instance.new("TextButton")
