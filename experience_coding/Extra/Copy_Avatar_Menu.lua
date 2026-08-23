@@ -1914,10 +1914,7 @@ outfitData.WalkAnimation = getVal("WalkAnimation")
         
            tryShareBtn.MouseButton1Click:Connect(function()
             local payload = buildBatchPayload(outfitData)
-            
-            -- FIX: Inject the missing 'makeups' table that SimpleSpy caught.
-            -- This prevents the server from crashing and breaking your chat!
-            payload.makeups = {}
+            payload.makeups = {} -- Vital to prevent server crash
 
             local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
 
@@ -1936,38 +1933,50 @@ outfitData.WalkAnimation = getVal("WalkAnimation")
                         accept = "View",
                         content = "Custom Outfit",
                         func = "view_outfit",
-                        desc = payload -- Now safely includes the makeups array!
+                        desc = payload
                     }
                     local embedJson = HttpService:JSONEncode(embedData)
                     
-                    -- 3. Grab exactly 1 target UserId
-                    local targetIdString = ""
-                    local playersList = Players:GetPlayers()
-                    for _, p in ipairs(playersList) do
+                    -- 3. Grab exactly 1 target player
+                    local targetPlayer = nil
+                    for _, p in ipairs(Players:GetPlayers()) do
                         if p ~= LocalPlayer then
-                            targetIdString = tostring(p.UserId)
-                            break -- Force stop after 1 user
+                            targetPlayer = p
+                            break -- Force stop after 1 user for testing
                         end
                     end
 
-                    -- 4. Fire the exact unpack(args) replica of your SimpleSpy log
                     local success = false
-                    if targetIdString ~= "" then
-                        task.spawn(function() -- Keeps local script safe
+                    if targetPlayer then
+                        task.spawn(function() -- Keeps local script and chat safe
                             pcall(function()
-                                local args = {
-                                    8, 
-                                    "out_embed",
-                                    targetIdString,
-                                    embedJson,
-                                    "!EMBED"
-                                }
-                                game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Get"):InvokeServer(unpack(args))
+                                local RemoteGet = game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Get")
+                                local myId = LocalPlayer.UserId
+                                local targetId = targetPlayer.UserId
+                                
+                                -- A. Generate a random Request ID so we don't break the local chat handler
+                                local reqId = math.random(10000, 99999)
+                                
+                                -- B. Fire the mandatory pre-check that you discovered in the logs
+                                RemoteGet:InvokeServer(reqId, "can_users_direct_chat", myId, targetId)
+                                
+                                -- C. Build the secret Chat Channel ID (Lowest ID first, Highest ID second)
+                                local channelStr = ""
+                                if myId < targetId then
+                                    channelStr = tostring(myId) .. " " .. tostring(targetId)
+                                else
+                                    channelStr = tostring(targetId) .. " " .. tostring(myId)
+                                end
+                                
+                                -- D. Fire the outfit embed!
+                                reqId = reqId + 1
+                                RemoteGet:InvokeServer(reqId, "out_embed", channelStr, embedJson, "!EMBED")
                             end)
                         end)
                         success = true
                     end
                     
+                    -- 4. Visual Feedback
                     if success then
                         tryShareBtn.Text = "Successfully shared"
                         tryShareBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
