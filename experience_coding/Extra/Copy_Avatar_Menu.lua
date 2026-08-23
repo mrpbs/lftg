@@ -30,7 +30,7 @@ local function buildBatchPayload(data)
     end
 
     -- Smart Skin Tone Encoder using captured valid strings
-    local safeSkinString = ":&#A" -- Default to White
+    local safeSkinString = "^l?B" -- Default to ligh tancolor
     if data.SkinTone then
         local r, g, b = data.SkinTone[1], data.SkinTone[2], data.SkinTone[3]
         if ((r + g + b) / 3) < 0.4 then
