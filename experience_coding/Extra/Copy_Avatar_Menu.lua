@@ -2331,44 +2331,44 @@ populateSavedOutfits = function()
         NameBox.ClearTextOnFocus = false
         NameBox.Parent = Entry
 
-        local WearBtn = Instance.new("TextButton")
-        WearBtn.Size = UDim2.new(0.18, 0, 0, 26)
-        WearBtn.Position = UDim2.new(0.40, 0, 0.5, -13)
+      local WearBtn = Instance.new("TextButton")
+        WearBtn.Size = UDim2.new(0.14, 0, 0, 26)
+        WearBtn.Position = UDim2.new(0.38, 0, 0.5, -13)
         WearBtn.Text = "Wear"
         WearBtn.BackgroundColor3 = Color3.fromRGB(249, 180, 0)
         WearBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
         WearBtn.Font = Enum.Font.SourceSansBold
-        WearBtn.TextSize = 12
+        WearBtn.TextSize = 11
         WearBtn.BorderSizePixel = 0
         WearBtn.Parent = Entry
 
         local RenameBtn = Instance.new("TextButton")
-        RenameBtn.Size = UDim2.new(0.20, 0, 0, 26)
-        RenameBtn.Position = UDim2.new(0.60, 0, 0.5, -13)
+        RenameBtn.Size = UDim2.new(0.16, 0, 0, 26)
+        RenameBtn.Position = UDim2.new(0.53, 0, 0.5, -13)
         RenameBtn.Text = "Rename"
         RenameBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 150)
         RenameBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
         RenameBtn.Font = Enum.Font.SourceSansBold
-        RenameBtn.TextSize = 12
+        RenameBtn.TextSize = 11
         RenameBtn.BorderSizePixel = 0
         RenameBtn.Parent = Entry
 
         local DeleteBtn = Instance.new("TextButton")
-        DeleteBtn.Size = UDim2.new(0.14, 0, 0, 26)
-        DeleteBtn.Position = UDim2.new(0.82, 0, 0.5, -13)
+        DeleteBtn.Size = UDim2.new(0.12, 0, 0, 26)
+        DeleteBtn.Position = UDim2.new(0.70, 0, 0.5, -13)
         DeleteBtn.Text = "Del"
         DeleteBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
         DeleteBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
         DeleteBtn.Font = Enum.Font.SourceSansBold
-        DeleteBtn.TextSize = 12
+        DeleteBtn.TextSize = 11
         DeleteBtn.BorderSizePixel = 0
         DeleteBtn.Parent = Entry
------------
-      
-      local ShareBtn = Instance.new("TextButton")
+
+        -- NEW: Share All Button for Saved Outfits
+        local ShareBtn = Instance.new("TextButton")
         ShareBtn.Size = UDim2.new(0.16, 0, 0, 26)
         ShareBtn.Position = UDim2.new(0.83, 0, 0.5, -13)
-        ShareBtn.Text = "Share All"
+        ShareBtn.Text = "All Share"
         ShareBtn.BackgroundColor3 = Color3.fromRGB(200, 100, 200)
         ShareBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
         ShareBtn.Font = Enum.Font.SourceSansBold
