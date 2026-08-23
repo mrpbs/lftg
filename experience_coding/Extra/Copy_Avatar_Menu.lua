@@ -28,7 +28,20 @@ local function buildBatchPayload(data)
         end
     end
 
-        
+   -- Custom Byte Encoder for LT's secret color formatting
+    local function encodeSkin(rgb)
+        if not rgb then return ";<,#" end -- Default fallback
+        -- Convert Roblox 0-1 Color3 values back to 1-255 byte characters
+        -- (We clamp to min 1 because a 0/null byte breaks JSON encoding)
+        local r = math.clamp(math.floor(rgb[1] * 255), 1, 255)
+        local g = math.clamp(math.floor(rgb[2] * 255), 1, 255)
+        local b = math.clamp(math.floor(rgb[3] * 255), 1, 255)
+        return string.char(r, g, b, 255)
+    end
+    
+    local encodedColor = encodeSkin(data.SkinTone)
+
+     
 
     return {
         accessories = accessories,
@@ -60,12 +73,14 @@ local function buildBatchPayload(data)
             BodyTypeScale = data.BodyTypeScale or 0.25,
             ProportionScale = data.ProportionScale or 0,
 
-            HeadColor = ";<,#",
-            TorsoColor = ";<,#",
-            LeftArmColor = ";<,#",
-            RightArmColor = ";<,#",
-            LeftLegColor = ";<,#",
-            RightLegColor = ";<,#",
+       -- Dynamically insert the target's true skin tone!
+            HeadColor = encodedColor,
+            TorsoColor = encodedColor,
+            LeftArmColor = encodedColor,
+            RightArmColor = encodedColor,
+            LeftLegColor = encodedColor,
+            RightLegColor = encodedColor,
+   
         }
     }
 end
