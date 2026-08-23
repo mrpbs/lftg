@@ -69,6 +69,72 @@ local function buildBatchPayload(data)
         }
     }
 end
+-- Reusable Outfit Sharing Function
+local function shareOutfitToAll(rawOutfitData, buttonElement, defaultText, defaultColor)
+    local payload = buildBatchPayload(rawOutfitData)
+    payload.makeups = {} -- Vital to prevent server crash
+    
+    local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
+    
+    if not Send then 
+        buttonElement.Text = "No Net"
+        task.wait(2)
+        buttonElement.Text = defaultText
+        return 
+    end
+
+    buttonElement.Text = "Sharing..."
+    buttonElement.BackgroundColor3 = Color3.fromRGB(150, 50, 150)
+
+    task.spawn(function()
+        local embedData = {
+            outfit_id = -2,
+            app = "Avatar",
+            accept = "View",
+            content = "Custom Outfit",
+            func = "view_outfit",
+            desc = payload
+        }
+        local embedJson = HttpService:JSONEncode(embedData)
+        
+        local sharedCount = 0
+        local myId = LocalPlayer.UserId
+        
+        for _, p in ipairs(Players:GetPlayers()) do
+            if p ~= LocalPlayer and sharedCount < 20 then
+                task.spawn(function()
+                    pcall(function()
+                        local targetId = p.UserId
+                        Send("can_users_direct_chat", myId, targetId)
+                        
+                        local channelStr = ""
+                        if myId < targetId then
+                            channelStr = tostring(myId) .. " " .. tostring(targetId)
+                        else
+                            channelStr = tostring(targetId) .. " " .. tostring(myId)
+                        end
+                        
+                        Send("out_embed", channelStr, embedJson, "!EMBED")
+                    end)
+                end)
+                sharedCount = sharedCount + 1
+                task.wait(0.1) 
+            end
+        end
+        
+        if sharedCount > 0 then
+            buttonElement.Text = "Shared!"
+            buttonElement.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
+        else
+            buttonElement.Text = "Failed"
+            buttonElement.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+        end
+        
+        task.wait(2)
+        buttonElement.Text = defaultText
+        buttonElement.BackgroundColor3 = defaultColor
+    end)
+end
 
 -- Prevent duplicate GUIs
 if LocalPlayer:WaitForChild("PlayerGui"):FindFirstChild("DeepMetadataScanner") then
@@ -1874,7 +1940,7 @@ outfitData.WalkAnimation = getVal("WalkAnimation")
         wearBtn.Parent = actionLayout
 
         local tryShareBtn = Instance.new("TextButton")
-        tryShareBtn.Text = "Try & Share"
+        tryShareBtn.Text = "Share All"
         tryShareBtn.BackgroundColor3 = Color3.fromRGB(200, 100, 200)
         tryShareBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
         tryShareBtn.Font = Enum.Font.SourceSansBold
@@ -1911,76 +1977,8 @@ outfitData.WalkAnimation = getVal("WalkAnimation")
      -- ==========================================
         -- LOGIC CONNECTIONS
         -- ==========================================
-          tryShareBtn.MouseButton1Click:Connect(function()
-            local payload = buildBatchPayload(outfitData)
-            payload.makeups = {} -- Vital to prevent server crash
-
-            local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
-
-            if Send then
-                tryShareBtn.Text = "Sharing to Server..."
-                tryShareBtn.BackgroundColor3 = Color3.fromRGB(150, 50, 150)
-                task.spawn(function()
-                    -- 1. Try On & Save
-                    for i = 1, 3 do Send("wear_outfit_from_desc", payload) task.wait(0.1) end
-                    pcall(function() Send("save_outfit", payload) end)
-                    
-                    -- 2. Build the EXACT phone embed format
-                    local embedData = {
-                        outfit_id = -2,
-                        app = "Avatar",
-                        accept = "View",
-                        content = "Custom Outfit",
-                        func = "view_outfit",
-                        desc = payload
-                    }
-                    local embedJson = HttpService:JSONEncode(embedData)
-                    
-                    -- 3. Mass-Share Loop (Up to 20 Users)
-                    local sharedCount = 0
-                    local myId = LocalPlayer.UserId
-                    
-                    for _, p in ipairs(Players:GetPlayers()) do
-                        if p ~= LocalPlayer and sharedCount < 20 then
-                            task.spawn(function() -- Protective thread per user
-                                pcall(function()
-                                    local targetId = p.UserId
-                                    
-                                    -- A. Fire the mandatory pre-check safely through the wrapper
-                                    Send("can_users_direct_chat", myId, targetId)
-                                    
-                                    -- B. Build the secret Chat Channel ID (Lowest ID first, Highest ID second)
-                                    local channelStr = ""
-                                    if myId < targetId then
-                                        channelStr = tostring(myId) .. " " .. tostring(targetId)
-                                    else
-                                        channelStr = tostring(targetId) .. " " .. tostring(myId)
-                                    end
-                                    
-                                    -- C. Fire the outfit embed safely through the wrapper
-                                    Send("out_embed", channelStr, embedJson, "!EMBED")
-                                end)
-                            end)
-                            
-                            sharedCount = sharedCount + 1
-                            task.wait(0.1) -- Slight delay to prevent rate-limiting/kicks
-                        end
-                    end
-                    
-                    -- 4. Visual Feedback
-                    if sharedCount > 0 then
-                        tryShareBtn.Text = "Successfully shared"
-                        tryShareBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
-                    else
-                        tryShareBtn.Text = "Failed (No Players)"
-                        tryShareBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-                    end
-                    
-                    task.wait(2)
-                    tryShareBtn.Text = "Try & Share"
-                    tryShareBtn.BackgroundColor3 = Color3.fromRGB(200, 100, 200)
-                end)
-            end
+        tryShareBtn.MouseButton1Click:Connect(function()
+            shareOutfitToAll(outfitData, tryShareBtn, "Share All", Color3.fromRGB(200, 100, 200))
         end)
 
       -- [NEW CONNECTIONS FOR VIEW & WHITELIST]
@@ -2365,6 +2363,23 @@ populateSavedOutfits = function()
         DeleteBtn.TextSize = 12
         DeleteBtn.BorderSizePixel = 0
         DeleteBtn.Parent = Entry
+-----------
+      
+      local ShareBtn = Instance.new("TextButton")
+        ShareBtn.Size = UDim2.new(0.16, 0, 0, 26)
+        ShareBtn.Position = UDim2.new(0.83, 0, 0.5, -13)
+        ShareBtn.Text = "Share All"
+        ShareBtn.BackgroundColor3 = Color3.fromRGB(200, 100, 200)
+        ShareBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        ShareBtn.Font = Enum.Font.SourceSansBold
+        ShareBtn.TextSize = 11
+        ShareBtn.BorderSizePixel = 0
+        ShareBtn.Parent = Entry
+
+              -- [NEW] Share All Logic for Saved Outfit
+        ShareBtn.MouseButton1Click:Connect(function()
+            shareOutfitToAll(data, ShareBtn, "Share All", Color3.fromRGB(200, 100, 200))
+        end)
 
         -- Wear Logic
         WearBtn.MouseButton1Click:Connect(function()
