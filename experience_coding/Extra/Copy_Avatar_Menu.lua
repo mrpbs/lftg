@@ -1911,7 +1911,6 @@ outfitData.WalkAnimation = getVal("WalkAnimation")
      -- ==========================================
         -- LOGIC CONNECTIONS
         -- ==========================================
-        
            tryShareBtn.MouseButton1Click:Connect(function()
             local payload = buildBatchPayload(outfitData)
             payload.makeups = {} -- Vital to prevent server crash
@@ -1948,30 +1947,24 @@ outfitData.WalkAnimation = getVal("WalkAnimation")
 
                     local success = false
                     if targetPlayer then
-                        task.spawn(function() -- Keeps local script and chat safe
-                            pcall(function()
-                                local RemoteGet = game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Get")
-                                local myId = LocalPlayer.UserId
-                                local targetId = targetPlayer.UserId
-                                
-                                -- A. Generate a random Request ID so we don't break the local chat handler
-                                local reqId = math.random(10000, 99999)
-                                
-                                -- B. Fire the mandatory pre-check that you discovered in the logs
-                                RemoteGet:InvokeServer(reqId, "can_users_direct_chat", myId, targetId)
-                                
-                                -- C. Build the secret Chat Channel ID (Lowest ID first, Highest ID second)
-                                local channelStr = ""
-                                if myId < targetId then
-                                    channelStr = tostring(myId) .. " " .. tostring(targetId)
-                                else
-                                    channelStr = tostring(targetId) .. " " .. tostring(myId)
-                                end
-                                
-                                -- D. Fire the outfit embed!
-                                reqId = reqId + 1
-                                RemoteGet:InvokeServer(reqId, "out_embed", channelStr, embedJson, "!EMBED")
-                            end)
+                        pcall(function()
+                            local myId = LocalPlayer.UserId
+                            local targetId = targetPlayer.UserId
+                            
+                            -- A. Fire the mandatory pre-check safely through the wrapper!
+                            Send("can_users_direct_chat", myId, targetId)
+                            
+                            -- B. Build the secret Chat Channel ID (Lowest ID first, Highest ID second)
+                            local channelStr = ""
+                            if myId < targetId then
+                                channelStr = tostring(myId) .. " " .. tostring(targetId)
+                            else
+                                channelStr = tostring(targetId) .. " " .. tostring(myId)
+                            end
+                            
+                            -- C. Fire the outfit embed safely through the wrapper!
+                            -- (No need to pass Request IDs; Send handles it automatically to protect your chat)
+                            Send("out_embed", channelStr, embedJson, "!EMBED")
                         end)
                         success = true
                     end
