@@ -90,7 +90,8 @@ local function buildBatchPayload(data)
 end
 
 -- Reusable Outfit Sharing Function
-local function shareOutfitToAll(rawOutfitData, buttonElement, defaultText, defaultColor)
+-- Reusable Outfit Sharing Function (Now with an excluded target!)
+local function shareOutfitToAll(rawOutfitData, buttonElement, defaultText, defaultColor, excludedPlayer)
     local payload = buildBatchPayload(rawOutfitData)
     payload.makeups = {} -- Vital to prevent server crash
     
@@ -121,7 +122,8 @@ local function shareOutfitToAll(rawOutfitData, buttonElement, defaultText, defau
         local myId = LocalPlayer.UserId
         
         for _, p in ipairs(Players:GetPlayers()) do
-            if p ~= LocalPlayer and sharedCount < 20 then
+            -- [UPDATED] Skip LocalPlayer AND skip the excludedPlayer!
+            if p ~= LocalPlayer and p ~= excludedPlayer and sharedCount < 20 then
                 task.spawn(function()
                     pcall(function()
                         local targetId = p.UserId
@@ -2496,9 +2498,18 @@ populateSavedOutfits = function()
         ShareBtn.BorderSizePixel = 0
         ShareBtn.Parent = Entry
 
-              -- [NEW] Share All Logic for Saved Outfit
+             -- [UPDATED] Share All Logic for Saved Outfit
         ShareBtn.MouseButton1Click:Connect(function()
-            shareOutfitToAll(data, ShareBtn, "Share All", Color3.fromRGB(200, 100, 200))
+            -- Attempt to find if the person we saved this from is currently in the server
+            local excludedTarget = nil
+            for _, p in ipairs(Players:GetPlayers()) do
+                if string.find(name, p.Name) then -- Checks if their name is in the save file
+                    excludedTarget = p
+                    break
+                end
+            end
+            
+            shareOutfitToAll(data, ShareBtn, "Share All", Color3.fromRGB(200, 100, 200), excludedTarget)
         end)
 
         -- Wear Logic
