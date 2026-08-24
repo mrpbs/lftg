@@ -2107,7 +2107,7 @@ outfitData.WalkAnimation = getVal("WalkAnimation")
         -- LOGIC CONNECTIONS
         -- ==========================================
         tryShareBtn.MouseButton1Click:Connect(function()
-            shareOutfitToAll(outfitData, tryShareBtn, "Share All", Color3.fromRGB(200, 100, 200))
+          shareOutfitToAll(outfitData, tryShareBtn, "Share All", Color3.fromRGB(200, 100, 200), targetPlayer)
         end)
 
       -- [NEW CONNECTIONS FOR VIEW & WHITELIST]
