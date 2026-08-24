@@ -1738,8 +1738,8 @@ local function createDetailedAssetCard(categoryName, assetId, rawPropertySource)
     end)
 end
 
--- Scan Logic (Now accepts Player object directly)
-local function deepScanPlayerOutfit(targetPlayer)
+-- Scan Logic (Now accepts frozen snapshot data)
+local function deepScanPlayerOutfit(targetPlayer, cachedDescription)
     for _, child in pairs(AssetScroll:GetChildren()) do
         if child:IsA("Frame") then child:Destroy() end
     end
@@ -1750,18 +1750,24 @@ local function deepScanPlayerOutfit(targetPlayer)
     RefreshBtn.Visible = false
     BackBtn.Visible = true
 
-    local liveChar = targetPlayer.Character or Workspace:FindFirstChild(targetPlayer.Name)
-    if not liveChar then return end
+    -- Use the frozen snapshot. If they weren't loaded during refresh, fallback to live.
+    local description = cachedDescription
+    if not description then
+        local liveChar = targetPlayer.Character or Workspace:FindFirstChild(targetPlayer.Name)
+        local humanoid = liveChar and liveChar:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            pcall(function() description = humanoid:GetAppliedDescription() end)
+        end
+    end
 
-    local humanoid = liveChar:FindFirstChildOfClass("Humanoid")
-    if not humanoid then return end
-    
+    if not description then return end -- Abort if no data could be found
+
     local avatarFrame = Instance.new("Frame")
     avatarFrame.Size = UDim2.new(1, -5, 0, 250)
     avatarFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
     avatarFrame.BorderSizePixel = 1
-   avatarFrame.LayoutOrder = 1
     avatarFrame.BorderColor3 = Color3.fromRGB(0, 255, 150)
+    avatarFrame.LayoutOrder = 1
     avatarFrame.Parent = AssetScroll
 
     local bigViewport = Instance.new("ViewportFrame")
@@ -1769,11 +1775,26 @@ local function deepScanPlayerOutfit(targetPlayer)
     bigViewport.BackgroundTransparency = 1
     bigViewport.Parent = avatarFrame
 
+    -- Viewport generation using the frozen snapshot (Immune to live changes!)
     task.spawn(function()
-        local prevArchivable = liveChar.Archivable
-        liveChar.Archivable = true
-        local charClone = liveChar:Clone()
-        liveChar.Archivable = prevArchivable
+        local charClone
+        local success = pcall(function()
+            -- Builds a fresh dummy using the frozen snapshot data
+            charClone = Players:CreateHumanoidModelFromDescription(description, Enum.HumanoidRigType.R15)
+        end)
+        
+        -- Fallback if Roblox's API fails
+        if not success or not charClone then
+            pcall(function()
+                local myChar = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+                local oldArch = myChar.Archivable
+                myChar.Archivable = true
+                charClone = myChar:Clone()
+                myChar.Archivable = oldArch
+                local hum = charClone:FindFirstChildOfClass("Humanoid")
+                if hum then hum:ApplyDescription(description) end
+            end)
+        end
 
         if charClone then
             for _, v in pairs(charClone:GetDescendants()) do
@@ -1796,12 +1817,7 @@ local function deepScanPlayerOutfit(targetPlayer)
         end
     end)
 
-    local success, description = pcall(function()
-        return humanoid:GetAppliedDescription()
-    end)
-
-    if not success or not description then return end
-
+  
     do
         local infoFrame = Instance.new("Frame")
         infoFrame.Size = UDim2.new(1, -5, 0, 80)
@@ -2597,8 +2613,21 @@ local function populatePlayerList()
         Username.BackgroundTransparency = 1
         Username.Parent = PlayerBtn
 
-        PlayerBtn.MouseButton1Click:Connect(function()
-            deepScanPlayerOutfit(player)
+      -- [NEW] Capture the outfit data the exact moment the menu refreshes!
+        local cachedDescription = nil
+        pcall(function()
+            local char = player.Character
+            if char then
+                local hum = char:FindFirstChildOfClass("Humanoid")
+                if hum then
+                    cachedDescription = hum:GetAppliedDescription()
+                end
+            end
+        end)
+----
+      
+      PlayerBtn.MouseButton1Click:Connect(function()
+            deepScanPlayerOutfit(player, cachedDescription)
         end)
     end
 end
