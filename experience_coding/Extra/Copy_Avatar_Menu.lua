@@ -1770,10 +1770,14 @@ local function deepScanPlayerOutfit(targetPlayer, cachedDescription)
     avatarFrame.LayoutOrder = 1
     avatarFrame.Parent = AssetScroll
 
-    local bigViewport = Instance.new("ViewportFrame")
+      local bigViewport = Instance.new("ViewportFrame")
     bigViewport.Size = UDim2.new(1, 0, 1, 0)
     bigViewport.BackgroundTransparency = 1
     bigViewport.Parent = avatarFrame
+
+    -- [NEW] WorldModel fixes Layered Clothing glitches!
+    local worldModel = Instance.new("WorldModel")
+    worldModel.Parent = bigViewport
 
     -- Viewport generation using the frozen snapshot (Immune to live changes!)
     task.spawn(function()
@@ -1803,7 +1807,12 @@ local function deepScanPlayerOutfit(targetPlayer, cachedDescription)
                 end
             end
             
-            charClone.Parent = bigViewport
+            -- [NEW] Center the model at 0,0,0 to stop camera rendering glitches
+            charClone:PivotTo(CFrame.new(0, 0, 0))
+            
+            -- [NEW] Parent the avatar to the WorldModel, NOT the Viewport directly!
+            charClone.Parent = worldModel
+            
             local camera = Instance.new("Camera")
             camera.Parent = bigViewport
             
