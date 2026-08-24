@@ -2337,7 +2337,7 @@ populateSavedOutfits = function()
         Entry.BorderSizePixel = 0
         Entry.Parent = SavedScroll
 
-        -- NEW: Mini 3D Viewport Thumbnail
+            -- NEW: Mini 3D Viewport Thumbnail
         local SmallViewport = Instance.new("ViewportFrame")
         SmallViewport.Size = UDim2.new(0, 30, 0, 30)
         SmallViewport.Position = UDim2.new(0, 5, 0, 5)
@@ -2345,9 +2345,12 @@ populateSavedOutfits = function()
         SmallViewport.BorderSizePixel = 0
         SmallViewport.Parent = Entry
 
+        -- [NEW] WorldModel for Layered Clothing deformation in thumbnails
+        local smallWorldModel = Instance.new("WorldModel")
+        smallWorldModel.Parent = SmallViewport
+
         -- Background thread to build the avatar and take a picture
         task.spawn(function()
-            -- Build a Roblox Description out of the saved JSON first
             local desc = Instance.new("HumanoidDescription")
             desc.Shirt = data.Shirt or 0
             desc.Pants = data.Pants or 0
@@ -2370,7 +2373,6 @@ populateSavedOutfits = function()
                 local accGroups = {}
                 for _, acc in pairs(data.Accessories) do
                     local typeName = acc.AccessoryType
-                    -- Ensure "Accessory" is appended if it's not already there
                     if not string.find(typeName, "Accessory") then
                         typeName = typeName .. "Accessory"
                     end
@@ -2386,14 +2388,13 @@ populateSavedOutfits = function()
                 end
             end
 
-            -- Create a fresh, fully-loaded model using Roblox's built-in API
+            -- Create dummy model
             local dummy
             local success, err = pcall(function()
-                -- This guarantees all layered clothing and accessories are downloaded and built
                 dummy = Players:CreateHumanoidModelFromDescription(desc, Enum.HumanoidRigType.R15)
             end)
 
-            -- Fallback just in case the API fails (uses LocalPlayer)
+            -- Fallback
             if not success or not dummy then
                 pcall(function()
                     local myChar = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
@@ -2414,16 +2415,15 @@ populateSavedOutfits = function()
                     if v:IsA("Script") or v:IsA("LocalScript") then v:Destroy() end
                 end
 
-                dummy.Parent = SmallViewport
+                -- Center dummy and parent to WorldModel
+                dummy:PivotTo(CFrame.new(0, 0, 0))
+                dummy.Parent = smallWorldModel
     
-                -- FIX: Create the missing camera instance
                 local camera = Instance.new("Camera")
                 camera.Parent = SmallViewport
     
-                -- Target the center of the body instead of the head
                 local hrp = dummy:FindFirstChild("HumanoidRootPart") or dummy:FindFirstChild("UpperTorso") or dummy:FindFirstChild("Torso")
                 if hrp then
-                    -- Pull the camera back to -5.5 studs and up slightly to frame the whole body
                     camera.CFrame = hrp.CFrame * CFrame.new(0, 0.5, -5.5) * CFrame.Angles(0, math.pi, 0)
                     camera.Focus = hrp.CFrame
                 end
@@ -2431,7 +2431,6 @@ populateSavedOutfits = function()
                 SmallViewport.CurrentCamera = camera
             end
         end)
-
 
         -- Text Box shifted over to make room for the picture
         local NameBox = Instance.new("TextBox")
