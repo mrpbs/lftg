@@ -1774,6 +1774,118 @@ ApplyScaleBtn.MouseButton1Click:Connect(function()
     end
 end)
 ------
+-- ========== PREMIUM TOOL SPAWNER (Collapsible) ==========
+local ToolSpawnFrame = Instance.new("Frame")
+ToolSpawnFrame.Size = UDim2.new(1, -5, 0, 30) -- Starts collapsed
+ToolSpawnFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 38)
+ToolSpawnFrame.BorderSizePixel = 0
+ToolSpawnFrame.ClipsDescendants = true
+ToolSpawnFrame.Parent = ToolsScroll
+
+local ToolSpawnToggleBtn = Instance.new("TextButton")
+ToolSpawnToggleBtn.Size = UDim2.new(1, 0, 0, 30)
+ToolSpawnToggleBtn.Text = "  🛠️ Premium Tool Spawner [ ▼ ]"
+ToolSpawnToggleBtn.TextColor3 = Color3.fromRGB(0, 255, 200)
+ToolSpawnToggleBtn.Font = Enum.Font.SourceSansBold
+ToolSpawnToggleBtn.TextSize = 14
+ToolSpawnToggleBtn.TextXAlignment = Enum.TextXAlignment.Left
+ToolSpawnToggleBtn.BackgroundColor3 = Color3.fromRGB(25, 25, 32)
+ToolSpawnToggleBtn.BorderSizePixel = 0
+ToolSpawnToggleBtn.Parent = ToolSpawnFrame
+
+local ToolSpawnContent = Instance.new("Frame")
+ToolSpawnContent.Size = UDim2.new(1, 0, 1, -30)
+ToolSpawnContent.Position = UDim2.new(0, 0, 0, 30)
+ToolSpawnContent.BackgroundTransparency = 1
+ToolSpawnContent.Visible = false
+ToolSpawnContent.Parent = ToolSpawnFrame
+
+local ToolInput = Instance.new("TextBox")
+ToolInput.Size = UDim2.new(1, -20, 0, 30)
+ToolInput.Position = UDim2.new(0, 10, 0, 10)
+ToolInput.PlaceholderText = "Type tool name (e.g. Jetpack)"
+ToolInput.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
+ToolInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToolInput.Font = Enum.Font.SourceSansBold
+ToolInput.TextSize = 14
+ToolInput.Text = ""
+ToolInput.ClearTextOnFocus = false
+ToolInput.Parent = ToolSpawnContent
+Instance.new("UICorner", ToolInput).CornerRadius = UDim.new(0, 6)
+
+local SpawnToolBtn = Instance.new("TextButton")
+SpawnToolBtn.Size = UDim2.new(1, -20, 0, 35)
+SpawnToolBtn.Position = UDim2.new(0, 10, 0, 50)
+SpawnToolBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
+SpawnToolBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+SpawnToolBtn.Font = Enum.Font.SourceSansBold
+SpawnToolBtn.TextSize = 14
+SpawnToolBtn.Text = "Get Tool"
+SpawnToolBtn.BorderSizePixel = 0
+SpawnToolBtn.Parent = ToolSpawnContent
+Instance.new("UICorner", SpawnToolBtn).CornerRadius = UDim.new(0, 6)
+
+-- Dropdown Toggle Logic
+local toolSpawnExpanded = false
+ToolSpawnToggleBtn.MouseButton1Click:Connect(function()
+    toolSpawnExpanded = not toolSpawnExpanded
+    if toolSpawnExpanded then
+        ToolSpawnFrame.Size = UDim2.new(1, -5, 0, 100)
+        ToolSpawnContent.Visible = true
+        ToolSpawnToggleBtn.Text = "  🛠️ Premium Tool Spawner [ ▲ ]"
+    else
+        ToolSpawnFrame.Size = UDim2.new(1, -5, 0, 30)
+        ToolSpawnContent.Visible = false
+        ToolSpawnToggleBtn.Text = "  🛠️ Premium Tool Spawner [ ▼ ]"
+    end
+end)
+
+-- The master list of tools for Smart Search
+local knownTools = {
+    "Jetpack", "RocketLauncher", "Parachute", "Segway", "Hoverboard", 
+    "Glider", "BoomBox", "Sign", "Stroller", "Skateboard", "Flashlight"
+}
+
+SpawnToolBtn.MouseButton1Click:Connect(function()
+    local inputName = string.lower(ToolInput.Text)
+    if inputName == "" then return end
+
+    local foundName = nil
+    
+    -- Smart Search: Checks if what you typed is part of any tool's real name
+    for _, v in ipairs(knownTools) do
+        if string.lower(v):find(inputName) then
+            foundName = v
+            break
+        end
+    end
+
+    -- Fallback to exact input if smart search couldn't find it
+    local targetTool = foundName or VehInput.Text 
+    
+    -- Fetch the global network sender 
+    local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
+    
+    if Send then
+        -- Execute the exact payload you reverse-engineered
+        Send("get_tool", targetTool)
+        
+        SpawnToolBtn.Text = "Received: " .. targetTool
+        SpawnToolBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
+        task.delay(1.5, function()
+            SpawnToolBtn.Text = "Get Tool"
+            SpawnToolBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
+        end)
+    else
+        SpawnToolBtn.Text = "Network Error"
+        SpawnToolBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+        task.delay(1.5, function()
+            SpawnToolBtn.Text = "Get Tool"
+            SpawnToolBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
+        end)
+    end
+end)
+
 -- ========== VEHICLE SPAWNER TOOL (Collapsible) ==========
 local VehSpawnFrame = Instance.new("Frame")
 VehSpawnFrame.Size = UDim2.new(1, -5, 0, 30) -- Starts collapsed
