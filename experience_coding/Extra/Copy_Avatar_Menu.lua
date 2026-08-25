@@ -314,7 +314,44 @@ local function createCollapsible(parent, titleText, openHeight)
     -- Return the Content frame so you can put buttons/sliders inside it!
     return Content 
 end
+-- 4. Reusable "Smart Hold" Button Logic (ADD THIS NEW ONE HERE!)
+local function applySmartHold(button, container, normalHeight, expandedHeight, holdTime, onShortClick, onUpdate)
+    local holdTick = 0
+    local isHolding = false
+    local isExpanded = false
 
+    button.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            isHolding = true
+            holdTick = tick()
+            
+            task.spawn(function()
+                task.wait(holdTime)
+                if isHolding then
+                    isExpanded = not isExpanded
+                    if isExpanded then
+                        container.Size = UDim2.new(1, -5, 0, expandedHeight)
+                    else
+                        container.Size = UDim2.new(1, -5, 0, normalHeight)
+                    end
+                    if onUpdate then onUpdate(isExpanded) end
+                end
+            end)
+        end
+    end)
+
+    button.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            isHolding = false
+            
+            -- If released quickly, it's a normal click!
+            if tick() - holdTick < holdTime then
+                if onShortClick then onShortClick() end
+                if onUpdate then onUpdate(isExpanded) end
+            end
+        end
+    end)
+end
 
 --deep scan
 
@@ -1045,8 +1082,8 @@ local function startView(targetPlayer)
     end)
 end
 
--- ==============================================================
--- ✈️ LOCAL FLY TOOL (Uses the reusable UI)
+-- -- ==============================================================
+-- ✈️ SMART LOCAL FLY TOOL (Hold for Speed)
 -- ==============================================================
 local localFlyEnabled = false
 local localFlySpeed = 3
@@ -1054,27 +1091,37 @@ local flyLoop = nil
 local flyKeys = {f=0, b=0, l=0, r=0, q=0, e=0}
 local flyInputs = {}
 
--- The Main Toggle Button
+-- Container for Button + Hidden Slider
+local FlyContainer = Instance.new("Frame")
+FlyContainer.Size = UDim2.new(1, -5, 0, 40)
+FlyContainer.BackgroundColor3 = Color3.fromRGB(30, 30, 38)
+FlyContainer.BorderSizePixel = 0
+FlyContainer.ClipsDescendants = true
+FlyContainer.Parent = ToolsScroll
+
+-- The Main Button
 local FlyBtn = Instance.new("TextButton")
-FlyBtn.Size = UDim2.new(1, -5, 0, 40)
+FlyBtn.Size = UDim2.new(1, 0, 0, 40)
 FlyBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
 FlyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 FlyBtn.Font = Enum.Font.SourceSansBold
 FlyBtn.TextSize = 16
-FlyBtn.Text = "✈️ Local Fly: OFF"
+FlyBtn.Text = "✈️ Local Fly: OFF (Hold for Speed)"
 FlyBtn.BorderSizePixel = 0
-FlyBtn.Parent = ToolsScroll
+FlyBtn.Parent = FlyContainer
+Instance.new("UICorner", FlyBtn).CornerRadius = UDim.new(0, 8)
 
--- The Speed Slider (Using our new function!)
-createSlider(ToolsScroll, "✈️ Fly Speed", 1, 10, 3, function(value)
+-- The Speed Slider (Using your reusable function)
+local SpeedSlider = createSlider(FlyContainer, "✈️ Fly Speed", 1, 10, 3, function(value)
     localFlySpeed = value
 end)
+SpeedSlider.Position = UDim2.new(0, 0, 0, 45)
 
+-- ==========================================
+-- FLIGHT PHYSICS LOGIC
+-- ==========================================
 local function stopLocalFly()
     localFlyEnabled = false
-    FlyBtn.Text = "✈️ Local Fly: OFF"
-    FlyBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-
     if flyLoop then flyLoop:Disconnect() flyLoop = nil end
     for _, c in pairs(flyInputs) do c:Disconnect() end
     table.clear(flyInputs)
@@ -1089,7 +1136,6 @@ local function stopLocalFly()
         if bg then bg:Destroy() end
         if bv then bv:Destroy() end
     end
-    
     if hum then 
         hum.PlatformStand = false 
         hum:ChangeState(Enum.HumanoidStateType.Jumping) 
@@ -1119,15 +1165,11 @@ local function startLocalFly()
 
     flyLoop = RunService.RenderStepped:Connect(function()
         if not char or not char.Parent then stopLocalFly() return end
-        
         local cam = workspace.CurrentCamera
         bg.CFrame = cam.CFrame
         
-        -- Mobile Support check
         if UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled then
-            local success, controlModule = pcall(function()
-                return require(LocalPlayer.PlayerScripts:WaitForChild("PlayerModule"):WaitForChild("ControlModule"))
-            end)
+            local success, controlModule = pcall(function() return require(LocalPlayer.PlayerScripts:WaitForChild("PlayerModule"):WaitForChild("ControlModule")) end)
             if success and controlModule then
                 local dir = controlModule:GetMoveVector()
                 if dir.Magnitude > 0 then
@@ -1137,7 +1179,6 @@ local function startLocalFly()
                 end
             end
         else
-            -- PC WASD Support
             local moveVec = Vector3.zero
             local look = cam.CFrame.LookVector
             local right = cam.CFrame.RightVector
@@ -1151,12 +1192,11 @@ local function startLocalFly()
             if vel.Magnitude > 0 then
                 bv.Velocity = vel.Unit * (localFlySpeed * 50)
             else
-                bv.Velocity = bv.Velocity * 0.9 -- Smooth stopping
+                bv.Velocity = bv.Velocity * 0.9 
             end
         end
     end)
 
-    -- Capture WASD Keyboard Inputs
     table.insert(flyInputs, UserInputService.InputBegan:Connect(function(i, gp)
         if gp then return end
         if i.KeyCode == Enum.KeyCode.W then flyKeys.f = 1 end
@@ -1166,7 +1206,6 @@ local function startLocalFly()
         if i.KeyCode == Enum.KeyCode.E or i.KeyCode == Enum.KeyCode.Space then flyKeys.q = 1 end
         if i.KeyCode == Enum.KeyCode.Q or i.KeyCode == Enum.KeyCode.LeftShift then flyKeys.e = -1 end
     end))
-
     table.insert(flyInputs, UserInputService.InputEnded:Connect(function(i)
         if i.KeyCode == Enum.KeyCode.W then flyKeys.f = 0 end
         if i.KeyCode == Enum.KeyCode.S then flyKeys.b = 0 end
@@ -1177,16 +1216,37 @@ local function startLocalFly()
     end))
 end
 
-FlyBtn.MouseButton1Click:Connect(function()
-    if localFlyEnabled then
-        stopLocalFly()
-    else
-        localFlyEnabled = true
-        FlyBtn.Text = "✈️ Local Fly: ON"
-        FlyBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
-        startLocalFly()
+-- ==========================================
+-- SMART HOLD LOGIC CONNECTION
+-- ==========================================
+applySmartHold(
+    FlyBtn,        -- The button to click/hold
+    FlyContainer,  -- The frame to expand/shrink
+    40,            -- Normal collapsed height
+    100,           -- Expanded height (to show slider)
+    0.4,           -- Hold duration in seconds
+    
+    -- Action 1: What happens on a normal, quick click
+    function()
+        localFlyEnabled = not localFlyEnabled
+        if localFlyEnabled then
+            FlyBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
+            startLocalFly()
+        else
+            FlyBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+            stopLocalFly()
+        end
+    end,
+    
+    -- Action 2: How the text updates when clicked or held
+    function(isExpanded)
+        if isExpanded then
+            FlyBtn.Text = localFlyEnabled and "✈️ Local Fly: ON [▲ Settings]" or "✈️ Local Fly: OFF [▲ Settings]"
+        else
+            FlyBtn.Text = localFlyEnabled and "✈️ Local Fly: ON (Hold for Speed)" or "✈️ Local Fly: OFF (Hold for Speed)"
+        end
     end
-end)
+)
 
 -- ========== AVATAR SCALER TOOL (Collapsible) ==========
 local ScalerFrame = Instance.new("Frame")
