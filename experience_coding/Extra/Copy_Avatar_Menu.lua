@@ -1140,12 +1140,19 @@ Instance.new("UICorner", VehFlyBtn).CornerRadius = UDim.new(0, 6)
 -- ==========================================
 local function stopLocalFly()
     localFlyEnabled = false
-    FlyBtn.Text = "✈️ Local Fly: OFF [▲ Options]"
     FlyBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+    
+    -- Keep text accurate based on whether the menu is open
+    if FlyContainer.Size.Y.Offset > 50 then
+        FlyBtn.Text = "✈️ Local Fly: OFF [▲ Options]"
+    else
+        FlyBtn.Text = "✈️ Local Fly: OFF (Hold for Options)"
+    end
 
     if flyLoop then flyLoop:Disconnect() flyLoop = nil end
     for _, c in pairs(flyInputs) do c:Disconnect() end
     table.clear(flyInputs)
+    flyKeys = {f=0, b=0, l=0, r=0, q=0, e=0} -- Fix: Prevents stuck keys!
 
     local char = LocalPlayer.Character
     if char then
@@ -1164,8 +1171,47 @@ local function stopLocalFly()
     end
 end
 
+local function getMyVehicle()
+    local vehiclesFolder = workspace:FindFirstChild("Vehicles")
+    if not vehiclesFolder then return nil end
+    for _, v in pairs(vehiclesFolder:GetChildren()) do
+        local ownerObj = v:FindFirstChild("owner") or v:FindFirstChild("owner", true)
+        if ownerObj and ownerObj.Value == LocalPlayer then return v end
+    end
+    return nil
+end
+
+local function stopVehFly()
+    vehFlyEnabled = false
+    VehFlyBtn.Text = "🚗 Vehicle Fly: OFF"
+    VehFlyBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+
+    if vFlyLoop then vFlyLoop:Disconnect() vFlyLoop = nil end
+    for _, c in pairs(flyInputs) do c:Disconnect() end
+    table.clear(flyInputs)
+    flyKeys = {f=0, b=0, l=0, r=0, q=0, e=0} -- Fix: Prevents stuck keys!
+
+    -- Restore Collisions
+    for part, state in pairs(vFlyCollisions) do
+        if part and part.Parent then part.CanCollide = state end
+    end
+    table.clear(vFlyCollisions)
+
+    local car = getMyVehicle()
+    if car then
+        local base = car:FindFirstChild("Base") or car.PrimaryPart
+        if base then
+            local bg = base:FindFirstChild("VehFlyGyro")
+            local bv = base:FindFirstChild("VehFlyVelocity")
+            if bg then bg:Destroy() end
+            if bv then bv:Destroy() end
+        end
+    end
+end
+
 local function startLocalFly()
-    if vehFlyEnabled then VehFlyBtn.Text = "🚗 Vehicle Fly: OFF" vehFlyEnabled = false end -- Safety check
+    if vehFlyEnabled then stopVehFly() end -- Fix: Properly shuts down Vehicle Fly
+    
     local char = LocalPlayer.Character
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
     local hum = char and char:FindFirstChildOfClass("Humanoid")
@@ -1234,45 +1280,9 @@ end
 -- ==========================================
 -- VEHICLE FLY PHYSICS
 -- ==========================================
-local function getMyVehicle()
-    local vehiclesFolder = workspace:FindFirstChild("Vehicles")
-    if not vehiclesFolder then return nil end
-    for _, v in pairs(vehiclesFolder:GetChildren()) do
-        local ownerObj = v:FindFirstChild("owner") or v:FindFirstChild("owner", true)
-        if ownerObj and ownerObj.Value == LocalPlayer then return v end
-    end
-    return nil
-end
-
-local function stopVehFly()
-    vehFlyEnabled = false
-    VehFlyBtn.Text = "🚗 Vehicle Fly: OFF"
-    VehFlyBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
-
-    if vFlyLoop then vFlyLoop:Disconnect() vFlyLoop = nil end
-    for _, c in pairs(flyInputs) do c:Disconnect() end
-    table.clear(flyInputs)
-
-    -- Restore Collisions
-    for part, state in pairs(vFlyCollisions) do
-        if part and part.Parent then part.CanCollide = state end
-    end
-    table.clear(vFlyCollisions)
-
-    local car = getMyVehicle()
-    if car then
-        local base = car:FindFirstChild("Base") or car.PrimaryPart
-        if base then
-            local bg = base:FindFirstChild("VehFlyGyro")
-            local bv = base:FindFirstChild("VehFlyVelocity")
-            if bg then bg:Destroy() end
-            if bv then bv:Destroy() end
-        end
-    end
-end
-
 local function startVehFly()
-    if localFlyEnabled then stopLocalFly() end -- Safety check
+    if localFlyEnabled then stopLocalFly() end -- Fix: Properly shuts down Local Fly
+    
     local car = getMyVehicle()
     if not car then stopVehFly() VehFlyBtn.Text = "No Vehicle Found!" task.wait(1.5) VehFlyBtn.Text = "🚗 Vehicle Fly: OFF" return end
     
@@ -1365,7 +1375,7 @@ applySmartHold(
     FlyContainer,  -- The frame to expand/shrink
     40,            -- Normal collapsed height
     145,           -- Expanded height (to show BOTH slider and VehFly button)
-    0.4,           -- Hold duration in seconds
+    1.4,           -- Fix: Hold duration changed to 1.4 seconds
     
     -- Action 1: Normal quick click toggles Local Fly
     function()
