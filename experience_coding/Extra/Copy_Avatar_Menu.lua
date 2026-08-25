@@ -1774,6 +1774,120 @@ ApplyScaleBtn.MouseButton1Click:Connect(function()
     end
 end)
 ------
+-- ========== VEHICLE SPAWNER TOOL (Collapsible) ==========
+local VehSpawnFrame = Instance.new("Frame")
+VehSpawnFrame.Size = UDim2.new(1, -5, 0, 30) -- Starts collapsed
+VehSpawnFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 38)
+VehSpawnFrame.BorderSizePixel = 0
+VehSpawnFrame.ClipsDescendants = true
+VehSpawnFrame.Parent = ToolsScroll
+
+local VehSpawnToggleBtn = Instance.new("TextButton")
+VehSpawnToggleBtn.Size = UDim2.new(1, 0, 0, 30)
+VehSpawnToggleBtn.Text = "  🚙 Premium Vehicle Spawner [ ▼ ]"
+VehSpawnToggleBtn.TextColor3 = Color3.fromRGB(0, 255, 200)
+VehSpawnToggleBtn.Font = Enum.Font.SourceSansBold
+VehSpawnToggleBtn.TextSize = 14
+VehSpawnToggleBtn.TextXAlignment = Enum.TextXAlignment.Left
+VehSpawnToggleBtn.BackgroundColor3 = Color3.fromRGB(25, 25, 32)
+VehSpawnToggleBtn.BorderSizePixel = 0
+VehSpawnToggleBtn.Parent = VehSpawnFrame
+
+local VehSpawnContent = Instance.new("Frame")
+VehSpawnContent.Size = UDim2.new(1, 0, 1, -30)
+VehSpawnContent.Position = UDim2.new(0, 0, 0, 30)
+VehSpawnContent.BackgroundTransparency = 1
+VehSpawnContent.Visible = false
+VehSpawnContent.Parent = VehSpawnFrame
+
+local VehInput = Instance.new("TextBox")
+VehInput.Size = UDim2.new(1, -20, 0, 30)
+VehInput.Position = UDim2.new(0, 10, 0, 10)
+VehInput.PlaceholderText = "Type car name (e.g. Monster Truck)"
+VehInput.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
+VehInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+VehInput.Font = Enum.Font.SourceSansBold
+VehInput.TextSize = 14
+VehInput.Text = ""
+VehInput.ClearTextOnFocus = false
+VehInput.Parent = VehSpawnContent
+Instance.new("UICorner", VehInput).CornerRadius = UDim.new(0, 6)
+
+local SpawnVehBtn = Instance.new("TextButton")
+SpawnVehBtn.Size = UDim2.new(1, -20, 0, 35)
+SpawnVehBtn.Position = UDim2.new(0, 10, 0, 50)
+SpawnVehBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
+SpawnVehBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+SpawnVehBtn.Font = Enum.Font.SourceSansBold
+SpawnVehBtn.TextSize = 14
+SpawnVehBtn.Text = "Spawn Vehicle"
+SpawnVehBtn.BorderSizePixel = 0
+SpawnVehBtn.Parent = VehSpawnContent
+Instance.new("UICorner", SpawnVehBtn).CornerRadius = UDim.new(0, 6)
+
+-- Dropdown Toggle Logic
+local vehSpawnExpanded = false
+VehSpawnToggleBtn.MouseButton1Click:Connect(function()
+    vehSpawnExpanded = not vehSpawnExpanded
+    if vehSpawnExpanded then
+        VehSpawnFrame.Size = UDim2.new(1, -5, 0, 100)
+        VehSpawnContent.Visible = true
+        VehSpawnToggleBtn.Text = "  🚙 Premium Vehicle Spawner [ ▲ ]"
+    else
+        VehSpawnFrame.Size = UDim2.new(1, -5, 0, 30)
+        VehSpawnContent.Visible = false
+        VehSpawnToggleBtn.Text = "  🚙 Premium Vehicle Spawner [ ▼ ]"
+    end
+end)
+
+-- The exact master list pulled directly from Flames Hub
+local flamesHubCars = {
+    "Magic Carpet", "EClass", "TowTruck", "Bicycle", "Fiat500", "Cayenne", "Jetski", "LuggageScooter",
+    "MiniCooper", "GarbageTruck", "EScooter", "Monster Truck", "Yacht", "Stingray", "FireTruck", "VespaPizza",
+    "VespaPolice", "F150", "Police SUV", "Chiron", "Humvee", "Wrangler", "Box Van", "Ambulance", "Urus", "Tesla",
+    "Cybertruck", "RollsRoyce", "GClass", "SVJ", "MX5", "SF90", "Charger SRT", "Evoque", "IceCream Truck",
+    "Vespa", "ATV", "Limo", "Tank", "Smart Car", "Beauford", "SchoolBus", "Sprinter", "GolfKart", "TrackHawk",
+    "Helicopter", "SnowPlow", "Camper Van", "SWAT Van"
+}
+
+SpawnVehBtn.MouseButton1Click:Connect(function()
+    local inputName = string.lower(VehInput.Text)
+    if inputName == "" then return end
+
+    local foundName = nil
+    
+    -- Smart Search: Checks if what you typed is part of any car's real name
+    for _, v in ipairs(flamesHubCars) do
+        if string.lower(v):find(inputName) then
+            foundName = v
+            break
+        end
+    end
+
+    -- Fallback to exact input if smart search couldn't find it
+    local targetVeh = foundName or VehInput.Text 
+    
+    local Get = getgenv().Get or (getgenv().g and getgenv().g.Get)
+    if Get then
+        -- Execute the vehicle spawn payload
+        Get("spawn_vehicle", targetVeh)
+        
+        SpawnVehBtn.Text = "Spawned: " .. targetVeh
+        SpawnVehBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
+        task.delay(1.5, function()
+            SpawnVehBtn.Text = "Spawn Vehicle"
+            SpawnVehBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
+        end)
+    else
+        SpawnVehBtn.Text = "Network Error"
+        SpawnVehBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+        task.delay(1.5, function()
+            SpawnVehBtn.Text = "Spawn Vehicle"
+            SpawnVehBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
+        end)
+    end
+end)
+
 -- ========== MASS SERVER FLING (Underground Uppercut + Auto-Respawn & Stack Logs) ==========
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
