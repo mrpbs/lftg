@@ -3075,6 +3075,8 @@ populateSavedOutfits = function()
     end
 end
 
+
+----
 local function populatePlayerList()
     for _, child in pairs(PlayerScroll:GetChildren()) do
         if child:IsA("TextButton") then child:Destroy() end
@@ -3094,29 +3096,6 @@ local function populatePlayerList()
         SmallViewport.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
         SmallViewport.BorderSizePixel = 0
         SmallViewport.Parent = PlayerBtn
-
-        task.spawn(function()
-            local char = player.Character
-            if char then
-                local oldArchivable = char.Archivable
-                char.Archivable = true
-                local headClone = char:Clone()
-                char.Archivable = oldArchivable
-
-                if headClone then
-                    headClone.Parent = SmallViewport
-                    local camera = Instance.new("Camera")
-                    camera.Parent = SmallViewport
-                    
-                    local head = headClone:FindFirstChild("Head")
-                    if head then
-                        camera.CFrame = head.CFrame * CFrame.new(0, 0, -2.5) * CFrame.Angles(0, math.pi, 0)
-                        camera.Focus = head.CFrame
-                    end
-                    SmallViewport.CurrentCamera = camera
-                end
-            end
-        end)
 
         local DisplayName = Instance.new("TextLabel")
         DisplayName.Size = UDim2.new(1, -60, 0, 20)
@@ -3140,18 +3119,52 @@ local function populatePlayerList()
         Username.BackgroundTransparency = 1
         Username.Parent = PlayerBtn
 
-      -- [NEW] Capture the outfit data the exact moment the menu refreshes!
+        -- [FIXED] Smart State Capture Logic
         local cachedDescription = nil
-        pcall(function()
-            local char = player.Character
-            if char then
-                local hum = char:FindFirstChildOfClass("Humanoid")
-                if hum then
+        
+        task.spawn(function()
+            -- 1. Wait for their 3D character to actually exist in the world
+            local char = player.Character or player.CharacterAdded:Wait()
+            
+            -- 2. Wait for Roblox to finish dressing them (prevents blank/bald captures!)
+            if not player:HasAppearanceLoaded() then
+                player.CharacterAppearanceLoaded:Wait()
+            end
+
+            -- 3. Now that they are fully loaded, permanently lock in the snapshot!
+            local hum = char:WaitForChild("Humanoid", 5)
+            if hum then
+                pcall(function()
                     cachedDescription = hum:GetAppliedDescription()
+                end)
+            end
+
+            -- 4. Build the thumbnail picture safely
+            local oldArchivable = char.Archivable
+            char.Archivable = true
+            local headClone = char:Clone()
+            char.Archivable = oldArchivable
+
+            if headClone then
+                headClone.Parent = SmallViewport
+                local camera = Instance.new("Camera")
+                camera.Parent = SmallViewport
+                
+                local head = headClone:FindFirstChild("Head")
+                if head then
+                    camera.CFrame = head.CFrame * CFrame.new(0, 0, -2.5) * CFrame.Angles(0, math.pi, 0)
+                    camera.Focus = head.CFrame
                 end
+                SmallViewport.CurrentCamera = camera
             end
         end)
-----
+        
+        PlayerBtn.MouseButton1Click:Connect(function()
+            deepScanPlayerOutfit(player, cachedDescription)
+        end)
+    end
+end
+-----
       
       PlayerBtn.MouseButton1Click:Connect(function()
             deepScanPlayerOutfit(player, cachedDescription)
