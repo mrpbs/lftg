@@ -314,19 +314,22 @@ local function createCollapsible(parent, titleText, openHeight)
     -- Return the Content frame so you can put buttons/sliders inside it!
     return Content 
 end
--- 4. Reusable "Smart Hold" Button Logic (ADD THIS NEW ONE HERE!)
+-- 4. Reusable "Smart Hold" Button Logic (Swipe-Proof!)
 local function applySmartHold(button, container, normalHeight, expandedHeight, holdTime, onShortClick, onUpdate)
     local holdTick = 0
     local isHolding = false
     local isExpanded = false
+    local startPos = Vector3.new()
 
     button.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             isHolding = true
             holdTick = tick()
+            startPos = input.Position -- Record exactly where the touch started
             
             task.spawn(function()
                 task.wait(holdTime)
+                -- If they are STILL holding and haven't swiped away
                 if isHolding then
                     isExpanded = not isExpanded
                     if isExpanded then
@@ -340,14 +343,31 @@ local function applySmartHold(button, container, normalHeight, expandedHeight, h
         end
     end)
 
+    -- NEW: Cancel the hold if the finger slides (Scrolling the UI)
+    button.InputChanged:Connect(function(input)
+        if isHolding and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            local dist = (input.Position - startPos).Magnitude
+            if dist > 15 then -- If moved more than 15 pixels, it's a swipe!
+                isHolding = false
+            end
+        end
+    end)
+
     button.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            isHolding = false
-            
-            -- If released quickly, it's a normal click!
-            if tick() - holdTick < holdTime then
-                if onShortClick then onShortClick() end
-                if onUpdate then onUpdate(isExpanded) end
+            -- If the touch wasn't already cancelled by a swipe
+            if isHolding then
+                isHolding = false
+                
+                -- Verify one last time that they didn't drift
+                local dist = (input.Position - startPos).Magnitude
+                if dist <= 15 then
+                    -- If released quickly, it's a normal click!
+                    if tick() - holdTick < holdTime then
+                        if onShortClick then onShortClick() end
+                        if onUpdate then onUpdate(isExpanded) end
+                    end
+                end
             end
         end
     end)
@@ -1087,7 +1107,7 @@ end
 -- ==============================================================
 local localFlyEnabled = false
 local vehFlyEnabled = false
-local localFlySpeed = 3 -- SHARED SPEED VARIABLE
+local localFlySpeed = 1 -- SHARED SPEED VARIABLE
 
 -- Physics Trackers
 local flyLoop = nil
@@ -1117,7 +1137,7 @@ FlyBtn.Parent = FlyContainer
 Instance.new("UICorner", FlyBtn).CornerRadius = UDim.new(0, 8)
 
 -- 3. The Shared Speed Slider
-local SpeedSlider = createSlider(FlyContainer, "⚡ Shared Fly Speed", 1, 10, 3, function(value)
+local SpeedSlider = createSlider(FlyContainer, "⚡ Shared Fly Speed", 1, 10, 1, function(value)
     localFlySpeed = value
 end)
 SpeedSlider.Position = UDim2.new(0, 0, 0, 45)
