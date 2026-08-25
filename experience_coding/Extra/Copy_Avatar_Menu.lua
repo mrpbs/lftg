@@ -890,87 +890,55 @@ local function startView(targetPlayer)
     end)
 end
 
--- ========== EXPERIMENTAL TRAIL TOOL ==========
-local testTrailEnabled = false
-local testTrailData = {}
-local testTrailCharConn = nil
+-- ========== FLAMES HUB FLY 2 (MAGIC CARPET FE) ==========
+local fly2Enabled = false
 
-local TestTrailBtn = Instance.new("TextButton")
-TestTrailBtn.Size = UDim2.new(1, -5, 0, 40)
-TestTrailBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-TestTrailBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-TestTrailBtn.Font = Enum.Font.SourceSansBold
-TestTrailBtn.TextSize = 16
-TestTrailBtn.Text = "🌈 Test Trail: OFF"
-TestTrailBtn.BorderSizePixel = 0
-TestTrailBtn.Parent = ToolsScroll
+local Fly2Btn = Instance.new("TextButton")
+Fly2Btn.Size = UDim2.new(1, -5, 0, 40)
+Fly2Btn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+Fly2Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+Fly2Btn.Font = Enum.Font.SourceSansBold
+Fly2Btn.TextSize = 16
+Fly2Btn.Text = "✈️ Fly 2 (FE Trait): OFF"
+Fly2Btn.BorderSizePixel = 0
+Fly2Btn.Parent = ToolsScroll
 
-local function removeTestTrail()
-    for _, obj in pairs(testTrailData) do
-        if obj and obj.Parent then obj:Destroy() end
-    end
-    table.clear(testTrailData)
-end
-
-local function applyTestTrail(char)
-    removeTestTrail()
-    if not char then return end
+Fly2Btn.MouseButton1Click:Connect(function()
+    fly2Enabled = not fly2Enabled
     
-    local rootPart = char:WaitForChild("HumanoidRootPart", 5)
-    if not rootPart then return end
-
-    local currentA0 = Instance.new("Attachment")
-    currentA0.Position = Vector3.new(0, 1, 0)
-    currentA0.Parent = rootPart
-
-    local currentA1 = Instance.new("Attachment")
-    currentA1.Position = Vector3.new(0, -1.5, 0)
-    currentA1.Parent = rootPart
-
-    local currentTrail = Instance.new("Trail")
-    currentTrail.Attachment0 = currentA0
-    currentTrail.Attachment1 = currentA1
+    -- Safely grab Flames Hub's global environment
+    local g = getgenv().g
     
-    currentTrail.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0.00, Color3.fromRGB(255, 0, 0)),
-        ColorSequenceKeypoint.new(0.16, Color3.fromRGB(255, 127, 0)),
-        ColorSequenceKeypoint.new(0.33, Color3.fromRGB(255, 255, 0)),
-        ColorSequenceKeypoint.new(0.50, Color3.fromRGB(0, 255, 0)),
-        ColorSequenceKeypoint.new(0.66, Color3.fromRGB(0, 0, 255)),
-        ColorSequenceKeypoint.new(0.83, Color3.fromRGB(75, 0, 130)),
-        ColorSequenceKeypoint.new(1.00, Color3.fromRGB(148, 0, 211))
-    })
-    
-    currentTrail.WidthScale = NumberSequence.new(1, 0)
-    currentTrail.Lifetime = 1
-    currentTrail.LightEmission = 0.5
-    currentTrail.Parent = rootPart
-
-    -- Save references to clean up later
-    table.insert(testTrailData, currentA0)
-    table.insert(testTrailData, currentA1)
-    table.insert(testTrailData, currentTrail)
-end
-
-TestTrailBtn.MouseButton1Click:Connect(function()
-    testTrailEnabled = not testTrailEnabled
-    
-    if testTrailEnabled then
-        TestTrailBtn.Text = "🌈 Test Trail: ON"
-        TestTrailBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
-        applyTestTrail(LocalPlayer.Character)
+    if fly2Enabled then
+        Fly2Btn.Text = "✈️ Fly 2 (FE Trait): ON"
+        Fly2Btn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
         
-        -- Automatically re-apply if you reset
-        testTrailCharConn = LocalPlayer.CharacterAdded:Connect(function(char)
-            applyTestTrail(char)
-        end)
+        -- We hijack their exact function since it's hidden in their Pastebin API!
+        if g and type(g.EnableFly2) == "function" then
+            g.EnableFly2(3) -- 3 is the default speed
+        else
+            -- If their API isn't loaded yet, force-load the specific Pastebin that contains EnableFly2
+            Fly2Btn.Text = "Loading API..."
+            pcall(function()
+                loadstring(game:HttpGet("https://pastebin.com/raw/ksfZM2C4"))()
+                task.wait(0.5)
+                local newG = getgenv().g
+                if newG and type(newG.EnableFly2) == "function" then
+                    newG.EnableFly2(3)
+                    Fly2Btn.Text = "✈️ Fly 2 (FE Trait): ON"
+                else
+                    Fly2Btn.Text = "API Error"
+                    Fly2Btn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+                end
+            end)
+        end
     else
-        TestTrailBtn.Text = "🌈 Test Trail: OFF"
-        TestTrailBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-        removeTestTrail()
-        if testTrailCharConn then
-            testTrailCharConn:Disconnect()
-            testTrailCharConn = nil
+        Fly2Btn.Text = "✈️ Fly 2 (FE Trait): OFF"
+        Fly2Btn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+        
+        -- Run their disable function
+        if g and type(g.DisableFly2) == "function" then
+            g.DisableFly2()
         end
     end
 end)
