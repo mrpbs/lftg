@@ -1082,16 +1082,21 @@ local function startView(targetPlayer)
     end)
 end
 
--- -- ==============================================================
--- ✈️ SMART LOCAL FLY TOOL (Hold for Speed)
+-- ==============================================================
+-- ✈️ SMART FLY TOOL (Local + Vehicle Fly + Shared Speed)
 -- ==============================================================
 local localFlyEnabled = false
-local localFlySpeed = 3
+local vehFlyEnabled = false
+local localFlySpeed = 3 -- SHARED SPEED VARIABLE
+
+-- Physics Trackers
 local flyLoop = nil
+local vFlyLoop = nil
 local flyKeys = {f=0, b=0, l=0, r=0, q=0, e=0}
 local flyInputs = {}
+local vFlyCollisions = {}
 
--- Container for Button + Hidden Slider
+-- 1. Main Container
 local FlyContainer = Instance.new("Frame")
 FlyContainer.Size = UDim2.new(1, -5, 0, 40)
 FlyContainer.BackgroundColor3 = Color3.fromRGB(30, 30, 38)
@@ -1099,67 +1104,83 @@ FlyContainer.BorderSizePixel = 0
 FlyContainer.ClipsDescendants = true
 FlyContainer.Parent = ToolsScroll
 
--- The Main Button
+-- 2. The Main Button (Local Fly)
 local FlyBtn = Instance.new("TextButton")
 FlyBtn.Size = UDim2.new(1, 0, 0, 40)
 FlyBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
 FlyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 FlyBtn.Font = Enum.Font.SourceSansBold
 FlyBtn.TextSize = 16
-FlyBtn.Text = "✈️ Local Fly: OFF (Hold for Speed)"
+FlyBtn.Text = "✈️ Local Fly: OFF (Hold for Options)"
 FlyBtn.BorderSizePixel = 0
 FlyBtn.Parent = FlyContainer
 Instance.new("UICorner", FlyBtn).CornerRadius = UDim.new(0, 8)
 
--- The Speed Slider (Using your reusable function)
-local SpeedSlider = createSlider(FlyContainer, "✈️ Fly Speed", 1, 10, 3, function(value)
+-- 3. The Shared Speed Slider
+local SpeedSlider = createSlider(FlyContainer, "⚡ Shared Fly Speed", 1, 10, 3, function(value)
     localFlySpeed = value
 end)
 SpeedSlider.Position = UDim2.new(0, 0, 0, 45)
 
+-- 4. The Vehicle Fly Button (Tucked inside the menu)
+local VehFlyBtn = Instance.new("TextButton")
+VehFlyBtn.Size = UDim2.new(1, -10, 0, 35)
+VehFlyBtn.Position = UDim2.new(0, 5, 0, 100)
+VehFlyBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+VehFlyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+VehFlyBtn.Font = Enum.Font.SourceSansBold
+VehFlyBtn.TextSize = 15
+VehFlyBtn.Text = "🚗 Vehicle Fly: OFF"
+VehFlyBtn.BorderSizePixel = 0
+VehFlyBtn.Parent = FlyContainer
+Instance.new("UICorner", VehFlyBtn).CornerRadius = UDim.new(0, 6)
+
 -- ==========================================
--- FLIGHT PHYSICS LOGIC
+-- LOCAL FLY PHYSICS
 -- ==========================================
 local function stopLocalFly()
     localFlyEnabled = false
+    FlyBtn.Text = "✈️ Local Fly: OFF [▲ Options]"
+    FlyBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+
     if flyLoop then flyLoop:Disconnect() flyLoop = nil end
     for _, c in pairs(flyInputs) do c:Disconnect() end
     table.clear(flyInputs)
 
     local char = LocalPlayer.Character
-    local hrp = char and char:FindFirstChild("HumanoidRootPart")
-    local hum = char and char:FindFirstChildOfClass("Humanoid")
-    
-    if hrp then
-        local bg = hrp:FindFirstChild("LocalFlyGyro")
-        local bv = hrp:FindFirstChild("LocalFlyVelocity")
-        if bg then bg:Destroy() end
-        if bv then bv:Destroy() end
-    end
-    if hum then 
-        hum.PlatformStand = false 
-        hum:ChangeState(Enum.HumanoidStateType.Jumping) 
+    if char then
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        if hrp then
+            local bg = hrp:FindFirstChild("LocalFlyGyro")
+            local bv = hrp:FindFirstChild("LocalFlyVelocity")
+            if bg then bg:Destroy() end
+            if bv then bv:Destroy() end
+        end
+        if hum then 
+            hum.PlatformStand = false 
+            hum:ChangeState(Enum.HumanoidStateType.Jumping) 
+        end
     end
 end
 
 local function startLocalFly()
+    if vehFlyEnabled then VehFlyBtn.Text = "🚗 Vehicle Fly: OFF" vehFlyEnabled = false end -- Safety check
     local char = LocalPlayer.Character
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
     local hum = char and char:FindFirstChildOfClass("Humanoid")
     if not hrp or not hum then stopLocalFly() return end
 
-    local bg = Instance.new("BodyGyro")
+    local bg = Instance.new("BodyGyro", hrp)
     bg.Name = "LocalFlyGyro"
     bg.P = 9e4
     bg.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
     bg.CFrame = hrp.CFrame
-    bg.Parent = hrp
 
-    local bv = Instance.new("BodyVelocity")
+    local bv = Instance.new("BodyVelocity", hrp)
     bv.Name = "LocalFlyVelocity"
     bv.MaxForce = Vector3.new(9e9, 9e9, 9e9)
     bv.Velocity = Vector3.zero
-    bv.Parent = hrp
 
     hum.PlatformStand = true
 
@@ -1179,16 +1200,10 @@ local function startLocalFly()
                 end
             end
         else
-            local moveVec = Vector3.zero
             local look = cam.CFrame.LookVector
             local right = cam.CFrame.RightVector
             local up = Vector3.new(0, 1, 0)
-            
-            local forwardMag = flyKeys.f + flyKeys.b
-            local rightMag = flyKeys.r + flyKeys.l
-            local upMag = flyKeys.q + flyKeys.e
-            
-            local vel = (look * forwardMag) + (right * rightMag) + (up * upMag)
+            local vel = (look * (flyKeys.f + flyKeys.b)) + (right * (flyKeys.r + flyKeys.l)) + (up * (flyKeys.q + flyKeys.e))
             if vel.Magnitude > 0 then
                 bv.Velocity = vel.Unit * (localFlySpeed * 50)
             else
@@ -1217,16 +1232,142 @@ local function startLocalFly()
 end
 
 -- ==========================================
+-- VEHICLE FLY PHYSICS
+-- ==========================================
+local function getMyVehicle()
+    local vehiclesFolder = workspace:FindFirstChild("Vehicles")
+    if not vehiclesFolder then return nil end
+    for _, v in pairs(vehiclesFolder:GetChildren()) do
+        local ownerObj = v:FindFirstChild("owner") or v:FindFirstChild("owner", true)
+        if ownerObj and ownerObj.Value == LocalPlayer then return v end
+    end
+    return nil
+end
+
+local function stopVehFly()
+    vehFlyEnabled = false
+    VehFlyBtn.Text = "🚗 Vehicle Fly: OFF"
+    VehFlyBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+
+    if vFlyLoop then vFlyLoop:Disconnect() vFlyLoop = nil end
+    for _, c in pairs(flyInputs) do c:Disconnect() end
+    table.clear(flyInputs)
+
+    -- Restore Collisions
+    for part, state in pairs(vFlyCollisions) do
+        if part and part.Parent then part.CanCollide = state end
+    end
+    table.clear(vFlyCollisions)
+
+    local car = getMyVehicle()
+    if car then
+        local base = car:FindFirstChild("Base") or car.PrimaryPart
+        if base then
+            local bg = base:FindFirstChild("VehFlyGyro")
+            local bv = base:FindFirstChild("VehFlyVelocity")
+            if bg then bg:Destroy() end
+            if bv then bv:Destroy() end
+        end
+    end
+end
+
+local function startVehFly()
+    if localFlyEnabled then stopLocalFly() end -- Safety check
+    local car = getMyVehicle()
+    if not car then stopVehFly() VehFlyBtn.Text = "No Vehicle Found!" task.wait(1.5) VehFlyBtn.Text = "🚗 Vehicle Fly: OFF" return end
+    
+    local base = car:FindFirstChild("Base") or car.PrimaryPart
+    if not base then stopVehFly() return end
+
+    -- Save & Disable Collisions
+    table.clear(vFlyCollisions)
+    for _, v in ipairs(car:GetDescendants()) do
+        if v:IsA("BasePart") then
+            vFlyCollisions[v] = v.CanCollide
+            v.CanCollide = false
+        end
+    end
+
+    local bg = Instance.new("BodyGyro", base)
+    bg.Name = "VehFlyGyro"
+    bg.P = 3e4
+    bg.D = 1e3
+    bg.MaxTorque = Vector3.new(0, 9e9, 0)
+    bg.CFrame = base.CFrame
+
+    local bv = Instance.new("BodyVelocity", base)
+    bv.Name = "VehFlyVelocity"
+    bv.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+    bv.Velocity = Vector3.zero
+
+    vFlyLoop = RunService.Heartbeat:Connect(function()
+        if not car or not base.Parent then stopVehFly() return end
+        base.AssemblyAngularVelocity = Vector3.zero
+        
+        local cam = workspace.CurrentCamera
+        local look = cam.CFrame.LookVector
+        local yaw = math.atan2(-look.X, -look.Z)
+        bg.CFrame = CFrame.new(base.Position) * CFrame.Angles(0, yaw, 0)
+
+        if UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled then
+            local success, controlModule = pcall(function() return require(LocalPlayer.PlayerScripts:WaitForChild("PlayerModule"):WaitForChild("ControlModule")) end)
+            if success and controlModule then
+                local dir = controlModule:GetMoveVector()
+                if dir.Magnitude > 0 then
+                    bv.Velocity = (cam.CFrame.LookVector * -dir.Z + cam.CFrame.RightVector * dir.X) * (localFlySpeed * 50)
+                else
+                    bv.Velocity = Vector3.zero
+                end
+            end
+        else
+            local forwardMag = flyKeys.f + flyKeys.b
+            local rightMag = flyKeys.r + flyKeys.l
+            local upMag = flyKeys.q + flyKeys.e
+            bv.Velocity = (cam.CFrame.LookVector * forwardMag + cam.CFrame.RightVector * rightMag + Vector3.new(0, upMag, 0)) * (localFlySpeed * 50)
+        end
+    end)
+
+    table.insert(flyInputs, UserInputService.InputBegan:Connect(function(i, gp)
+        if gp then return end
+        if i.KeyCode == Enum.KeyCode.W then flyKeys.f = 1 end
+        if i.KeyCode == Enum.KeyCode.S then flyKeys.b = -1 end
+        if i.KeyCode == Enum.KeyCode.A then flyKeys.l = -1 end
+        if i.KeyCode == Enum.KeyCode.D then flyKeys.r = 1 end
+        if i.KeyCode == Enum.KeyCode.E or i.KeyCode == Enum.KeyCode.Space then flyKeys.q = 1 end
+        if i.KeyCode == Enum.KeyCode.Q or i.KeyCode == Enum.KeyCode.LeftShift then flyKeys.e = -1 end
+    end))
+    table.insert(flyInputs, UserInputService.InputEnded:Connect(function(i)
+        if i.KeyCode == Enum.KeyCode.W then flyKeys.f = 0 end
+        if i.KeyCode == Enum.KeyCode.S then flyKeys.b = 0 end
+        if i.KeyCode == Enum.KeyCode.A then flyKeys.l = 0 end
+        if i.KeyCode == Enum.KeyCode.D then flyKeys.r = 0 end
+        if i.KeyCode == Enum.KeyCode.E or i.KeyCode == Enum.KeyCode.Space then flyKeys.q = 0 end
+        if i.KeyCode == Enum.KeyCode.Q or i.KeyCode == Enum.KeyCode.LeftShift then flyKeys.e = 0 end
+    end))
+end
+
+VehFlyBtn.MouseButton1Click:Connect(function()
+    vehFlyEnabled = not vehFlyEnabled
+    if vehFlyEnabled then
+        VehFlyBtn.Text = "🚗 Vehicle Fly: ON"
+        VehFlyBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
+        startVehFly()
+    else
+        stopVehFly()
+    end
+end)
+
+-- ==========================================
 -- SMART HOLD LOGIC CONNECTION
 -- ==========================================
 applySmartHold(
     FlyBtn,        -- The button to click/hold
     FlyContainer,  -- The frame to expand/shrink
     40,            -- Normal collapsed height
-    100,           -- Expanded height (to show slider)
+    145,           -- Expanded height (to show BOTH slider and VehFly button)
     0.4,           -- Hold duration in seconds
     
-    -- Action 1: What happens on a normal, quick click
+    -- Action 1: Normal quick click toggles Local Fly
     function()
         localFlyEnabled = not localFlyEnabled
         if localFlyEnabled then
@@ -1238,12 +1379,12 @@ applySmartHold(
         end
     end,
     
-    -- Action 2: How the text updates when clicked or held
+    -- Action 2: Text updates
     function(isExpanded)
         if isExpanded then
-            FlyBtn.Text = localFlyEnabled and "✈️ Local Fly: ON [▲ Settings]" or "✈️ Local Fly: OFF [▲ Settings]"
+            FlyBtn.Text = localFlyEnabled and "✈️ Local Fly: ON [▲ Options]" or "✈️ Local Fly: OFF [▲ Options]"
         else
-            FlyBtn.Text = localFlyEnabled and "✈️ Local Fly: ON (Hold for Speed)" or "✈️ Local Fly: OFF (Hold for Speed)"
+            FlyBtn.Text = localFlyEnabled and "✈️ Local Fly: ON (Hold for Options)" or "✈️ Local Fly: OFF (Hold for Options)"
         end
     end
 )
