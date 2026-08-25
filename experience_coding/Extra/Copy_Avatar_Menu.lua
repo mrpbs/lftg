@@ -890,18 +890,6 @@ local function startView(targetPlayer)
     end)
 end
 
--- Global Unview Button for Tools Tab
-local UnviewBtn = Instance.new("TextButton")
-UnviewBtn.Size = UDim2.new(1, -5, 0, 40)
-UnviewBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-UnviewBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-UnviewBtn.Font = Enum.Font.SourceSansBold
-UnviewBtn.TextSize = 16
-UnviewBtn.Text = "🛑 Stop Spectating (Unview)"
-UnviewBtn.BorderSizePixel = 0
-UnviewBtn.Parent = ToolsScroll
-
-UnviewBtn.MouseButton1Click:Connect(stopView)
 
 -- ========== AVATAR SCALER TOOL (Collapsible) ==========
 local ScalerFrame = Instance.new("Frame")
@@ -2082,8 +2070,14 @@ outfitData.WalkAnimation = getVal("WalkAnimation")
         -- ROW 2: VIEW, WHITELIST
         -- ==========================================
         local viewBtn = Instance.new("TextButton")
-        viewBtn.Text = "View"
-        viewBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 150)
+        -- Smart Check: Make it red if already viewing this player
+        if isViewing and selectedSpectateTarget == targetPlayer then
+            viewBtn.Text = "Unview"
+            viewBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+        else
+            viewBtn.Text = "View"
+            viewBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 150)
+        end
         viewBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
         viewBtn.Font = Enum.Font.SourceSansBold
         viewBtn.TextSize = 11
@@ -2091,6 +2085,7 @@ outfitData.WalkAnimation = getVal("WalkAnimation")
         viewBtn.LayoutOrder = 5
         viewBtn.Parent = actionLayout
 
+      
         local isWl = massWhitelist[targetPlayer.Name]
         local wlBtn = Instance.new("TextButton")
         wlBtn.Text = isWl and "Safe" or "Whitelist"
@@ -2110,14 +2105,19 @@ outfitData.WalkAnimation = getVal("WalkAnimation")
           shareOutfitToAll(outfitData, tryShareBtn, "Share All", Color3.fromRGB(200, 100, 200), targetPlayer)
         end)
 
-      -- [NEW CONNECTIONS FOR VIEW & WHITELIST]
+          -- [NEW CONNECTIONS FOR VIEW & WHITELIST]
         viewBtn.MouseButton1Click:Connect(function()
-            startView(targetPlayer)
-            viewBtn.Text = "Viewing!"
-            viewBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-            task.wait(1.5)
-            viewBtn.Text = "View"
-            viewBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 150)
+            if isViewing and selectedSpectateTarget == targetPlayer then
+                -- If we are already viewing them, stop viewing and revert to blue
+                stopView()
+                viewBtn.Text = "View"
+                viewBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 150)
+            else
+                -- If we are NOT viewing them, start viewing and turn red
+                startView(targetPlayer)
+                viewBtn.Text = "Unview"
+                viewBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+            end
         end)
 
         wlBtn.MouseButton1Click:Connect(function()
