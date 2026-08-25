@@ -162,6 +162,233 @@ end
 if LocalPlayer:WaitForChild("PlayerGui"):FindFirstChild("DeepMetadataScanner") then
     LocalPlayer.PlayerGui.DeepMetadataScanner:Destroy()
 end
+----
+
+-- ========================================================
+--  HELPER 1: Hold‑to‑open button
+-- ========================================================
+-- Parameters:
+--   parent:       parent GUI element (e.g., ScrollingFrame)
+--   text:         button text (e.g., "Fly 2 (FE)")
+--   onTap:        function() – called when tapped quickly
+--   onHold:       function() – called when held for holdDuration seconds
+--   holdDuration: number (default 0.5)
+-- Returns: the TextButton instance
+function createHoldToggleButton(parent, text, onTap, onHold, holdDuration)
+    holdDuration = holdDuration or 0.5
+
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(1, -5, 0, 40)
+    btn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.Font = Enum.Font.SourceSansBold
+    btn.TextSize = 16
+    btn.Text = text
+    btn.BorderSizePixel = 0
+    btn.Parent = parent
+
+    local holdTimer = nil
+    local isHolding = false
+    local isClick = false
+
+    btn.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+            isClick = true
+            isHolding = false
+            if holdTimer then holdTimer:Disconnect(); holdTimer = nil end
+
+            local startTime = tick()
+            -- Check every 0.05 seconds if the button is still being held
+            holdTimer = game:GetService("RunService").Heartbeat:Connect(function()
+                if not btn:IsDescendantOf(game) then
+                    holdTimer:Disconnect()
+                    return
+                end
+                if isHolding then return end
+                if input.UserInputState ~= Enum.UserInputState.Begin then
+                    holdTimer:Disconnect()
+                    return
+                end
+                if tick() - startTime >= holdDuration then
+                    isHolding = true
+                    isClick = false
+                    if holdTimer then holdTimer:Disconnect(); holdTimer = nil end
+                    if onHold and type(onHold) == "function" then
+                        onHold()
+                    end
+                end
+            end)
+        end
+    end)
+
+    btn.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+            if holdTimer then holdTimer:Disconnect(); holdTimer = nil end
+            if isClick and not isHolding then
+                if onTap and type(onTap) == "function" then
+                    onTap()
+                end
+            end
+            isClick = false
+            isHolding = false
+        end
+    end)
+
+    return btn
+end
+
+-- ========================================================
+--  HELPER 2: Reusable slider popup
+-- ========================================================
+-- Returns: { open(), close(), setValue(newValue), getValue() }
+-- The popup is created once and hidden initially.
+function createSliderPopup(title, minVal, maxVal, defaultVal, callback)
+    local popupGui = Instance.new("ScreenGui")
+    popupGui.Name = "SliderPopup"
+    popupGui.ResetOnSpawn = false
+    popupGui.Parent = game:GetService("CoreGui")
+    popupGui.Enabled = false   -- hidden by default
+
+    local bg = Instance.new("Frame")
+    bg.Size = UDim2.new(0, 250, 0, 120)
+    bg.Position = UDim2.new(0.5, -125, 0.5, -60)
+    bg.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+    bg.BorderSizePixel = 0
+    bg.Parent = popupGui
+    Instance.new("UICorner", bg).CornerRadius = UDim.new(0, 12)
+    local stroke = Instance.new("UIStroke", bg)
+    stroke.Color = Color3.fromRGB(60, 60, 70)
+
+    -- Title
+    local titleLabel = Instance.new("TextLabel")
+    titleLabel.Size = UDim2.new(1, -20, 0, 30)
+    titleLabel.Position = UDim2.new(0, 10, 0, 5)
+    titleLabel.BackgroundTransparency = 1
+    titleLabel.Text = title or "Value"
+    titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    titleLabel.Font = Enum.Font.SourceSansBold
+    titleLabel.TextSize = 16
+    titleLabel.Parent = bg
+
+    -- Close button
+    local close = Instance.new("TextButton")
+    close.Size = UDim2.new(0, 25, 0, 25)
+    close.Position = UDim2.new(1, -30, 0, 5)
+    close.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+    close.Text = "X"
+    close.TextColor3 = Color3.fromRGB(255, 255, 255)
+    close.Font = Enum.Font.SourceSansBold
+    close.TextSize = 14
+    close.BorderSizePixel = 0
+    close.Parent = bg
+    Instance.new("UICorner", close).CornerRadius = UDim.new(0, 6)
+
+    -- Value label
+    local valueLabel = Instance.new("TextLabel")
+    valueLabel.Size = UDim2.new(1, -20, 0, 30)
+    valueLabel.Position = UDim2.new(0, 10, 0, 35)
+    valueLabel.BackgroundTransparency = 1
+    valueLabel.Text = tostring(defaultVal)
+    valueLabel.TextColor3 = Color3.fromRGB(255, 200, 50)
+    valueLabel.Font = Enum.Font.SourceSansBold
+    valueLabel.TextSize = 18
+    valueLabel.Parent = bg
+
+    -- Slider bar
+    local sliderBar = Instance.new("Frame")
+    sliderBar.Size = UDim2.new(0.8, 0, 0, 8)
+    sliderBar.Position = UDim2.new(0.1, 0, 0, 72)
+    sliderBar.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
+    sliderBar.BorderSizePixel = 0
+    sliderBar.Parent = bg
+    Instance.new("UICorner", sliderBar).CornerRadius = UDim.new(0, 4)
+
+    -- Fill
+    local fill = Instance.new("Frame")
+    fill.Size = UDim2.new((defaultVal - minVal) / (maxVal - minVal), 0, 1, 0)
+    fill.BackgroundColor3 = Color3.fromRGB(60, 180, 255)
+    fill.BorderSizePixel = 0
+    fill.Parent = sliderBar
+    Instance.new("UICorner", fill).CornerRadius = UDim.new(0, 4)
+
+    -- Thumb (draggable)
+    local thumb = Instance.new("TextButton")
+    thumb.Size = UDim2.new(0, 20, 0, 20)
+    thumb.AnchorPoint = Vector2.new(0.5, 0.5)
+    thumb.Position = UDim2.new((defaultVal - minVal) / (maxVal - minVal), 0, 0.5, 0)
+    thumb.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    thumb.Text = ""
+    thumb.BorderSizePixel = 0
+    thumb.Parent = sliderBar
+    Instance.new("UICorner", thumb).CornerRadius = UDim.new(0.5, 0)
+
+    local currentValue = defaultVal
+    local dragging = false
+
+    local function updateSlider(input)
+        local barPos = sliderBar.AbsolutePosition.X
+        local barWidth = sliderBar.AbsoluteSize.X
+        local pos = (input.Position.X - barPos) / barWidth
+        pos = math.clamp(pos, 0, 1)
+        local val = minVal + pos * (maxVal - minVal)
+        val = math.round(val)   -- integer steps
+        val = math.clamp(val, minVal, maxVal)
+        currentValue = val
+        valueLabel.Text = tostring(val)
+        thumb.Position = UDim2.new(pos, 0, 0.5, 0)
+        fill.Size = UDim2.new(pos, 0, 1, 0)
+        if callback and type(callback) == "function" then
+            callback(val)
+        end
+    end
+
+    thumb.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+            updateSlider(input)
+        end
+    end)
+
+    thumb.InputChanged:Connect(function(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseMovement) then
+            updateSlider(input)
+        end
+    end)
+
+    thumb.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = false
+        end
+    end)
+
+    close.MouseButton1Click:Connect(function()
+        popupGui.Enabled = false
+    end)
+
+    -- Expose API
+    local api = {}
+    function api.open()
+        popupGui.Enabled = true
+        -- reposition to front
+        popupGui.Parent = game:GetService("CoreGui")
+    end
+    function api.close()
+        popupGui.Enabled = false
+    end
+    function api.setValue(newVal)
+        newVal = math.clamp(newVal, minVal, maxVal)
+        currentValue = newVal
+        valueLabel.Text = tostring(newVal)
+        local pos = (newVal - minVal) / (maxVal - minVal)
+        thumb.Position = UDim2.new(pos, 0, 0.5, 0)
+        fill.Size = UDim2.new(pos, 0, 1, 0)
+        if callback then callback(newVal) end
+    end
+    function api.getValue()
+        return currentValue
+    end
+    return api
+end
 
 -- Create Layout Screen UI
 local ScreenGui = Instance.new("ScreenGui")
@@ -889,13 +1116,14 @@ local function startView(targetPlayer)
         end
     end)
 end
--- ========== FLAMES HUB FLY 2 (MOBILE ONLY) ==========
+-- ========================================================
+--  FLY 2 LOGIC (mobile only)
+-- ========================================================
 local fly2Enabled = false
 local fly2Gyro, fly2Velocity, fly2Conn, fly2MobileConn
-local fly2Speed = 10          -- adjust as needed
+local fly2Speed = 1          -- default
 local lastPos = nil
 
--- Disable function (cleanup)
 local function disableFly2()
     if not fly2Enabled then return end
     fly2Enabled = false
@@ -918,10 +1146,9 @@ local function disableFly2()
     lastPos = nil
 end
 
--- Enable function (fly + trail)
 local function enableFly2(speed)
     if fly2Enabled then return end
-    speed = speed or 10
+    speed = speed or fly2Speed
     fly2Speed = speed
 
     local plr = game.Players.LocalPlayer
@@ -933,19 +1160,17 @@ local function enableFly2(speed)
         return
     end
 
-    disableFly2()   -- clean leftovers
+    disableFly2()   -- clean
 
     fly2Enabled = true
     lastPos = nil
 
-    -- BodyGyro to align with camera
     fly2Gyro = Instance.new("BodyGyro")
     fly2Gyro.P = 9e4
     fly2Gyro.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
     fly2Gyro.CFrame = hrp.CFrame
     fly2Gyro.Parent = hrp
 
-    -- BodyVelocity for movement
     fly2Velocity = Instance.new("BodyVelocity")
     fly2Velocity.MaxForce = Vector3.new(9e9, 9e9, 9e9)
     fly2Velocity.Velocity = Vector3.zero
@@ -962,14 +1187,13 @@ local function enableFly2(speed)
         Color3.fromRGB(255,0,255), Color3.fromRGB(0,255,255)
     }
 
-    -- Get mobile control module
+    -- Mobile controls
     local controlModule
     local ok, result = pcall(function()
         return require(plr:WaitForChild("PlayerScripts"):WaitForChild("PlayerModule"):WaitForChild("ControlModule"))
     end)
     if ok then controlModule = result end
 
-    -- Main loop (mobile joystick)
     fly2MobileConn = RunService.RenderStepped:Connect(function()
         if not fly2Enabled then return end
         local cam = Workspace.CurrentCamera
@@ -983,7 +1207,7 @@ local function enableFly2(speed)
         end
         fly2Gyro.CFrame = cam.CFrame
 
-        -- Neon trail (client‑side only)
+        -- Neon trail
         local pos = hrp.Position
         if not lastPos or (pos - lastPos).Magnitude > 1 then
             local part = Instance.new("Part")
@@ -1005,31 +1229,48 @@ local function enableFly2(speed)
     end
 end
 
--- ========== CREATE THE BUTTON ==========
-local Fly2Btn = Instance.new("TextButton")
-Fly2Btn.Size = UDim2.new(1, -5, 0, 40)
-Fly2Btn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-Fly2Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-Fly2Btn.Font = Enum.Font.SourceSansBold
-Fly2Btn.TextSize = 16
-Fly2Btn.Text = "✈️ Fly 2 (FE Trait): OFF"
-Fly2Btn.BorderSizePixel = 0
-Fly2Btn.Parent = ToolsScroll
+-- ========================================================
+--  CREATE THE FLY BUTTON WITH REUSABLE HELPERS
+-- ========================================================
 
-Fly2Btn.MouseButton1Click:Connect(function()
-    if fly2Enabled then
-        disableFly2()
-        Fly2Btn.Text = "✈️ Fly 2 (FE Trait): OFF"
-        Fly2Btn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-        if getgenv().notify then
-            getgenv().notify("Success", "Fly 2 disabled", 3)
-        end
-    else
-        enableFly2(10)   -- speed setting
-        Fly2Btn.Text = "✈️ Fly 2 (FE Trait): ON"
-        Fly2Btn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
+-- 1. Create the slider popup for speed
+local speedSlider = createSliderPopup(
+    "Fly Speed",      -- title
+    1,                -- min
+    100,              -- max
+    1,                -- default
+    function(newVal)  -- callback
+        fly2Speed = newVal
+        -- If flying, speed changes immediately because the loop uses fly2Speed
     end
-end)
+)
+
+-- 2. Create the hold‑to‑open button
+local flyBtn = createHoldToggleButton(
+    ToolsScroll,                     -- parent
+    "✈️ Fly 2 (FE Trait): OFF",      -- initial text
+    -- onTap: toggle fly
+    function()
+        if fly2Enabled then
+            disableFly2()
+            flyBtn.Text = "✈️ Fly 2 (FE Trait): OFF"
+            flyBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+            if getgenv().notify then
+                getgenv().notify("Success", "Fly 2 disabled", 3)
+            end
+        else
+            enableFly2(fly2Speed)
+            flyBtn.Text = "✈️ Fly 2 (FE Trait): ON"
+            flyBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
+        end
+    end,
+    -- onHold: open speed slider
+    function()
+        speedSlider.open()
+    end,
+    0.5   -- hold duration (seconds)
+)
+
 -- ========== AVATAR SCALER TOOL (Collapsible) ==========
 local ScalerFrame = Instance.new("Frame")
 ScalerFrame.Size = UDim2.new(1, -5, 0, 30) -- Starts collapsed
