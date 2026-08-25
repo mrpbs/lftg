@@ -1103,11 +1103,13 @@ local function startView(targetPlayer)
 end
 
 -- ==============================================================
--- ✈️ SMART FLY TOOL (Local + Vehicle Fly + Shared Speed)
+-- ✈️ SMART FLY TOOL (Local + RC Drone Vehicle Fly)
 -- ==============================================================
 local localFlyEnabled = false
 local vehFlyEnabled = false
-local localFlySpeed = 1 -- SHARED SPEED VARIABLE
+local vehViewEnabled = false
+local plrFrozen = false
+local localFlySpeed = 2 -- SHARED SPEED VARIABLE
 
 -- Physics Trackers
 local flyLoop = nil
@@ -1137,12 +1139,12 @@ FlyBtn.Parent = FlyContainer
 Instance.new("UICorner", FlyBtn).CornerRadius = UDim.new(0, 8)
 
 -- 3. The Shared Speed Slider
-local SpeedSlider = createSlider(FlyContainer, "⚡ Shared Fly Speed", 1, 10, 1, function(value)
+local SpeedSlider = createSlider(FlyContainer, "⚡ Shared Fly Speed", 1, 10, 2, function(value)
     localFlySpeed = value
 end)
 SpeedSlider.Position = UDim2.new(0, 0, 0, 45)
 
--- 4. The Vehicle Fly Button (Tucked inside the menu)
+-- 4. The Vehicle Fly Button
 local VehFlyBtn = Instance.new("TextButton")
 VehFlyBtn.Size = UDim2.new(1, -10, 0, 35)
 VehFlyBtn.Position = UDim2.new(0, 5, 0, 100)
@@ -1155,6 +1157,102 @@ VehFlyBtn.BorderSizePixel = 0
 VehFlyBtn.Parent = FlyContainer
 Instance.new("UICorner", VehFlyBtn).CornerRadius = UDim.new(0, 6)
 
+-- 5. Vehicle View Button (Camera Snap)
+local VehViewBtn = Instance.new("TextButton")
+VehViewBtn.Size = UDim2.new(1, -10, 0, 35)
+VehViewBtn.Position = UDim2.new(0, 5, 0, 140)
+VehViewBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+VehViewBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+VehViewBtn.Font = Enum.Font.SourceSansBold
+VehViewBtn.TextSize = 15
+VehViewBtn.Text = "🎥 Vehicle View: OFF"
+VehViewBtn.BorderSizePixel = 0
+VehViewBtn.Parent = FlyContainer
+Instance.new("UICorner", VehViewBtn).CornerRadius = UDim.new(0, 6)
+
+-- 6. Stone Player Button (Freeze Body)
+local FreezeBtn = Instance.new("TextButton")
+FreezeBtn.Size = UDim2.new(1, -10, 0, 35)
+FreezeBtn.Position = UDim2.new(0, 5, 0, 180)
+FreezeBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+FreezeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+FreezeBtn.Font = Enum.Font.SourceSansBold
+FreezeBtn.TextSize = 15
+FreezeBtn.Text = "🗿 Stone Player: OFF"
+FreezeBtn.BorderSizePixel = 0
+FreezeBtn.Parent = FlyContainer
+Instance.new("UICorner", FreezeBtn).CornerRadius = UDim.new(0, 6)
+
+-- ==========================================
+-- UTILITY & CAMERA LOGIC
+-- ==========================================
+local function getMyVehicle()
+    local vehiclesFolder = workspace:FindFirstChild("Vehicles")
+    if not vehiclesFolder then return nil end
+    for _, v in pairs(vehiclesFolder:GetChildren()) do
+        local ownerObj = v:FindFirstChild("owner") or v:FindFirstChild("owner", true)
+        if ownerObj and ownerObj.Value == LocalPlayer then return v end
+    end
+    return nil
+end
+
+local function resetDroneTools()
+    -- Reset Camera
+    if vehViewEnabled then
+        vehViewEnabled = false
+        VehViewBtn.Text = "🎥 Vehicle View: OFF"
+        VehViewBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+        local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        if hum then workspace.CurrentCamera.CameraSubject = hum end
+    end
+    -- Reset Player Freeze
+    if plrFrozen then
+        plrFrozen = false
+        FreezeBtn.Text = "🗿 Stone Player: OFF"
+        FreezeBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+        local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if hrp then hrp.Anchored = false end
+    end
+end
+
+VehViewBtn.MouseButton1Click:Connect(function()
+    vehViewEnabled = not vehViewEnabled
+    local cam = workspace.CurrentCamera
+    if vehViewEnabled then
+        local car = getMyVehicle()
+        local targetPart = car and (car.PrimaryPart or car:FindFirstChild("Base"))
+        if targetPart then
+            VehViewBtn.Text = "🎥 Vehicle View: ON"
+            VehViewBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
+            cam.CameraSubject = targetPart
+        else
+            vehViewEnabled = false
+            VehViewBtn.Text = "No Car Found!"
+            task.wait(1.5)
+            VehViewBtn.Text = "🎥 Vehicle View: OFF"
+        end
+    else
+        VehViewBtn.Text = "🎥 Vehicle View: OFF"
+        VehViewBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+        local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        if hum then cam.CameraSubject = hum end
+    end
+end)
+
+FreezeBtn.MouseButton1Click:Connect(function()
+    plrFrozen = not plrFrozen
+    local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if plrFrozen then
+        FreezeBtn.Text = "🗿 Stone Player: ON"
+        FreezeBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
+        if hrp then hrp.Anchored = true end
+    else
+        FreezeBtn.Text = "🗿 Stone Player: OFF"
+        FreezeBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+        if hrp then hrp.Anchored = false end
+    end
+end)
+
 -- ==========================================
 -- LOCAL FLY PHYSICS
 -- ==========================================
@@ -1162,7 +1260,6 @@ local function stopLocalFly()
     localFlyEnabled = false
     FlyBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
     
-    -- Keep text accurate based on whether the menu is open
     if FlyContainer.Size.Y.Offset > 50 then
         FlyBtn.Text = "✈️ Local Fly: OFF [▲ Options]"
     else
@@ -1172,7 +1269,7 @@ local function stopLocalFly()
     if flyLoop then flyLoop:Disconnect() flyLoop = nil end
     for _, c in pairs(flyInputs) do c:Disconnect() end
     table.clear(flyInputs)
-    flyKeys = {f=0, b=0, l=0, r=0, q=0, e=0} -- Fix: Prevents stuck keys!
+    flyKeys = {f=0, b=0, l=0, r=0, q=0, e=0}
 
     local char = LocalPlayer.Character
     if char then
@@ -1191,46 +1288,8 @@ local function stopLocalFly()
     end
 end
 
-local function getMyVehicle()
-    local vehiclesFolder = workspace:FindFirstChild("Vehicles")
-    if not vehiclesFolder then return nil end
-    for _, v in pairs(vehiclesFolder:GetChildren()) do
-        local ownerObj = v:FindFirstChild("owner") or v:FindFirstChild("owner", true)
-        if ownerObj and ownerObj.Value == LocalPlayer then return v end
-    end
-    return nil
-end
-
-local function stopVehFly()
-    vehFlyEnabled = false
-    VehFlyBtn.Text = "🚗 Vehicle Fly: OFF"
-    VehFlyBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
-
-    if vFlyLoop then vFlyLoop:Disconnect() vFlyLoop = nil end
-    for _, c in pairs(flyInputs) do c:Disconnect() end
-    table.clear(flyInputs)
-    flyKeys = {f=0, b=0, l=0, r=0, q=0, e=0} -- Fix: Prevents stuck keys!
-
-    -- Restore Collisions
-    for part, state in pairs(vFlyCollisions) do
-        if part and part.Parent then part.CanCollide = state end
-    end
-    table.clear(vFlyCollisions)
-
-    local car = getMyVehicle()
-    if car then
-        local base = car:FindFirstChild("Base") or car.PrimaryPart
-        if base then
-            local bg = base:FindFirstChild("VehFlyGyro")
-            local bv = base:FindFirstChild("VehFlyVelocity")
-            if bg then bg:Destroy() end
-            if bv then bv:Destroy() end
-        end
-    end
-end
-
 local function startLocalFly()
-    if vehFlyEnabled then stopVehFly() end -- Fix: Properly shuts down Vehicle Fly
+    if vehFlyEnabled then stopVehFly() end 
     
     local char = LocalPlayer.Character
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
@@ -1298,10 +1357,40 @@ local function startLocalFly()
 end
 
 -- ==========================================
--- VEHICLE FLY PHYSICS
+-- VEHICLE FLY PHYSICS (RC DRONE)
 -- ==========================================
+local function stopVehFly()
+    vehFlyEnabled = false
+    VehFlyBtn.Text = "🚗 Vehicle Fly: OFF"
+    VehFlyBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+
+    if vFlyLoop then vFlyLoop:Disconnect() vFlyLoop = nil end
+    for _, c in pairs(flyInputs) do c:Disconnect() end
+    table.clear(flyInputs)
+    flyKeys = {f=0, b=0, l=0, r=0, q=0, e=0}
+
+    resetDroneTools() -- Shut down camera view and stone player
+
+    -- Restore Collisions
+    for part, state in pairs(vFlyCollisions) do
+        if part and part.Parent then part.CanCollide = state end
+    end
+    table.clear(vFlyCollisions)
+
+    local car = getMyVehicle()
+    if car then
+        local base = car:FindFirstChild("Base") or car.PrimaryPart
+        if base then
+            local bg = base:FindFirstChild("VehFlyGyro")
+            local bv = base:FindFirstChild("VehFlyVelocity")
+            if bg then bg:Destroy() end
+            if bv then bv:Destroy() end
+        end
+    end
+end
+
 local function startVehFly()
-    if localFlyEnabled then stopLocalFly() end -- Fix: Properly shuts down Local Fly
+    if localFlyEnabled then stopLocalFly() end 
     
     local car = getMyVehicle()
     if not car then stopVehFly() VehFlyBtn.Text = "No Vehicle Found!" task.wait(1.5) VehFlyBtn.Text = "🚗 Vehicle Fly: OFF" return end
@@ -1339,22 +1428,41 @@ local function startVehFly()
         local yaw = math.atan2(-look.X, -look.Z)
         bg.CFrame = CFrame.new(base.Position) * CFrame.Angles(0, yaw, 0)
 
+        -- Calculate desired velocity
+        local targetVelocity = Vector3.zero
         if UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled then
             local success, controlModule = pcall(function() return require(LocalPlayer.PlayerScripts:WaitForChild("PlayerModule"):WaitForChild("ControlModule")) end)
             if success and controlModule then
                 local dir = controlModule:GetMoveVector()
                 if dir.Magnitude > 0 then
-                    bv.Velocity = (cam.CFrame.LookVector * -dir.Z + cam.CFrame.RightVector * dir.X) * (localFlySpeed * 50)
-                else
-                    bv.Velocity = Vector3.zero
+                    targetVelocity = (cam.CFrame.LookVector * -dir.Z + cam.CFrame.RightVector * dir.X) * (localFlySpeed * 50)
                 end
             end
         else
             local forwardMag = flyKeys.f + flyKeys.b
             local rightMag = flyKeys.r + flyKeys.l
             local upMag = flyKeys.q + flyKeys.e
-            bv.Velocity = (cam.CFrame.LookVector * forwardMag + cam.CFrame.RightVector * rightMag + Vector3.new(0, upMag, 0)) * (localFlySpeed * 50)
+            targetVelocity = (cam.CFrame.LookVector * forwardMag + cam.CFrame.RightVector * rightMag + Vector3.new(0, upMag, 0)) * (localFlySpeed * 50)
         end
+        
+        -- ⭐ ANTI-STUCK BOUNDARY LIMITER (400 Studs)
+        local myRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if myRoot then
+            local distFromPlayer = (base.Position - myRoot.Position).Magnitude
+            if distFromPlayer > 400 then
+                -- Find the direction vector pointing FROM the player TO the car
+                local vectorAwayFromPlayer = (base.Position - myRoot.Position).Unit
+                -- Check if the car's intended velocity is pushing it further outward
+                local outwardForce = targetVelocity:Dot(vectorAwayFromPlayer)
+                
+                if outwardForce > 0 then
+                    -- Cancel out only the speed pushing it away, allow it to fly sideways or back towards you
+                    targetVelocity = targetVelocity - (vectorAwayFromPlayer * outwardForce)
+                end
+            end
+        end
+
+        bv.Velocity = targetVelocity
     end)
 
     table.insert(flyInputs, UserInputService.InputBegan:Connect(function(i, gp)
@@ -1394,10 +1502,9 @@ applySmartHold(
     FlyBtn,        -- The button to click/hold
     FlyContainer,  -- The frame to expand/shrink
     40,            -- Normal collapsed height
-    145,           -- Expanded height (to show BOTH slider and VehFly button)
-    1.4,           -- Fix: Hold duration changed to 1.4 seconds
+    225,           -- Expanded height (to fit 4 buttons + 1 slider)
+    1,           -- Hold duration
     
-    -- Action 1: Normal quick click toggles Local Fly
     function()
         localFlyEnabled = not localFlyEnabled
         if localFlyEnabled then
@@ -1409,7 +1516,6 @@ applySmartHold(
         end
     end,
     
-    -- Action 2: Text updates
     function(isExpanded)
         if isExpanded then
             FlyBtn.Text = localFlyEnabled and "✈️ Local Fly: ON [▲ Options]" or "✈️ Local Fly: OFF [▲ Options]"
@@ -1418,7 +1524,6 @@ applySmartHold(
         end
     end
 )
-
 -- ========== AVATAR SCALER TOOL (Collapsible) ==========
 local ScalerFrame = Instance.new("Frame")
 ScalerFrame.Size = UDim2.new(1, -5, 0, 30) -- Starts collapsed
