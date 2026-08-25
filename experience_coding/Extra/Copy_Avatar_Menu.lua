@@ -889,10 +889,123 @@ local function startView(targetPlayer)
         end
     end)
 end
-
--- ========== FLAMES HUB FLY 2 (MAGIC CARPET FE) ==========
+-- ========== FLAMES HUB FLY 2 (MOBILE ONLY) ==========
 local fly2Enabled = false
+local fly2Gyro, fly2Velocity, fly2Conn, fly2MobileConn
+local fly2Speed = 10          -- adjust as needed
+local lastPos = nil
 
+-- Disable function (cleanup)
+local function disableFly2()
+    if not fly2Enabled then return end
+    fly2Enabled = false
+
+    if fly2Conn then fly2Conn:Disconnect(); fly2Conn = nil end
+    if fly2MobileConn then fly2MobileConn:Disconnect(); fly2MobileConn = nil end
+
+    local plr = game.Players.LocalPlayer
+    local char = plr.Character or plr.CharacterAdded:Wait()
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    if hrp then
+        for _, v in ipairs(hrp:GetChildren()) do
+            if v:IsA("BodyVelocity") or v:IsA("BodyGyro") then
+                v:Destroy()
+            end
+        end
+    end
+    if hum then hum.PlatformStand = false end
+    lastPos = nil
+end
+
+-- Enable function (fly + trail)
+local function enableFly2(speed)
+    if fly2Enabled then return end
+    speed = speed or 10
+    fly2Speed = speed
+
+    local plr = game.Players.LocalPlayer
+    local char = plr.Character or plr.CharacterAdded:Wait()
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    if not hrp or not hum then
+        warn("Character or Humanoid missing")
+        return
+    end
+
+    disableFly2()   -- clean leftovers
+
+    fly2Enabled = true
+    lastPos = nil
+
+    -- BodyGyro to align with camera
+    fly2Gyro = Instance.new("BodyGyro")
+    fly2Gyro.P = 9e4
+    fly2Gyro.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
+    fly2Gyro.CFrame = hrp.CFrame
+    fly2Gyro.Parent = hrp
+
+    -- BodyVelocity for movement
+    fly2Velocity = Instance.new("BodyVelocity")
+    fly2Velocity.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+    fly2Velocity.Velocity = Vector3.zero
+    fly2Velocity.Parent = hrp
+
+    hum.PlatformStand = true
+
+    local RunService = game:GetService("RunService")
+    local Workspace = game:GetService("Workspace")
+    local Debris = game:GetService("Debris")
+    local colors = {
+        Color3.fromRGB(255,0,0), Color3.fromRGB(0,255,0),
+        Color3.fromRGB(0,0,255), Color3.fromRGB(255,255,0),
+        Color3.fromRGB(255,0,255), Color3.fromRGB(0,255,255)
+    }
+
+    -- Get mobile control module
+    local controlModule
+    local ok, result = pcall(function()
+        return require(plr:WaitForChild("PlayerScripts"):WaitForChild("PlayerModule"):WaitForChild("ControlModule"))
+    end)
+    if ok then controlModule = result end
+
+    -- Main loop (mobile joystick)
+    fly2MobileConn = RunService.RenderStepped:Connect(function()
+        if not fly2Enabled then return end
+        local cam = Workspace.CurrentCamera
+        local s = fly2Speed * 50
+        local move = controlModule and controlModule:GetMoveVector() or Vector3.zero
+
+        if move.Magnitude > 0 then
+            fly2Velocity.Velocity = (cam.CFrame.LookVector * -move.Z + cam.CFrame.RightVector * move.X) * s
+        else
+            fly2Velocity.Velocity = Vector3.zero
+        end
+        fly2Gyro.CFrame = cam.CFrame
+
+        -- Neon trail (client‑side only)
+        local pos = hrp.Position
+        if not lastPos or (pos - lastPos).Magnitude > 1 then
+            local part = Instance.new("Part")
+            part.Anchored = true
+            part.CanCollide = false
+            part.Material = Enum.Material.Neon
+            local dist = (pos - (lastPos or pos)).Magnitude + 2
+            part.Size = Vector3.new(1, 1, dist)
+            part.CFrame = CFrame.new((lastPos or pos) + ((pos - (lastPos or pos)) / 2), pos)
+            part.Color = colors[math.random(1, #colors)]
+            part.Parent = Workspace
+            Debris:AddItem(part, 1)
+            lastPos = pos
+        end
+    end)
+
+    if getgenv().notify then
+        getgenv().notify("Success", "Fly 2 enabled (speed: " .. fly2Speed .. ")", 5)
+    end
+end
+
+-- ========== CREATE THE BUTTON ==========
 local Fly2Btn = Instance.new("TextButton")
 Fly2Btn.Size = UDim2.new(1, -5, 0, 40)
 Fly2Btn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
@@ -904,45 +1017,19 @@ Fly2Btn.BorderSizePixel = 0
 Fly2Btn.Parent = ToolsScroll
 
 Fly2Btn.MouseButton1Click:Connect(function()
-    fly2Enabled = not fly2Enabled
-    
-    -- Safely grab Flames Hub's global environment
-    local g = getgenv().g
-    
     if fly2Enabled then
-        Fly2Btn.Text = "✈️ Fly 2 (FE Trait): ON"
-        Fly2Btn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
-        
-        -- We hijack their exact function since it's hidden in their Pastebin API!
-        if g and type(g.EnableFly2) == "function" then
-            g.EnableFly2(3) -- 3 is the default speed
-        else
-            -- If their API isn't loaded yet, force-load the specific Pastebin that contains EnableFly2
-            Fly2Btn.Text = "Loading API..."
-            pcall(function()
-                loadstring(game:HttpGet("https://pastebin.com/raw/ksfZM2C4"))()
-                task.wait(0.5)
-                local newG = getgenv().g
-                if newG and type(newG.EnableFly2) == "function" then
-                    newG.EnableFly2(3)
-                    Fly2Btn.Text = "✈️ Fly 2 (FE Trait): ON"
-                else
-                    Fly2Btn.Text = "API Error"
-                    Fly2Btn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-                end
-            end)
-        end
-    else
+        disableFly2()
         Fly2Btn.Text = "✈️ Fly 2 (FE Trait): OFF"
         Fly2Btn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-        
-        -- Run their disable function
-        if g and type(g.DisableFly2) == "function" then
-            g.DisableFly2()
+        if getgenv().notify then
+            getgenv().notify("Success", "Fly 2 disabled", 3)
         end
+    else
+        enableFly2(10)   -- speed setting
+        Fly2Btn.Text = "✈️ Fly 2 (FE Trait): ON"
+        Fly2Btn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
     end
 end)
-
 -- ========== AVATAR SCALER TOOL (Collapsible) ==========
 local ScalerFrame = Instance.new("Frame")
 ScalerFrame.Size = UDim2.new(1, -5, 0, 30) -- Starts collapsed
