@@ -890,6 +890,90 @@ local function startView(targetPlayer)
     end)
 end
 
+-- ========== EXPERIMENTAL TRAIL TOOL ==========
+local testTrailEnabled = false
+local testTrailData = {}
+local testTrailCharConn = nil
+
+local TestTrailBtn = Instance.new("TextButton")
+TestTrailBtn.Size = UDim2.new(1, -5, 0, 40)
+TestTrailBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+TestTrailBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+TestTrailBtn.Font = Enum.Font.SourceSansBold
+TestTrailBtn.TextSize = 16
+TestTrailBtn.Text = "🌈 Test Trail: OFF"
+TestTrailBtn.BorderSizePixel = 0
+TestTrailBtn.Parent = ToolsScroll
+
+local function removeTestTrail()
+    for _, obj in pairs(testTrailData) do
+        if obj and obj.Parent then obj:Destroy() end
+    end
+    table.clear(testTrailData)
+end
+
+local function applyTestTrail(char)
+    removeTestTrail()
+    if not char then return end
+    
+    local rootPart = char:WaitForChild("HumanoidRootPart", 5)
+    if not rootPart then return end
+
+    local currentA0 = Instance.new("Attachment")
+    currentA0.Position = Vector3.new(0, 1, 0)
+    currentA0.Parent = rootPart
+
+    local currentA1 = Instance.new("Attachment")
+    currentA1.Position = Vector3.new(0, -1.5, 0)
+    currentA1.Parent = rootPart
+
+    local currentTrail = Instance.new("Trail")
+    currentTrail.Attachment0 = currentA0
+    currentTrail.Attachment1 = currentA1
+    
+    currentTrail.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0.00, Color3.fromRGB(255, 0, 0)),
+        ColorSequenceKeypoint.new(0.16, Color3.fromRGB(255, 127, 0)),
+        ColorSequenceKeypoint.new(0.33, Color3.fromRGB(255, 255, 0)),
+        ColorSequenceKeypoint.new(0.50, Color3.fromRGB(0, 255, 0)),
+        ColorSequenceKeypoint.new(0.66, Color3.fromRGB(0, 0, 255)),
+        ColorSequenceKeypoint.new(0.83, Color3.fromRGB(75, 0, 130)),
+        ColorSequenceKeypoint.new(1.00, Color3.fromRGB(148, 0, 211))
+    })
+    
+    currentTrail.WidthScale = NumberSequence.new(1, 0)
+    currentTrail.Lifetime = 1
+    currentTrail.LightEmission = 0.5
+    currentTrail.Parent = rootPart
+
+    -- Save references to clean up later
+    table.insert(testTrailData, currentA0)
+    table.insert(testTrailData, currentA1)
+    table.insert(testTrailData, currentTrail)
+end
+
+TestTrailBtn.MouseButton1Click:Connect(function()
+    testTrailEnabled = not testTrailEnabled
+    
+    if testTrailEnabled then
+        TestTrailBtn.Text = "🌈 Test Trail: ON"
+        TestTrailBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
+        applyTestTrail(LocalPlayer.Character)
+        
+        -- Automatically re-apply if you reset
+        testTrailCharConn = LocalPlayer.CharacterAdded:Connect(function(char)
+            applyTestTrail(char)
+        end)
+    else
+        TestTrailBtn.Text = "🌈 Test Trail: OFF"
+        TestTrailBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+        removeTestTrail()
+        if testTrailCharConn then
+            testTrailCharConn:Disconnect()
+            testTrailCharConn = nil
+        end
+    end
+end)
 
 -- ========== AVATAR SCALER TOOL (Collapsible) ==========
 local ScalerFrame = Instance.new("Frame")
