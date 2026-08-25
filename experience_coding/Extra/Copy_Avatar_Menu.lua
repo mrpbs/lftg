@@ -3166,11 +3166,7 @@ local function populatePlayerList()
 end
 -----
       
-      PlayerBtn.MouseButton1Click:Connect(function()
-            deepScanPlayerOutfit(player, cachedDescription)
-        end)
-    end
-end
+   
 
 -- Initialize
 RefreshBtn.MouseButton1Click:Connect(populatePlayerList)
