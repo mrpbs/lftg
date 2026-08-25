@@ -162,233 +162,161 @@ end
 if LocalPlayer:WaitForChild("PlayerGui"):FindFirstChild("DeepMetadataScanner") then
     LocalPlayer.PlayerGui.DeepMetadataScanner:Destroy()
 end
-----
+---
 
--- ========================================================
---  HELPER 1: Hold‑to‑open button
--- ========================================================
--- Parameters:
---   parent:       parent GUI element (e.g., ScrollingFrame)
---   text:         button text (e.g., "Fly 2 (FE)")
---   onTap:        function() – called when tapped quickly
---   onHold:       function() – called when held for holdDuration seconds
---   holdDuration: number (default 0.5)
--- Returns: the TextButton instance
-function createHoldToggleButton(parent, text, onTap, onHold, holdDuration)
-    holdDuration = holdDuration or 0.5
+-- ==============================================================
+-- 🛠️ REUSABLE UI COMPONENT LIBRARY (For Future Features)
+-- ==============================================================
 
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1, -5, 0, 40)
-    btn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btn.Font = Enum.Font.SourceSansBold
-    btn.TextSize = 16
-    btn.Text = text
-    btn.BorderSizePixel = 0
-    btn.Parent = parent
+-- 1. Reusable Slider Function
+local function createSlider(parent, titleText, minVal, maxVal, defaultVal, callback)
+    local SliderFrame = Instance.new("Frame")
+    SliderFrame.Size = UDim2.new(1, -5, 0, 50)
+    SliderFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 38)
+    SliderFrame.BorderSizePixel = 0
+    SliderFrame.Parent = parent
+    Instance.new("UICorner", SliderFrame).CornerRadius = UDim.new(0, 8)
 
-    local holdTimer = nil
-    local isHolding = false
-    local isClick = false
+    local Label = Instance.new("TextLabel")
+    Label.Size = UDim2.new(1, -10, 0, 20)
+    Label.Position = UDim2.new(0, 10, 0, 5)
+    Label.BackgroundTransparency = 1
+    Label.Text = titleText .. ": " .. tostring(defaultVal)
+    Label.TextColor3 = Color3.fromRGB(220, 220, 220)
+    Label.Font = Enum.Font.SourceSansBold
+    Label.TextSize = 14
+    Label.TextXAlignment = Enum.TextXAlignment.Left
+    Label.Parent = SliderFrame
 
-    btn.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
-            isClick = true
-            isHolding = false
-            if holdTimer then holdTimer:Disconnect(); holdTimer = nil end
+    local BarBg = Instance.new("Frame")
+    BarBg.Size = UDim2.new(1, -20, 0, 10)
+    BarBg.Position = UDim2.new(0, 10, 0, 30)
+    BarBg.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+    BarBg.BorderSizePixel = 0
+    BarBg.Parent = SliderFrame
+    Instance.new("UICorner", BarBg).CornerRadius = UDim.new(1, 0)
 
-            local startTime = tick()
-            -- Check every 0.05 seconds if the button is still being held
-            holdTimer = game:GetService("RunService").Heartbeat:Connect(function()
-                if not btn:IsDescendantOf(game) then
-                    holdTimer:Disconnect()
-                    return
-                end
-                if isHolding then return end
-                if input.UserInputState ~= Enum.UserInputState.Begin then
-                    holdTimer:Disconnect()
-                    return
-                end
-                if tick() - startTime >= holdDuration then
-                    isHolding = true
-                    isClick = false
-                    if holdTimer then holdTimer:Disconnect(); holdTimer = nil end
-                    if onHold and type(onHold) == "function" then
-                        onHold()
-                    end
-                end
-            end)
-        end
-    end)
+    local fillScale = (defaultVal - minVal) / (maxVal - minVal)
+    local BarFill = Instance.new("Frame")
+    BarFill.Size = UDim2.new(math.clamp(fillScale, 0, 1), 0, 1, 0)
+    BarFill.BackgroundColor3 = Color3.fromRGB(0, 255, 150)
+    BarFill.BorderSizePixel = 0
+    BarFill.Parent = BarBg
+    Instance.new("UICorner", BarFill).CornerRadius = UDim.new(1, 0)
 
-    btn.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
-            if holdTimer then holdTimer:Disconnect(); holdTimer = nil end
-            if isClick and not isHolding then
-                if onTap and type(onTap) == "function" then
-                    onTap()
-                end
-            end
-            isClick = false
-            isHolding = false
-        end
-    end)
+    local Handle = Instance.new("Frame")
+    Handle.Size = UDim2.new(0, 16, 0, 16)
+    Handle.AnchorPoint = Vector2.new(0.5, 0.5)
+    Handle.Position = UDim2.new(1, 0, 0.5, 0)
+    Handle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    Handle.Parent = BarFill
+    Instance.new("UICorner", Handle).CornerRadius = UDim.new(1, 0)
 
-    return btn
-end
-
--- ========================================================
---  HELPER 2: Reusable slider popup
--- ========================================================
--- Returns: { open(), close(), setValue(newValue), getValue() }
--- The popup is created once and hidden initially.
-function createSliderPopup(title, minVal, maxVal, defaultVal, callback)
-    local popupGui = Instance.new("ScreenGui")
-    popupGui.Name = "SliderPopup"
-    popupGui.ResetOnSpawn = false
-    popupGui.Parent = game:GetService("CoreGui")
-    popupGui.Enabled = false   -- hidden by default
-
-    local bg = Instance.new("Frame")
-    bg.Size = UDim2.new(0, 250, 0, 120)
-    bg.Position = UDim2.new(0.5, -125, 0.5, -60)
-    bg.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
-    bg.BorderSizePixel = 0
-    bg.Parent = popupGui
-    Instance.new("UICorner", bg).CornerRadius = UDim.new(0, 12)
-    local stroke = Instance.new("UIStroke", bg)
-    stroke.Color = Color3.fromRGB(60, 60, 70)
-
-    -- Title
-    local titleLabel = Instance.new("TextLabel")
-    titleLabel.Size = UDim2.new(1, -20, 0, 30)
-    titleLabel.Position = UDim2.new(0, 10, 0, 5)
-    titleLabel.BackgroundTransparency = 1
-    titleLabel.Text = title or "Value"
-    titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    titleLabel.Font = Enum.Font.SourceSansBold
-    titleLabel.TextSize = 16
-    titleLabel.Parent = bg
-
-    -- Close button
-    local close = Instance.new("TextButton")
-    close.Size = UDim2.new(0, 25, 0, 25)
-    close.Position = UDim2.new(1, -30, 0, 5)
-    close.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-    close.Text = "X"
-    close.TextColor3 = Color3.fromRGB(255, 255, 255)
-    close.Font = Enum.Font.SourceSansBold
-    close.TextSize = 14
-    close.BorderSizePixel = 0
-    close.Parent = bg
-    Instance.new("UICorner", close).CornerRadius = UDim.new(0, 6)
-
-    -- Value label
-    local valueLabel = Instance.new("TextLabel")
-    valueLabel.Size = UDim2.new(1, -20, 0, 30)
-    valueLabel.Position = UDim2.new(0, 10, 0, 35)
-    valueLabel.BackgroundTransparency = 1
-    valueLabel.Text = tostring(defaultVal)
-    valueLabel.TextColor3 = Color3.fromRGB(255, 200, 50)
-    valueLabel.Font = Enum.Font.SourceSansBold
-    valueLabel.TextSize = 18
-    valueLabel.Parent = bg
-
-    -- Slider bar
-    local sliderBar = Instance.new("Frame")
-    sliderBar.Size = UDim2.new(0.8, 0, 0, 8)
-    sliderBar.Position = UDim2.new(0.1, 0, 0, 72)
-    sliderBar.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
-    sliderBar.BorderSizePixel = 0
-    sliderBar.Parent = bg
-    Instance.new("UICorner", sliderBar).CornerRadius = UDim.new(0, 4)
-
-    -- Fill
-    local fill = Instance.new("Frame")
-    fill.Size = UDim2.new((defaultVal - minVal) / (maxVal - minVal), 0, 1, 0)
-    fill.BackgroundColor3 = Color3.fromRGB(60, 180, 255)
-    fill.BorderSizePixel = 0
-    fill.Parent = sliderBar
-    Instance.new("UICorner", fill).CornerRadius = UDim.new(0, 4)
-
-    -- Thumb (draggable)
-    local thumb = Instance.new("TextButton")
-    thumb.Size = UDim2.new(0, 20, 0, 20)
-    thumb.AnchorPoint = Vector2.new(0.5, 0.5)
-    thumb.Position = UDim2.new((defaultVal - minVal) / (maxVal - minVal), 0, 0.5, 0)
-    thumb.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    thumb.Text = ""
-    thumb.BorderSizePixel = 0
-    thumb.Parent = sliderBar
-    Instance.new("UICorner", thumb).CornerRadius = UDim.new(0.5, 0)
-
-    local currentValue = defaultVal
-    local dragging = false
-
+    local isDragging = false
     local function updateSlider(input)
-        local barPos = sliderBar.AbsolutePosition.X
-        local barWidth = sliderBar.AbsoluteSize.X
-        local pos = (input.Position.X - barPos) / barWidth
-        pos = math.clamp(pos, 0, 1)
-        local val = minVal + pos * (maxVal - minVal)
-        val = math.round(val)   -- integer steps
-        val = math.clamp(val, minVal, maxVal)
-        currentValue = val
-        valueLabel.Text = tostring(val)
-        thumb.Position = UDim2.new(pos, 0, 0.5, 0)
-        fill.Size = UDim2.new(pos, 0, 1, 0)
-        if callback and type(callback) == "function" then
-            callback(val)
-        end
+        local pos = math.clamp((input.Position.X - BarBg.AbsolutePosition.X) / BarBg.AbsoluteSize.X, 0, 1)
+        BarFill.Size = UDim2.new(pos, 0, 1, 0)
+        local val = math.floor(minVal + (maxVal - minVal) * pos)
+        Label.Text = titleText .. ": " .. tostring(val)
+        callback(val)
     end
 
-    thumb.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = true
+    BarBg.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            isDragging = true
             updateSlider(input)
         end
     end)
 
-    thumb.InputChanged:Connect(function(input)
-        if dragging and (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseMovement) then
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            isDragging = false
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if isDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
             updateSlider(input)
         end
     end)
 
-    thumb.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = false
-        end
-    end)
-
-    close.MouseButton1Click:Connect(function()
-        popupGui.Enabled = false
-    end)
-
-    -- Expose API
-    local api = {}
-    function api.open()
-        popupGui.Enabled = true
-        -- reposition to front
-        popupGui.Parent = game:GetService("CoreGui")
-    end
-    function api.close()
-        popupGui.Enabled = false
-    end
-    function api.setValue(newVal)
-        newVal = math.clamp(newVal, minVal, maxVal)
-        currentValue = newVal
-        valueLabel.Text = tostring(newVal)
-        local pos = (newVal - minVal) / (maxVal - minVal)
-        thumb.Position = UDim2.new(pos, 0, 0.5, 0)
-        fill.Size = UDim2.new(pos, 0, 1, 0)
-        if callback then callback(newVal) end
-    end
-    function api.getValue()
-        return currentValue
-    end
-    return api
+    return SliderFrame
 end
+
+-- 2. Reusable "Hold To Interact" Button Function
+local function createHoldButton(parent, titleText, color, onHoldStart, onHoldEnd)
+    local Btn = Instance.new("TextButton")
+    Btn.Size = UDim2.new(1, -5, 0, 40)
+    Btn.BackgroundColor3 = color or Color3.fromRGB(40, 40, 50)
+    Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Btn.Font = Enum.Font.SourceSansBold
+    Btn.TextSize = 16
+    Btn.Text = titleText
+    Btn.BorderSizePixel = 0
+    Btn.Parent = parent
+    Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 8)
+    
+    Btn.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            if onHoldStart then onHoldStart() end
+        end
+    end)
+    
+    Btn.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            if onHoldEnd then onHoldEnd() end
+        end
+    end)
+    return Btn
+end
+
+-- 3. Reusable "Fold For More" Dropdown Section (Like Avatar Scaler)
+local function createCollapsible(parent, titleText, openHeight)
+    local Frame = Instance.new("Frame")
+    Frame.Size = UDim2.new(1, -5, 0, 30)
+    Frame.BackgroundColor3 = Color3.fromRGB(30, 30, 38)
+    Frame.BorderSizePixel = 0
+    Frame.ClipsDescendants = true
+    Frame.Parent = parent
+
+    local ToggleBtn = Instance.new("TextButton")
+    ToggleBtn.Size = UDim2.new(1, 0, 0, 30)
+    ToggleBtn.Text = "  " .. titleText .. " [ ▼ ]"
+    ToggleBtn.TextColor3 = Color3.fromRGB(0, 255, 200)
+    ToggleBtn.Font = Enum.Font.SourceSansBold
+    ToggleBtn.TextSize = 14
+    ToggleBtn.TextXAlignment = Enum.TextXAlignment.Left
+    ToggleBtn.BackgroundColor3 = Color3.fromRGB(25, 25, 32)
+    ToggleBtn.BorderSizePixel = 0
+    ToggleBtn.Parent = Frame
+
+    local Content = Instance.new("Frame")
+    Content.Size = UDim2.new(1, 0, 1, -30)
+    Content.Position = UDim2.new(0, 0, 0, 30)
+    Content.BackgroundTransparency = 1
+    Content.Visible = false
+    Content.Parent = Frame
+
+    local expanded = false
+    ToggleBtn.MouseButton1Click:Connect(function()
+        expanded = not expanded
+        if expanded then
+            Frame.Size = UDim2.new(1, -5, 0, openHeight)
+            Content.Visible = true
+            ToggleBtn.Text = "  " .. titleText .. " [ ▲ ]"
+        else
+            Frame.Size = UDim2.new(1, -5, 0, 30)
+            Content.Visible = false
+            ToggleBtn.Text = "  " .. titleText .. " [ ▼ ]"
+        end
+    end)
+    
+    -- Return the Content frame so you can put buttons/sliders inside it!
+    return Content 
+end
+
+
+--deep scan
 
 -- Create Layout Screen UI
 local ScreenGui = Instance.new("ScreenGui")
@@ -1116,160 +1044,149 @@ local function startView(targetPlayer)
         end
     end)
 end
--- ========================================================
---  FLY 2 LOGIC (mobile only)
--- ========================================================
-local fly2Enabled = false
-local fly2Gyro, fly2Velocity, fly2Conn, fly2MobileConn
-local fly2Speed = 1          -- default
-local lastPos = nil
 
-local function disableFly2()
-    if not fly2Enabled then return end
-    fly2Enabled = false
+-- ==============================================================
+-- ✈️ LOCAL FLY TOOL (Uses the reusable UI)
+-- ==============================================================
+local localFlyEnabled = false
+local localFlySpeed = 3
+local flyLoop = nil
+local flyKeys = {f=0, b=0, l=0, r=0, q=0, e=0}
+local flyInputs = {}
 
-    if fly2Conn then fly2Conn:Disconnect(); fly2Conn = nil end
-    if fly2MobileConn then fly2MobileConn:Disconnect(); fly2MobileConn = nil end
+-- The Main Toggle Button
+local FlyBtn = Instance.new("TextButton")
+FlyBtn.Size = UDim2.new(1, -5, 0, 40)
+FlyBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+FlyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+FlyBtn.Font = Enum.Font.SourceSansBold
+FlyBtn.TextSize = 16
+FlyBtn.Text = "✈️ Local Fly: OFF"
+FlyBtn.BorderSizePixel = 0
+FlyBtn.Parent = ToolsScroll
 
-    local plr = game.Players.LocalPlayer
-    local char = plr.Character or plr.CharacterAdded:Wait()
-    local hrp = char:FindFirstChild("HumanoidRootPart")
-    local hum = char:FindFirstChildOfClass("Humanoid")
+-- The Speed Slider (Using our new function!)
+createSlider(ToolsScroll, "✈️ Fly Speed", 1, 10, 3, function(value)
+    localFlySpeed = value
+end)
+
+local function stopLocalFly()
+    localFlyEnabled = false
+    FlyBtn.Text = "✈️ Local Fly: OFF"
+    FlyBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+
+    if flyLoop then flyLoop:Disconnect() flyLoop = nil end
+    for _, c in pairs(flyInputs) do c:Disconnect() end
+    table.clear(flyInputs)
+
+    local char = LocalPlayer.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    
     if hrp then
-        for _, v in ipairs(hrp:GetChildren()) do
-            if v:IsA("BodyVelocity") or v:IsA("BodyGyro") then
-                v:Destroy()
-            end
-        end
+        local bg = hrp:FindFirstChild("LocalFlyGyro")
+        local bv = hrp:FindFirstChild("LocalFlyVelocity")
+        if bg then bg:Destroy() end
+        if bv then bv:Destroy() end
     end
-    if hum then hum.PlatformStand = false end
-    lastPos = nil
+    
+    if hum then 
+        hum.PlatformStand = false 
+        hum:ChangeState(Enum.HumanoidStateType.Jumping) 
+    end
 end
 
-local function enableFly2(speed)
-    if fly2Enabled then return end
-    speed = speed or fly2Speed
-    fly2Speed = speed
+local function startLocalFly()
+    local char = LocalPlayer.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    if not hrp or not hum then stopLocalFly() return end
 
-    local plr = game.Players.LocalPlayer
-    local char = plr.Character or plr.CharacterAdded:Wait()
-    local hrp = char:FindFirstChild("HumanoidRootPart")
-    local hum = char:FindFirstChildOfClass("Humanoid")
-    if not hrp or not hum then
-        warn("Character or Humanoid missing")
-        return
-    end
+    local bg = Instance.new("BodyGyro")
+    bg.Name = "LocalFlyGyro"
+    bg.P = 9e4
+    bg.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
+    bg.CFrame = hrp.CFrame
+    bg.Parent = hrp
 
-    disableFly2()   -- clean
-
-    fly2Enabled = true
-    lastPos = nil
-
-    fly2Gyro = Instance.new("BodyGyro")
-    fly2Gyro.P = 9e4
-    fly2Gyro.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
-    fly2Gyro.CFrame = hrp.CFrame
-    fly2Gyro.Parent = hrp
-
-    fly2Velocity = Instance.new("BodyVelocity")
-    fly2Velocity.MaxForce = Vector3.new(9e9, 9e9, 9e9)
-    fly2Velocity.Velocity = Vector3.zero
-    fly2Velocity.Parent = hrp
+    local bv = Instance.new("BodyVelocity")
+    bv.Name = "LocalFlyVelocity"
+    bv.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+    bv.Velocity = Vector3.zero
+    bv.Parent = hrp
 
     hum.PlatformStand = true
 
-    local RunService = game:GetService("RunService")
-    local Workspace = game:GetService("Workspace")
-    local Debris = game:GetService("Debris")
-    local colors = {
-        Color3.fromRGB(255,0,0), Color3.fromRGB(0,255,0),
-        Color3.fromRGB(0,0,255), Color3.fromRGB(255,255,0),
-        Color3.fromRGB(255,0,255), Color3.fromRGB(0,255,255)
-    }
-
-    -- Mobile controls
-    local controlModule
-    local ok, result = pcall(function()
-        return require(plr:WaitForChild("PlayerScripts"):WaitForChild("PlayerModule"):WaitForChild("ControlModule"))
-    end)
-    if ok then controlModule = result end
-
-    fly2MobileConn = RunService.RenderStepped:Connect(function()
-        if not fly2Enabled then return end
-        local cam = Workspace.CurrentCamera
-        local s = fly2Speed * 50
-        local move = controlModule and controlModule:GetMoveVector() or Vector3.zero
-
-        if move.Magnitude > 0 then
-            fly2Velocity.Velocity = (cam.CFrame.LookVector * -move.Z + cam.CFrame.RightVector * move.X) * s
-        else
-            fly2Velocity.Velocity = Vector3.zero
-        end
-        fly2Gyro.CFrame = cam.CFrame
-
-        -- Neon trail
-        local pos = hrp.Position
-        if not lastPos or (pos - lastPos).Magnitude > 1 then
-            local part = Instance.new("Part")
-            part.Anchored = true
-            part.CanCollide = false
-            part.Material = Enum.Material.Neon
-            local dist = (pos - (lastPos or pos)).Magnitude + 2
-            part.Size = Vector3.new(1, 1, dist)
-            part.CFrame = CFrame.new((lastPos or pos) + ((pos - (lastPos or pos)) / 2), pos)
-            part.Color = colors[math.random(1, #colors)]
-            part.Parent = Workspace
-            Debris:AddItem(part, 1)
-            lastPos = pos
-        end
-    end)
-
-    if getgenv().notify then
-        getgenv().notify("Success", "Fly 2 enabled (speed: " .. fly2Speed .. ")", 5)
-    end
-end
-
--- ========================================================
---  CREATE THE FLY BUTTON WITH REUSABLE HELPERS
--- ========================================================
-
--- 1. Create the slider popup for speed
-local speedSlider = createSliderPopup(
-    "Fly Speed",      -- title
-    1,                -- min
-    100,              -- max
-    1,                -- default
-    function(newVal)  -- callback
-        fly2Speed = newVal
-        -- If flying, speed changes immediately because the loop uses fly2Speed
-    end
-)
-
--- 2. Create the hold‑to‑open button
-local flyBtn = createHoldToggleButton(
-    ToolsScroll,                     -- parent
-    "✈️ Fly 2 (FE Trait): OFF",      -- initial text
-    -- onTap: toggle fly
-    function()
-        if fly2Enabled then
-            disableFly2()
-            flyBtn.Text = "✈️ Fly 2 (FE Trait): OFF"
-            flyBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-            if getgenv().notify then
-                getgenv().notify("Success", "Fly 2 disabled", 3)
+    flyLoop = RunService.RenderStepped:Connect(function()
+        if not char or not char.Parent then stopLocalFly() return end
+        
+        local cam = workspace.CurrentCamera
+        bg.CFrame = cam.CFrame
+        
+        -- Mobile Support check
+        if UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled then
+            local success, controlModule = pcall(function()
+                return require(LocalPlayer.PlayerScripts:WaitForChild("PlayerModule"):WaitForChild("ControlModule"))
+            end)
+            if success and controlModule then
+                local dir = controlModule:GetMoveVector()
+                if dir.Magnitude > 0 then
+                    bv.Velocity = (cam.CFrame.LookVector * -dir.Z + cam.CFrame.RightVector * dir.X) * (localFlySpeed * 50)
+                else
+                    bv.Velocity = Vector3.zero
+                end
             end
         else
-            enableFly2(fly2Speed)
-            flyBtn.Text = "✈️ Fly 2 (FE Trait): ON"
-            flyBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
+            -- PC WASD Support
+            local moveVec = Vector3.zero
+            local look = cam.CFrame.LookVector
+            local right = cam.CFrame.RightVector
+            local up = Vector3.new(0, 1, 0)
+            
+            local forwardMag = flyKeys.f + flyKeys.b
+            local rightMag = flyKeys.r + flyKeys.l
+            local upMag = flyKeys.q + flyKeys.e
+            
+            local vel = (look * forwardMag) + (right * rightMag) + (up * upMag)
+            if vel.Magnitude > 0 then
+                bv.Velocity = vel.Unit * (localFlySpeed * 50)
+            else
+                bv.Velocity = bv.Velocity * 0.9 -- Smooth stopping
+            end
         end
-    end,
-    -- onHold: open speed slider
-    function()
-        speedSlider.open()
-    end,
-    0.5   -- hold duration (seconds)
-)
+    end)
+
+    -- Capture WASD Keyboard Inputs
+    table.insert(flyInputs, UserInputService.InputBegan:Connect(function(i, gp)
+        if gp then return end
+        if i.KeyCode == Enum.KeyCode.W then flyKeys.f = 1 end
+        if i.KeyCode == Enum.KeyCode.S then flyKeys.b = -1 end
+        if i.KeyCode == Enum.KeyCode.A then flyKeys.l = -1 end
+        if i.KeyCode == Enum.KeyCode.D then flyKeys.r = 1 end
+        if i.KeyCode == Enum.KeyCode.E or i.KeyCode == Enum.KeyCode.Space then flyKeys.q = 1 end
+        if i.KeyCode == Enum.KeyCode.Q or i.KeyCode == Enum.KeyCode.LeftShift then flyKeys.e = -1 end
+    end))
+
+    table.insert(flyInputs, UserInputService.InputEnded:Connect(function(i)
+        if i.KeyCode == Enum.KeyCode.W then flyKeys.f = 0 end
+        if i.KeyCode == Enum.KeyCode.S then flyKeys.b = 0 end
+        if i.KeyCode == Enum.KeyCode.A then flyKeys.l = 0 end
+        if i.KeyCode == Enum.KeyCode.D then flyKeys.r = 0 end
+        if i.KeyCode == Enum.KeyCode.E or i.KeyCode == Enum.KeyCode.Space then flyKeys.q = 0 end
+        if i.KeyCode == Enum.KeyCode.Q or i.KeyCode == Enum.KeyCode.LeftShift then flyKeys.e = 0 end
+    end))
+end
+
+FlyBtn.MouseButton1Click:Connect(function()
+    if localFlyEnabled then
+        stopLocalFly()
+    else
+        localFlyEnabled = true
+        FlyBtn.Text = "✈️ Local Fly: ON"
+        FlyBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
+        startLocalFly()
+    end
+end)
 
 -- ========== AVATAR SCALER TOOL (Collapsible) ==========
 local ScalerFrame = Instance.new("Frame")
