@@ -1774,102 +1774,101 @@ ApplyScaleBtn.MouseButton1Click:Connect(function()
     end
 end)
 ------
--- ========== PREMIUM TOOL SPAWNER (Collapsible) ==========
-local ToolSpawnFrame = Instance.new("Frame")
-ToolSpawnFrame.Size = UDim2.new(1, -5, 0, 30) -- Starts collapsed
-ToolSpawnFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 38)
-ToolSpawnFrame.BorderSizePixel = 0
-ToolSpawnFrame.ClipsDescendants = true
-ToolSpawnFrame.Parent = ToolsScroll
+-- ==============================================================
+-- 🛠️ SMART PREMIUM TOOL SPAWNER (Hold for Options + No Cooldown)
+-- ==============================================================
+local noCooldownEnabled = false
+local noCooldownConnection = nil
 
-local ToolSpawnToggleBtn = Instance.new("TextButton")
-ToolSpawnToggleBtn.Size = UDim2.new(1, 0, 0, 30)
-ToolSpawnToggleBtn.Text = "  🛠️ Premium Tool Spawner [ ▼ ]"
-ToolSpawnToggleBtn.TextColor3 = Color3.fromRGB(0, 255, 200)
-ToolSpawnToggleBtn.Font = Enum.Font.SourceSansBold
-ToolSpawnToggleBtn.TextSize = 14
-ToolSpawnToggleBtn.TextXAlignment = Enum.TextXAlignment.Left
-ToolSpawnToggleBtn.BackgroundColor3 = Color3.fromRGB(25, 25, 32)
-ToolSpawnToggleBtn.BorderSizePixel = 0
-ToolSpawnToggleBtn.Parent = ToolSpawnFrame
+-- 1. Main Container
+local ToolContainer = Instance.new("Frame")
+ToolContainer.Size = UDim2.new(1, -5, 0, 40)
+ToolContainer.BackgroundColor3 = Color3.fromRGB(30, 30, 38)
+ToolContainer.BorderSizePixel = 0
+ToolContainer.ClipsDescendants = true
+ToolContainer.Parent = ToolsScroll
 
-local ToolSpawnContent = Instance.new("Frame")
-ToolSpawnContent.Size = UDim2.new(1, 0, 1, -30)
-ToolSpawnContent.Position = UDim2.new(0, 0, 0, 30)
-ToolSpawnContent.BackgroundTransparency = 1
-ToolSpawnContent.Visible = false
-ToolSpawnContent.Parent = ToolSpawnFrame
+-- 2. The Main Button (Tool Spawner Bar)
+local ToolMainBtn = Instance.new("TextButton")
+ToolMainBtn.Size = UDim2.new(1, 0, 0, 40)
+ToolMainBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+ToolMainBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToolMainBtn.Font = Enum.Font.SourceSansBold
+ToolMainBtn.TextSize = 16
+ToolMainBtn.Text = "🛠️ Tool Spawner (Hold for Options)"
+ToolMainBtn.BorderSizePixel = 0
+ToolMainBtn.Parent = ToolContainer
+Instance.new("UICorner", ToolMainBtn).CornerRadius = UDim.new(0, 8)
 
+-- 3. Tool Name Input Box
 local ToolInput = Instance.new("TextBox")
 ToolInput.Size = UDim2.new(1, -20, 0, 30)
-ToolInput.Position = UDim2.new(0, 10, 0, 10)
-ToolInput.PlaceholderText = "Type tool name (e.g. Jetpack)"
+ToolInput.Position = UDim2.new(0, 10, 0, 45)
+ToolInput.PlaceholderText = "Type tool name (e.g. Jetpack, RocketLauncher)"
 ToolInput.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
 ToolInput.TextColor3 = Color3.fromRGB(255, 255, 255)
 ToolInput.Font = Enum.Font.SourceSansBold
-ToolInput.TextSize = 14
+ToolInput.TextSize = 13
 ToolInput.Text = ""
 ToolInput.ClearTextOnFocus = false
-ToolInput.Parent = ToolSpawnContent
+ToolInput.Parent = ToolContainer
 Instance.new("UICorner", ToolInput).CornerRadius = UDim.new(0, 6)
 
+-- 4. Get Tool Action Button
 local SpawnToolBtn = Instance.new("TextButton")
-SpawnToolBtn.Size = UDim2.new(1, -20, 0, 35)
-SpawnToolBtn.Position = UDim2.new(0, 10, 0, 50)
+SpawnToolBtn.Size = UDim2.new(1, -20, 0, 32)
+SpawnToolBtn.Position = UDim2.new(0, 10, 0, 82)
 SpawnToolBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
 SpawnToolBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 SpawnToolBtn.Font = Enum.Font.SourceSansBold
 SpawnToolBtn.TextSize = 14
 SpawnToolBtn.Text = "Get Tool"
 SpawnToolBtn.BorderSizePixel = 0
-SpawnToolBtn.Parent = ToolSpawnContent
+SpawnToolBtn.Parent = ToolContainer
 Instance.new("UICorner", SpawnToolBtn).CornerRadius = UDim.new(0, 6)
 
--- Dropdown Toggle Logic
-local toolSpawnExpanded = false
-ToolSpawnToggleBtn.MouseButton1Click:Connect(function()
-    toolSpawnExpanded = not toolSpawnExpanded
-    if toolSpawnExpanded then
-        ToolSpawnFrame.Size = UDim2.new(1, -5, 0, 100)
-        ToolSpawnContent.Visible = true
-        ToolSpawnToggleBtn.Text = "  🛠️ Premium Tool Spawner [ ▲ ]"
-    else
-        ToolSpawnFrame.Size = UDim2.new(1, -5, 0, 30)
-        ToolSpawnContent.Visible = false
-        ToolSpawnToggleBtn.Text = "  🛠️ Premium Tool Spawner [ ▼ ]"
-    end
-end)
+-- 5. No Cooldown Toggle Button
+local NoCooldownBtn = Instance.new("TextButton")
+NoCooldownBtn.Size = UDim2.new(1, -20, 0, 32)
+NoCooldownBtn.Position = UDim2.new(0, 10, 0, 120)
+NoCooldownBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+NoCooldownBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+NoCooldownBtn.Font = Enum.Font.SourceSansBold
+NoCooldownBtn.TextSize = 14
+NoCooldownBtn.Text = "⚡ No Cooldown: OFF"
+NoCooldownBtn.BorderSizePixel = 0
+NoCooldownBtn.Parent = ToolContainer
+Instance.new("UICorner", NoCooldownBtn).CornerRadius = UDim.new(0, 6)
 
--- The master list of tools for Smart Search
+-- ==========================================
+-- TOOL SPAWN LOGIC
+-- ==========================================
 local knownTools = {
     "Jetpack", "RocketLauncher", "Parachute", "Segway", "Hoverboard", 
     "Glider", "BoomBox", "Sign", "Stroller", "Skateboard", "Flashlight"
 }
 
-SpawnToolBtn.MouseButton1Click:Connect(function()
-    local inputName = string.lower(ToolInput.Text)
-    if inputName == "" then return end
+local function requestToolSpawn()
+    local inputName = string.lower(ToolInput.Text:gsub("%s+", ""))
+    if inputName == "" then 
+        SpawnToolBtn.Text = "Type a name first!"
+        task.delay(1.2, function() SpawnToolBtn.Text = "Get Tool" end)
+        return 
+    end
 
     local foundName = nil
-    
-    -- Smart Search: Checks if what you typed is part of any tool's real name
     for _, v in ipairs(knownTools) do
-        if string.lower(v):find(inputName) then
+        if string.lower(v):find(inputName, 1, true) then
             foundName = v
             break
         end
     end
 
-    -- Fallback to exact input if smart search couldn't find it
-    local targetTool = foundName or VehInput.Text 
-    
-    -- Fetch the global network sender 
+    local targetTool = foundName or ToolInput.Text
     local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
     
     if Send then
-        -- Execute the exact payload you reverse-engineered
         Send("get_tool", targetTool)
-        
         SpawnToolBtn.Text = "Received: " .. targetTool
         SpawnToolBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
         task.delay(1.5, function()
@@ -1884,7 +1883,88 @@ SpawnToolBtn.MouseButton1Click:Connect(function()
             SpawnToolBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
         end)
     end
+end
+
+SpawnToolBtn.MouseButton1Click:Connect(requestToolSpawn)
+
+-- ==========================================
+-- NO COOLDOWN LOGIC
+-- ==========================================
+local function applyRateLimiterBypass()
+    pcall(function()
+        local reps = game:GetService("ReplicatedStorage")
+        local msgs = reps:FindFirstChild("Messages", true)
+        if msgs and require then
+            local messageMod = require(msgs)
+            if type(messageMod) == "table" and messageMod.rate_limiter then
+                messageMod.rate_limiter.is_limited = function() return false end
+            end
+        end
+    end)
+end
+
+NoCooldownBtn.MouseButton1Click:Connect(function()
+    noCooldownEnabled = not noCooldownEnabled
+    
+    if noCooldownEnabled then
+        NoCooldownBtn.Text = "⚡ No Cooldown: ON"
+        NoCooldownBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
+        applyRateLimiterBypass()
+        
+        -- Continuously reset tool debounce and client cooldown timers
+        noCooldownConnection = RunService.Stepped:Connect(function()
+            local char = LocalPlayer.Character
+            if not char then return end
+            
+            for _, item in ipairs(char:GetChildren()) do
+                if item:IsA("Tool") then
+                    item.Enabled = true
+                    if item:GetAttribute("cooldown") then
+                        item:SetAttribute("cooldown", 0)
+                    end
+                    if item:GetAttribute("debounce") then
+                        item:SetAttribute("debounce", false)
+                    end
+                end
+            end
+        end)
+    else
+        NoCooldownBtn.Text = "⚡ No Cooldown: OFF"
+        NoCooldownBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+        
+        if noCooldownConnection then
+            noCooldownConnection:Disconnect()
+            noCooldownConnection = nil
+        end
+    end
 end)
+
+-- ==========================================
+-- SMART HOLD CONNECTION
+-- ==========================================
+applySmartHold(
+    ToolMainBtn,    -- The button
+    ToolContainer,  -- The container frame
+    40,             -- Normal height
+    165,            -- Expanded height (fits inputs, spawn btn & cooldown btn)
+    1,            -- Hold duration (1.4s)
+    
+    -- Short click action (quick-get tool if text is present)
+    function()
+        if ToolInput.Text ~= "" then
+            requestToolSpawn()
+        end
+    end,
+    
+    -- UI text updater on expand/collapse
+    function(isExpanded)
+        if isExpanded then
+            ToolMainBtn.Text = "🛠️ Tool Spawner [▲ Options]"
+        else
+            ToolMainBtn.Text = "🛠️ Tool Spawner (Hold for Options)"
+        end
+    end
+)
 
 -- ========== VEHICLE SPAWNER TOOL (Collapsible) ==========
 local VehSpawnFrame = Instance.new("Frame")
