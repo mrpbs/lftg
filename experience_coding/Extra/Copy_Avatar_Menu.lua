@@ -1887,32 +1887,16 @@ end
 
 SpawnToolBtn.MouseButton1Click:Connect(requestToolSpawn)
 -- ==========================================
--- INVENTORY CYCLE RAPID FIRE (MACHINE GUN FIX)
+-- DISPOSABLE TUBE RAPID FIRE (PING-BASED)
 -- ==========================================
 local isFiring = false
-local cycleIndex = 1 -- Keeps track of which launcher is next in line
 
 NoCooldownBtn.MouseButton1Click:Connect(function()
     noCooldownEnabled = not noCooldownEnabled
-    local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
     
     if noCooldownEnabled then
-        NoCooldownBtn.Text = "⚡ Rapid Fire (Stocking...)"
-        NoCooldownBtn.BackgroundColor3 = Color3.fromRGB(200, 150, 0)
-        
-        task.spawn(function()
-            -- Grab a few launchers to start the cycle
-            for i = 1, 5 do
-                if not noCooldownEnabled then break end
-                if Send then Send("get_tool", "RocketLauncher") end
-                task.wait(0.2)
-            end
-            
-            if noCooldownEnabled then
-                NoCooldownBtn.Text = "⚡ Rapid Fire: ON"
-                NoCooldownBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
-            end
-        end)
+        NoCooldownBtn.Text = "⚡ Rapid Fire: ON"
+        NoCooldownBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
     else
         NoCooldownBtn.Text = "⚡ Rapid Fire: OFF"
         NoCooldownBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
@@ -1940,42 +1924,36 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
                     local bp = player:FindFirstChild("Backpack")
                     
                     while isFiring and noCooldownEnabled and char and bp do
-                        -- 1. Gather all available launchers
-                        local launchers = {}
-                        for _, v in ipairs(char:GetChildren()) do if v.Name == "RocketLauncher" then table.insert(launchers, v) end end
-                        for _, v in ipairs(bp:GetChildren()) do if v.Name == "RocketLauncher" then table.insert(launchers, v) end end
+                        -- 1. Constantly demand fresh ammo from the server
+                        if Send then Send("get_tool", "RocketLauncher") end
                         
-                        -- 2. If we are running low, silently request more ammo from the server
-                        if #launchers < 4 and Send then
-                            Send("get_tool", "RocketLauncher")
-                        end
+                        -- 2. Grab any launcher that just spawned in
+                        local launcher = char:FindFirstChild("RocketLauncher") or bp:FindFirstChild("RocketLauncher")
                         
-                        -- 3. Cycle sequentially to the next ready launcher
-                        if #launchers > 0 then
-                            if cycleIndex > #launchers then cycleIndex = 1 end
-                            local launcher = launchers[cycleIndex]
-                            cycleIndex = cycleIndex + 1
-                            
-                            -- Instant equip, aim, and fire
+                        if launcher then
+                            -- Instant equip
                             launcher.Parent = char
+                            
+                            -- Aim and Fire
                             local handle = launcher:FindFirstChild("Handle")
                             local spawnPos = handle and handle.Position or (char:GetPivot().Position + Vector3.new(0, 2, 0))
                             local targetCFrame = CFrame.new(spawnPos, mouse.Hit.Position)
                             
                             if Send then Send("shoot_rocket", launcher, targetCFrame) end
                             
-                            -- Instant unequip so it can reload in the backpack
-                            launcher.Parent = bp
+                            -- 3. THE BYPASS: Destroy the launcher immediately!
+                            -- This prevents you from hitting the 3-launcher inventory cap.
+                            launcher:Destroy()
                         end
                         
-                        -- ⚡ THE MAGIC TIMING: 0.2 seconds gives the perfect, endless machine-gun rhythm
-                        task.wait(0.2)
+                        -- The firing speed is now purely determined by how fast the server gives you a new launcher!
+                        task.wait(0.05)
                     end
                     
-                    -- Re-equip a launcher when you let go of the mouse so you aren't empty-handed
-                    if char and bp then
-                        local lastLauncher = bp:FindFirstChild("RocketLauncher")
-                        if lastLauncher then lastLauncher.Parent = char end
+                    -- When you let go of the mouse, request one last launcher so you aren't empty-handed
+                    if Send then
+                        task.wait(0.1)
+                        Send("get_tool", "RocketLauncher") 
                     end
                 end)
             end
@@ -1988,7 +1966,6 @@ UserInputService.InputEnded:Connect(function(input)
         isFiring = false
     end
 end)
-
 
 -- ==========================================
 -- SMART HOLD CONNECTION
