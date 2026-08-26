@@ -2241,7 +2241,7 @@ AudioSpamToggleBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- Spam Logic
+-- Spam Logic (Stabilized Anti-Freeze Version)
 local isAudioSpamming = false
 SpamAudioBtn.MouseButton1Click:Connect(function()
     isAudioSpamming = not isAudioSpamming
@@ -2257,20 +2257,23 @@ SpamAudioBtn.MouseButton1Click:Connect(function()
                 local audioId = tonumber(AudioInput.Text) or 135545038339685
                 
                 if Send then 
-                    -- Step 1: Send FALSE to force the server to reset the audio state
+                    -- Step 1: Send FALSE
                     Send("listen_snap_audio", audioId, false)
+                    task.wait(0.1) 
                     
-                    -- Tiny wait so the server processes the stop command
-                    task.wait(0.01) 
+                    if not isAudioSpamming then break end
                     
-                    -- Step 2: Send TRUE twice (exactly mimicking your network log)
+                    -- Step 2: Send TRUE twice
                     Send("listen_snap_audio", audioId, true)
-                    task.wait(0.01)
+                    task.wait(0.1) 
+                    
+                    if not isAudioSpamming then break end
+                    
                     Send("listen_snap_audio", audioId, true)
                 end
                 
-                -- Wait a fraction of a second before restarting the sequence
-                task.wait(0.05) 
+                -- Wait 0.5 seconds so the UI doesn't crash
+                task.wait(0.5) 
             end
             
             -- When turned off, tell the server to cleanly stop the audio
