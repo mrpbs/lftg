@@ -2019,12 +2019,12 @@ ExplosiveTraitBtn.MouseButton1Click:Connect(function()
         local bp = player:FindFirstChild("Backpack")
         local newExp = bp and bp:WaitForChild("Explosive", 1)
         if newExp and char then newExp.Parent = char end
-    end)
-end
-
+  end)
+                    end
+                end -- <--- This 'end' closes the Magnitude distance check
                 
-            
-        
+            end -- <--- This 'end' closes the currentTool check
+        end)
     else
         ExplosiveTraitBtn.Text = "💣 Explosive Trait: OFF"
         ExplosiveTraitBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
