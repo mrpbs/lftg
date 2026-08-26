@@ -2007,14 +2007,25 @@ ExplosiveTraitBtn.MouseButton1Click:Connect(function()
                     -- (Vector3.new(0,1,0) is the "Y-axis normal" telling the server it's placed on the ground)
                     local dropPos = currentPos - Vector3.new(0, 2.5, 0) 
                     
-                    if Send then
-                        Send("place", dropPos, Vector3.new(0, 1, 0))
-                    end
-                end
+                   if Send then
+    -- 1. Drop the mine
+    Send("place", dropPos, Vector3.new(0, 1, 0))
+    
+    -- 2. Ask the server for a new one immediately
+    Send("get_tool", "Explosive")
+    
+    -- 3. Auto-equip it so the loop doesn't break
+    task.spawn(function()
+        local bp = player:FindFirstChild("Backpack")
+        local newExp = bp and bp:WaitForChild("Explosive", 1)
+        if newExp and char then newExp.Parent = char end
+    end)
+end
+
                 
-            end
-        end)
-    else
+          --  end
+     --   end)
+ --   else
         ExplosiveTraitBtn.Text = "💣 Explosive Trait: OFF"
         ExplosiveTraitBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
         
