@@ -1888,75 +1888,95 @@ end
 SpawnToolBtn.MouseButton1Click:Connect(requestToolSpawn)
 
 -- ==========================================
--- RAPID FIRE / NO COOLDOWN LOGIC (LIFE TOGETHER RP FIX)
+-- INVENTORY CYCLE RAPID FIRE (SERVER BYPASS)
 -- ==========================================
 local isFiring = false
-local attrClearLoop = nil
 
 NoCooldownBtn.MouseButton1Click:Connect(function()
     noCooldownEnabled = not noCooldownEnabled
+    local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
     
     if noCooldownEnabled then
-        NoCooldownBtn.Text = "⚡ No Cooldown: ON"
-        NoCooldownBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
+        NoCooldownBtn.Text = "⚡ Rapid Fire (Stocking...)"
+        NoCooldownBtn.BackgroundColor3 = Color3.fromRGB(200, 150, 0)
         
-        -- 1. Remove standard cooldowns from ALL tools continuously
-        attrClearLoop = RunService.Stepped:Connect(function()
+        -- Automatically stock up on Rocket Launchers to cycle through
+        task.spawn(function()
             local char = game:GetService("Players").LocalPlayer.Character
-            if not char then return end
-            for _, item in ipairs(char:GetChildren()) do
-                if item:IsA("Tool") then
-                    item.Enabled = true
-                    if item:GetAttribute("cooldown") then item:SetAttribute("cooldown", 0) end
-                    if item:GetAttribute("debounce") then item:SetAttribute("debounce", false) end
+            local bp = game:GetService("Players").LocalPlayer:FindFirstChild("Backpack")
+            local count = 0
+            
+            if char then for _, v in ipairs(char:GetChildren()) do if v.Name == "RocketLauncher" then count = count + 1 end end end
+            if bp then for _, v in ipairs(bp:GetChildren()) do if v.Name == "RocketLauncher" then count = count + 1 end end end
+            
+            -- Get up to 7 launchers for a smooth, endless cycle
+            if count < 7 and Send then
+                for i = 1, (7 - count) do
+                    Send("get_tool", "RocketLauncher")
+                    task.wait(0.3) -- Small wait to prevent network rate limits
                 end
+            end
+            
+            if noCooldownEnabled then
+                NoCooldownBtn.Text = "⚡ Rapid Fire: ON"
+                NoCooldownBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
             end
         end)
     else
-        NoCooldownBtn.Text = "⚡ No Cooldown: OFF"
+        NoCooldownBtn.Text = "⚡ Rapid Fire: OFF"
         NoCooldownBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
         isFiring = false
-        if attrClearLoop then 
-            attrClearLoop:Disconnect() 
-            attrClearLoop = nil 
-        end
     end
 end)
 
 local UserInputService = game:GetService("UserInputService")
-local mouse = game:GetService("Players").LocalPlayer:GetMouse()
+local player = game:GetService("Players").LocalPlayer
+local mouse = player:GetMouse()
 
--- 2. Explicit Rocket Launcher Rapid-Fire Bypass
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    -- Ignore clicks on UI buttons
     if gameProcessed and input.UserInputType ~= Enum.UserInputType.Touch then return end
     
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         if noCooldownEnabled then
-            local char = game:GetService("Players").LocalPlayer.Character
-            local tool = char and char:FindFirstChildOfClass("Tool")
+            local char = player.Character
+            local hum = char and char:FindFirstChildOfClass("Humanoid")
+            local currentTool = char and char:FindFirstChildOfClass("Tool")
             
-            -- Specifically hijack the RocketLauncher for extreme speed & accuracy
-            if tool and tool.Name == "RocketLauncher" then
+            -- Only activate if you are currently holding a Rocket Launcher
+            if currentTool and currentTool.Name == "RocketLauncher" then
                 isFiring = true
                 
                 task.spawn(function()
                     local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
-                    while isFiring and noCooldownEnabled and char:FindFirstChild("RocketLauncher") do
+                    
+                    while isFiring and noCooldownEnabled and char and hum do
+                        -- Gather ALL Rocket Launchers in your inventory
+                        local launchers = {}
+                        local bp = player:FindFirstChild("Backpack")
                         
-                        -- Start the rocket exactly at the launcher's physical tip
-                        local handle = tool:FindFirstChild("Handle")
-                        local spawnPos = handle and handle.Position or (char:GetPivot().Position + Vector3.new(0, 2, 0))
+                        for _, v in ipairs(char:GetChildren()) do if v.Name == "RocketLauncher" then table.insert(launchers, v) end end
+                        if bp then for _, v in ipairs(bp:GetChildren()) do if v.Name == "RocketLauncher" then table.insert(launchers, v) end end end
                         
-                        -- Aim directly at the 3D mouse position (Fixes the camera angle bug!)
-                        local targetCFrame = CFrame.new(spawnPos, mouse.Hit.Position)
-                        
-                        if Send then 
-                            Send("shoot_rocket", tool, targetCFrame) 
+                        -- Cycle through them and fire
+                        for _, launcher in ipairs(launchers) do
+                            if not isFiring or not noCooldownEnabled then break end
+                            
+                            -- Auto-equip the next launcher so the server accepts the remote
+                            if launcher.Parent ~= char then
+                                hum:EquipTool(launcher)
+                                task.wait(0.05) -- Let the server process the equip
+                            end
+                            
+                            -- Aim and fire directly at your mouse
+                            local handle = launcher:FindFirstChild("Handle")
+                            local spawnPos = handle and handle.Position or (char:GetPivot().Position + Vector3.new(0, 2, 0))
+                            local targetCFrame = CFrame.new(spawnPos, mouse.Hit.Position)
+                            
+                            if Send then Send("shoot_rocket", launcher, targetCFrame) end
+                            
+                            -- Tiny delay before swapping to the next launcher to prevent visual glitches
+                            task.wait(0.1)
                         end
-                        
-                        -- Using empty task.wait() fires every single physics frame (~60 rockets a second!)
-                        task.wait()
                     end
                 end)
             end
@@ -1969,6 +1989,7 @@ UserInputService.InputEnded:Connect(function(input)
         isFiring = false
     end
 end)
+
 
 -- ==========================================
 -- SMART HOLD CONNECTION
