@@ -1961,26 +1961,25 @@ end)
 -- SMART HOLD CONNECTION
 -- ==========================================
 applySmartHold(
-    SpawnToolBtn.Parent.Parent:FindFirstChildWhichIsA("TextButton"), -- The main button
-    SpawnToolBtn.Parent.Parent,  -- The container frame
-    40,             -- Normal height
-    165,            -- Expanded height (fits inputs, spawn btn & cooldown btn)
-    1.4,            -- Hold duration (1.4s)
+    ToolMainBtn,     -- Direct reference to your main button
+    ToolContainer,   -- Direct reference to your container frame
+    40,              -- Normal height
+    165,             -- Expanded height (fits inputs, spawn btn & cooldown btn)
+    1,               -- Hold duration
     
     -- Short click action (quick-get tool if text is present)
     function()
         if ToolInput.Text ~= "" then
-            -- requestToolSpawn() -- Ensure this points to your spawn function
+            requestToolSpawn() -- Ensure this points to your spawn function
         end
     end,
     
     -- UI text updater on expand/collapse
     function(isExpanded)
-        local MainBtn = SpawnToolBtn.Parent.Parent:FindFirstChildWhichIsA("TextButton")
         if isExpanded then
-            MainBtn.Text = "🛠️ Premium Tool Spawner [▲ Options]"
+            ToolMainBtn.Text = "🛠️ Premium Tool Spawner [▲ Options]"
         else
-            MainBtn.Text = "🛠️ Premium Tool Spawner (Hold for Options)"
+            ToolMainBtn.Text = "🛠️ Premium Tool Spawner (Hold for Options)"
         end
     end
 )
