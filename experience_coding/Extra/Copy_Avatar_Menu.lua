@@ -2023,9 +2023,9 @@ ExplosiveTraitBtn.MouseButton1Click:Connect(function()
 end
 
                 
-          --  end
-     --   end)
- --   else
+            end
+     end)
+   else
         ExplosiveTraitBtn.Text = "💣 Explosive Trait: OFF"
         ExplosiveTraitBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
         
