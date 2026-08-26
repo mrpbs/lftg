@@ -1887,7 +1887,7 @@ end
 
 SpawnToolBtn.MouseButton1Click:Connect(requestToolSpawn)
 -- ==========================================
--- ASYNC DUAL-THREAD RAPID FIRE (MAX SPEED)
+-- ASYNC DUAL-THREAD RAPID FIRE (STABILIZED TIMING)
 -- ==========================================
 local isFiring = false
 
@@ -1934,39 +1934,43 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
                 if Send then Send("delete_tool") end
                 currentTool:Destroy()
                 
-                -- 🚀 THREAD 1: THE LOADER (Spams requests endlessly without waiting)
+                -- 🚀 THREAD 1: THE LOADER (Spams requests)
                 task.spawn(function()
                     while isFiring and noCooldownEnabled do
                         if Send then Send("get_tool", "RocketLauncher") end
-                        -- Requesting a new launcher 20 times a second!
                         task.wait(0.05) 
                     end
                 end)
                 
-                -- 💥 THREAD 2: THE SHOOTER (Fires the exact millisecond ammo arrives)
+                -- 💥 THREAD 2: THE SHOOTER (Stabilized)
                 task.spawn(function()
                     while isFiring and noCooldownEnabled and char and bp do
-                        -- Instantly grab any launcher that appears
                         local newLauncher = bp:FindFirstChild("RocketLauncher")
                         
                         if newLauncher then
-                            -- Instant equip
+                            -- 1. Instant equip
                             newLauncher.Parent = char
-                            task.wait() -- 1 frame for server to register it in your hand
                             
-                            -- Aim and FIRE
+                            -- ⏳ FIX: Wait 30ms for the server to recognize it's in your hand
+                            task.wait(0.03) 
+                            
+                            -- 2. Aim and FIRE
                             local handle = newLauncher:FindFirstChild("Handle")
                             local spawnPos = handle and handle.Position or (char:GetPivot().Position + Vector3.new(0, 2, 0))
                             local targetCFrame = CFrame.new(spawnPos, mouse.Hit.Position)
                             
                             if Send then 
                                 Send("shoot_rocket", newLauncher, targetCFrame) 
-                                Send("delete_tool") 
                             end
                             
+                            -- ⏳ FIX: Wait 30ms for the server to actually launch the rocket
+                            task.wait(0.03)
+                            
+                            -- 3. Now it is safe to delete and bypass the inventory cap
+                            if Send then Send("delete_tool") end
                             newLauncher:Destroy()
                         else
-                            -- If backpack is empty, wait exactly 1 frame and check again
+                            -- Wait for ammo to arrive
                             task.wait()
                         end
                     end
