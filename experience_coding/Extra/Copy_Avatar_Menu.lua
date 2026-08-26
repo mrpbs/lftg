@@ -1887,7 +1887,7 @@ end
 
 SpawnToolBtn.MouseButton1Click:Connect(requestToolSpawn)
 -- ==========================================
--- AUTO-TURRET TARGETING SYSTEM (CLIENT MARKER)
+-- ASYNC DUAL-THREAD RAPID FIRE (STABILIZED TIMING)
 -- ==========================================
 local isFiring = false
 
@@ -1895,10 +1895,10 @@ NoCooldownBtn.MouseButton1Click:Connect(function()
     noCooldownEnabled = not noCooldownEnabled
     
     if noCooldownEnabled then
-        NoCooldownBtn.Text = "🎯 Auto-Turret: ON"
+        NoCooldownBtn.Text = "⚡ Rapid Fire: ON"
         NoCooldownBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
     else
-        NoCooldownBtn.Text = "🎯 Auto-Turret: OFF"
+        NoCooldownBtn.Text = "⚡ Rapid Fire: OFF"
         NoCooldownBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
         isFiring = false
     end
@@ -1908,97 +1908,74 @@ local UserInputService = game:GetService("UserInputService")
 local player = game:GetService("Players").LocalPlayer
 local mouse = player:GetMouse()
 
--- Create the invisible/holographic target marker
-local targetMarker = Instance.new("Part")
-targetMarker.Shape = Enum.PartType.Ball
-targetMarker.Size = Vector3.new(3, 3, 3)
-targetMarker.Color = Color3.fromRGB(255, 50, 50) -- Neon Red
-targetMarker.Material = Enum.Material.Neon
-targetMarker.Anchored = true
-targetMarker.CanCollide = false
-targetMarker.CastShadow = false
-targetMarker.Transparency = 1 -- Hidden by default
-targetMarker.Parent = workspace
-
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed and input.UserInputType ~= Enum.UserInputType.Touch then return end
     
-    -- RIGHT CLICK TO STOP FIRING
-    if input.UserInputType == Enum.UserInputType.MouseButton2 then
-        isFiring = false
-        targetMarker.Transparency = 1 -- Hide the marker
-        return
-    end
-    
-    -- LEFT CLICK TO SET TARGET AND START FIRING
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         if noCooldownEnabled then
             local char = player.Character
+            local bp = player:FindFirstChild("Backpack")
             local currentTool = char and char:FindFirstChildOfClass("Tool")
             
             if currentTool and currentTool.Name == "RocketLauncher" then
-                -- Lock the target and show the marker!
-                targetMarker.Position = mouse.Hit.Position
-                targetMarker.Transparency = 0.4
-                
-                -- If we are already firing, we just updated the target location! No need to start a new loop.
-                if isFiring then return end 
-                
                 isFiring = true
                 
-                task.spawn(function()
-                    local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
-                    local bp = player:FindFirstChild("Backpack")
-                    
-                    -- Clean up any extra launchers in the backpack to start fresh
-                    if bp then
-                        for _, v in ipairs(bp:GetChildren()) do
-                            if v.Name == "RocketLauncher" then 
-                                if Send then Send("delete_tool") end
-                                v:Destroy() 
-                            end
+                local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
+                
+                -- Initial cleanup
+                if bp then
+                    for _, v in ipairs(bp:GetChildren()) do
+                        if v.Name == "RocketLauncher" then 
+                            if Send then Send("delete_tool") end
+                            v:Destroy() 
                         end
                     end
-                    
-                    -- Destroy the one currently in your hand to begin the cycle cleanly
-                    local handTool = char:FindFirstChild("RocketLauncher")
-                    if handTool then
-                        if Send then Send("delete_tool") end
-                        handTool:Destroy()
-                    end
-                    
-                    while isFiring and noCooldownEnabled and char and bp do
-                        -- STEP 1: Ask the server to GIVE the gun
+                end
+                if Send then Send("delete_tool") end
+                currentTool:Destroy()
+                
+                -- 🚀 THREAD 1: THE LOADER (Spams requests)
+                task.spawn(function()
+                    while isFiring and noCooldownEnabled do
                         if Send then Send("get_tool", "RocketLauncher") end
-                        
-                        -- STEP 2: Wait perfectly for it to arrive
-                        local newLauncher = bp:WaitForChild("RocketLauncher", 1)
+                        task.wait(0.05) 
+                    end
+                end)
+                
+                -- 💥 THREAD 2: THE SHOOTER (Stabilized)
+                task.spawn(function()
+                    while isFiring and noCooldownEnabled and char and bp do
+                        local newLauncher = bp:FindFirstChild("RocketLauncher")
                         
                         if newLauncher then
-                            -- STEP 3: Instant equip
+                            -- 1. Instant equip
                             newLauncher.Parent = char
-                            task.wait(0.03) -- Let server process equip
                             
-                            -- STEP 4: Aim perfectly at the glowing Target Marker!
+                            -- ⏳ FIX: Wait 30ms for the server to recognize it's in your hand
+                            task.wait(0.03) 
+                            
+                            -- 2. Aim and FIRE
                             local handle = newLauncher:FindFirstChild("Handle")
                             local spawnPos = handle and handle.Position or (char:GetPivot().Position + Vector3.new(0, 2, 0))
-                            local targetCFrame = CFrame.new(spawnPos, targetMarker.Position)
+                            local targetCFrame = CFrame.new(spawnPos, mouse.Hit.Position)
                             
                             if Send then 
                                 Send("shoot_rocket", newLauncher, targetCFrame) 
                             end
-                            task.wait(0.03) -- Let server process the shot
                             
-                            -- STEP 5: PROPER SERVER DELETION
+                            -- ⏳ FIX: Wait 30ms for the server to actually launch the rocket
+                            task.wait(0.03)
+                            
+                            -- 3. Now it is safe to delete and bypass the inventory cap
                             if Send then Send("delete_tool") end
                             newLauncher:Destroy()
                         else
-                            task.wait(0.1)
+                            -- Wait for ammo to arrive
+                            task.wait()
                         end
                     end
                     
-                    -- When firing is stopped (via right-click or turning it off)
-                    targetMarker.Transparency = 1
+                    -- When you let go, restock 1 launcher so you aren't empty-handed
                     if Send then Send("get_tool", "RocketLauncher") end
                 end)
             end
@@ -2006,7 +1983,11 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
--- We remove the InputEnded stop event, because we want it to keep shooting after letting go of the left click!
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        isFiring = false
+    end
+end)
 
 -- ==========================================
 -- SMART HOLD CONNECTION
@@ -2733,6 +2714,69 @@ local function createDetailedAssetCard(categoryName, assetId, rawPropertySource)
         end
     end)
 end
+-- ========== AUTO-RL TARGETING SYSTEM ==========
+local autoRLTarget = nil
+
+task.spawn(function()
+    while true do
+        task.wait()
+        -- 1. Check if we have a target and they are alive
+        if autoRLTarget and autoRLTarget.Character and autoRLTarget.Character:FindFirstChild("HumanoidRootPart") then
+            local player = game:GetService("Players").LocalPlayer
+            local char = player.Character
+            local bp = player:FindFirstChild("Backpack")
+            local currentTool = char and char:FindFirstChildOfClass("Tool")
+            
+            -- 2. Only start auto-firing if YOU pull out a Rocket Launcher
+            if currentTool and currentTool.Name == "RocketLauncher" then
+                local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
+                
+                -- Clear out your inventory to prepare the loop
+                if bp then
+                    for _, v in ipairs(bp:GetChildren()) do
+                        if v.Name == "RocketLauncher" then 
+                            if Send then Send("delete_tool") end
+                            v:Destroy() 
+                        end
+                    end
+                end
+                if Send then Send("delete_tool") end
+                currentTool:Destroy()
+                
+                -- 3. Lock-On Loop
+                while autoRLTarget and autoRLTarget.Character and autoRLTarget.Character:FindFirstChild("HumanoidRootPart") and char and bp do
+                    if Send then Send("get_tool", "RocketLauncher") end
+                    
+                    local newLauncher = bp:WaitForChild("RocketLauncher", 1)
+                    if newLauncher then
+                        newLauncher.Parent = char
+                        task.wait(0.03) 
+                        
+                        local handle = newLauncher:FindFirstChild("Handle")
+                        local spawnPos = handle and handle.Position or (char:GetPivot().Position + Vector3.new(0, 2, 0))
+                        
+                        -- 🎯 AIMBOT: Calculate perfect trajectory to their chest
+                        local targetPos = autoRLTarget.Character.HumanoidRootPart.Position
+                        local targetCFrame = CFrame.new(spawnPos, targetPos)
+                        
+                        if Send then Send("shoot_rocket", newLauncher, targetCFrame) end
+                        task.wait(0.03)
+                        
+                        if Send then Send("delete_tool") end
+                        newLauncher:Destroy()
+                    else
+                        task.wait(0.1)
+                    end
+                end
+                
+                -- Restock you when they die or you untarget them
+                if Send then Send("get_tool", "RocketLauncher") end
+            end
+        else
+            task.wait(0.2)
+        end
+    end
+end)
 
 -- Scan Logic (Now accepts frozen snapshot data)
 local function deepScanPlayerOutfit(targetPlayer, cachedDescription)
@@ -3103,11 +3147,44 @@ outfitData.WalkAnimation = getVal("WalkAnimation")
         wlBtn.LayoutOrder = 6
         wlBtn.Parent = actionLayout
  -- ==========================================
-   
+
+              -- ==========================================
+        -- ROW 2: TARGET RL BUTTON (NEW!)
+        -- ==========================================
+        local targetRlBtn = Instance.new("TextButton")
+        if autoRLTarget == targetPlayer then
+            targetRlBtn.Text = "Untarget RL"
+            targetRlBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50) -- Red when active
+        else
+            targetRlBtn.Text = "Target RL"
+            targetRlBtn.BackgroundColor3 = Color3.fromRGB(200, 100, 50) -- Orange when inactive
+        end
+        targetRlBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        targetRlBtn.Font = Enum.Font.SourceSansBold
+        targetRlBtn.TextSize = 11
+        targetRlBtn.BorderSizePixel = 0
+        targetRlBtn.LayoutOrder = 7
+        targetRlBtn.Parent = actionLayout
+
      -- ==========================================
         -- LOGIC CONNECTIONS
         -- ==========================================
-        tryShareBtn.MouseButton1Click:Connect(function()
+   
+         targetRlBtn.MouseButton1Click:Connect(function()
+            if autoRLTarget == targetPlayer then
+                -- Turn it OFF
+                autoRLTarget = nil
+                targetRlBtn.Text = "Target RL"
+                targetRlBtn.BackgroundColor3 = Color3.fromRGB(200, 100, 50)
+            else
+                -- Turn it ON
+                autoRLTarget = targetPlayer
+                targetRlBtn.Text = "Untarget RL"
+                targetRlBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+            end
+        end)
+----     
+      tryShareBtn.MouseButton1Click:Connect(function()
           shareOutfitToAll(outfitData, tryShareBtn, "Share All", Color3.fromRGB(200, 100, 200), targetPlayer)
         end)
 
