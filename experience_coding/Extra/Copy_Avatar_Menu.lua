@@ -1888,62 +1888,75 @@ end
 SpawnToolBtn.MouseButton1Click:Connect(requestToolSpawn)
 
 -- ==========================================
--- RAPID FIRE / NO COOLDOWN LOGIC
+-- RAPID FIRE / NO COOLDOWN LOGIC (LIFE TOGETHER RP FIX)
 -- ==========================================
 local isFiring = false
+local attrClearLoop = nil
 
 NoCooldownBtn.MouseButton1Click:Connect(function()
     noCooldownEnabled = not noCooldownEnabled
     
     if noCooldownEnabled then
-        NoCooldownBtn.Text = "⚡ Rapid Fire Rockets: ON"
+        NoCooldownBtn.Text = "⚡ No Cooldown: ON"
         NoCooldownBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
+        
+        -- 1. Remove standard cooldowns from ALL tools continuously
+        attrClearLoop = RunService.Stepped:Connect(function()
+            local char = game:GetService("Players").LocalPlayer.Character
+            if not char then return end
+            for _, item in ipairs(char:GetChildren()) do
+                if item:IsA("Tool") then
+                    item.Enabled = true
+                    if item:GetAttribute("cooldown") then item:SetAttribute("cooldown", 0) end
+                    if item:GetAttribute("debounce") then item:SetAttribute("debounce", false) end
+                end
+            end
+        end)
     else
-        NoCooldownBtn.Text = "⚡ Rapid Fire Rockets: OFF"
+        NoCooldownBtn.Text = "⚡ No Cooldown: OFF"
         NoCooldownBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
         isFiring = false
+        if attrClearLoop then 
+            attrClearLoop:Disconnect() 
+            attrClearLoop = nil 
+        end
     end
 end)
 
 local UserInputService = game:GetService("UserInputService")
 local mouse = game:GetService("Players").LocalPlayer:GetMouse()
 
--- Hooks into your clicks to completely bypass the tool's built-in script
+-- 2. Explicit Rocket Launcher Rapid-Fire Bypass
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    -- We want to ignore clicks on UI buttons, but allow game clicks
+    -- Ignore clicks on UI buttons
     if gameProcessed and input.UserInputType ~= Enum.UserInputType.Touch then return end
     
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         if noCooldownEnabled then
             local char = game:GetService("Players").LocalPlayer.Character
-            local launcher = char and char:FindFirstChild("RocketLauncher")
+            local tool = char and char:FindFirstChildOfClass("Tool")
             
-            -- If we are holding the Rocket Launcher, intercept the click!
-            if launcher then
+            -- Specifically hijack the RocketLauncher for extreme speed & accuracy
+            if tool and tool.Name == "RocketLauncher" then
                 isFiring = true
+                
                 task.spawn(function()
                     local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
                     while isFiring and noCooldownEnabled and char:FindFirstChild("RocketLauncher") do
-                        local cam = workspace.CurrentCamera
                         
-                        -- Calculate where the rocket should spawn (slightly above the head)
-                        local head = char:FindFirstChild("Head")
-                        local spawnPos = head and (head.Position + Vector3.new(0, 3, 0)) or cam.CFrame.Position
+                        -- Start the rocket exactly at the launcher's physical tip
+                        local handle = tool:FindFirstChild("Handle")
+                        local spawnPos = handle and handle.Position or (char:GetPivot().Position + Vector3.new(0, 2, 0))
                         
-                        -- Aiming logic: Use mouse for PC, use Camera look direction for Mobile
-                        local targetPos = mouse.Hit.Position
-                        if input.UserInputType == Enum.UserInputType.Touch then
-                            targetPos = cam.CFrame.Position + (cam.CFrame.LookVector * 1000)
+                        -- Aim directly at the 3D mouse position (Fixes the camera angle bug!)
+                        local targetCFrame = CFrame.new(spawnPos, mouse.Hit.Position)
+                        
+                        if Send then 
+                            Send("shoot_rocket", tool, targetCFrame) 
                         end
                         
-                        -- Create the exact CFrame payload you reverse-engineered
-                        local cf = CFrame.new(spawnPos, targetPos)
-                        
-                        -- Fire the remote directly, ignoring the game's cooldown
-                        if Send then Send("shoot_rocket", launcher, cf) end
-                        
-                        -- The speed of the rapid fire (0.05 seconds = 20 rockets per second!)
-                        task.wait(0.05)
+                        -- Using empty task.wait() fires every single physics frame (~60 rockets a second!)
+                        task.wait()
                     end
                 end)
             end
@@ -1953,7 +1966,7 @@ end)
 
 UserInputService.InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        isFiring = false -- Stop shooting when you let go
+        isFiring = false
     end
 end)
 
@@ -1961,16 +1974,16 @@ end)
 -- SMART HOLD CONNECTION
 -- ==========================================
 applySmartHold(
-    ToolMainBtn,     -- Direct reference to your main button
-    ToolContainer,   -- Direct reference to your container frame
-    40,              -- Normal height
-    165,             -- Expanded height (fits inputs, spawn btn & cooldown btn)
-    1,               -- Hold duration
+    ToolMainBtn,    -- The button
+    ToolContainer,  -- The container frame
+    40,             -- Normal height
+    165,            -- Expanded height (fits inputs, spawn btn & cooldown btn)
+    1,              -- Hold duration (1s)
     
     -- Short click action (quick-get tool if text is present)
     function()
         if ToolInput.Text ~= "" then
-            requestToolSpawn() -- Ensure this points to your spawn function
+            -- requestToolSpawn() -- Ensure this points to your spawn function
         end
     end,
     
