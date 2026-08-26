@@ -2175,119 +2175,102 @@ SpawnVehBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- ========== SNAP AUDIO SPAMMER (Proximity Ear-Rape) ==========
-local AudioSpamFrame = Instance.new("Frame")
-AudioSpamFrame.Size = UDim2.new(1, -5, 0, 30) -- Starts collapsed
-AudioSpamFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 38)
-AudioSpamFrame.BorderSizePixel = 0
-AudioSpamFrame.ClipsDescendants = true
-AudioSpamFrame.Parent = ToolsScroll
+-- ========== FE FIRE SPAWNER (Bypassed Premium) ==========
+local FireSpawnFrame = Instance.new("Frame")
+FireSpawnFrame.Size = UDim2.new(1, -5, 0, 30) -- Starts collapsed
+FireSpawnFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 38)
+FireSpawnFrame.BorderSizePixel = 0
+FireSpawnFrame.ClipsDescendants = true
+FireSpawnFrame.Parent = ToolsScroll
 
-local AudioSpamToggleBtn = Instance.new("TextButton")
-AudioSpamToggleBtn.Size = UDim2.new(1, 0, 0, 30)
-AudioSpamToggleBtn.Text = "  🔊 Snap Audio Spammer [ ▼ ]"
-AudioSpamToggleBtn.TextColor3 = Color3.fromRGB(0, 255, 200)
-AudioSpamToggleBtn.Font = Enum.Font.SourceSansBold
-AudioSpamToggleBtn.TextSize = 14
-AudioSpamToggleBtn.TextXAlignment = Enum.TextXAlignment.Left
-AudioSpamToggleBtn.BackgroundColor3 = Color3.fromRGB(25, 25, 32)
-AudioSpamToggleBtn.BorderSizePixel = 0
-AudioSpamToggleBtn.Parent = AudioSpamFrame
+local FireToggleBtn = Instance.new("TextButton")
+FireToggleBtn.Size = UDim2.new(1, 0, 0, 30)
+FireToggleBtn.Text = "  🔥 FE Fire Spawner [ ▼ ]"
+FireToggleBtn.TextColor3 = Color3.fromRGB(255, 100, 50)
+FireToggleBtn.Font = Enum.Font.SourceSansBold
+FireToggleBtn.TextSize = 14
+FireToggleBtn.TextXAlignment = Enum.TextXAlignment.Left
+FireToggleBtn.BackgroundColor3 = Color3.fromRGB(25, 25, 32)
+FireToggleBtn.BorderSizePixel = 0
+FireToggleBtn.Parent = FireSpawnFrame
 
-local AudioSpamContent = Instance.new("Frame")
-AudioSpamContent.Size = UDim2.new(1, 0, 1, -30)
-AudioSpamContent.Position = UDim2.new(0, 0, 0, 30)
-AudioSpamContent.BackgroundTransparency = 1
-AudioSpamContent.Visible = false
-AudioSpamContent.Parent = AudioSpamFrame
+local FireContent = Instance.new("Frame")
+FireContent.Size = UDim2.new(1, 0, 1, -30)
+FireContent.Position = UDim2.new(0, 0, 0, 30)
+FireContent.BackgroundTransparency = 1
+FireContent.Visible = false
+FireContent.Parent = FireSpawnFrame
 
-local AudioInput = Instance.new("TextBox")
-AudioInput.Size = UDim2.new(1, -20, 0, 30)
-AudioInput.Position = UDim2.new(0, 10, 0, 10)
-AudioInput.PlaceholderText = "Audio ID (Default: 135545038339685)"
-AudioInput.Text = "135545038339685"
-AudioInput.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
-AudioInput.TextColor3 = Color3.fromRGB(255, 255, 255)
-AudioInput.Font = Enum.Font.Code
-AudioInput.TextSize = 13
-AudioInput.ClearTextOnFocus = false
-AudioInput.Parent = AudioSpamContent
-Instance.new("UICorner", AudioInput).CornerRadius = UDim.new(0, 6)
+local FireInput = Instance.new("TextBox")
+FireInput.Size = UDim2.new(1, -20, 0, 30)
+FireInput.Position = UDim2.new(0, 10, 0, 10)
+FireInput.PlaceholderText = "Enter amount (e.g. 5 or 20)"
+FireInput.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
+FireInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+FireInput.Font = Enum.Font.SourceSansBold
+FireInput.TextSize = 14
+FireInput.Text = "5"
+FireInput.ClearTextOnFocus = false
+FireInput.Parent = FireContent
+Instance.new("UICorner", FireInput).CornerRadius = UDim.new(0, 6)
 
-local SpamAudioBtn = Instance.new("TextButton")
-SpamAudioBtn.Size = UDim2.new(1, -20, 0, 35)
-SpamAudioBtn.Position = UDim2.new(0, 10, 0, 50)
-SpamAudioBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-SpamAudioBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-SpamAudioBtn.Font = Enum.Font.SourceSansBold
-SpamAudioBtn.TextSize = 14
-SpamAudioBtn.Text = "▶️ Start Audio Spam"
-SpamAudioBtn.BorderSizePixel = 0
-SpamAudioBtn.Parent = AudioSpamContent
-Instance.new("UICorner", SpamAudioBtn).CornerRadius = UDim.new(0, 6)
+local SpawnFireBtn = Instance.new("TextButton")
+SpawnFireBtn.Size = UDim2.new(1, -20, 0, 35)
+SpawnFireBtn.Position = UDim2.new(0, 10, 0, 50)
+SpawnFireBtn.BackgroundColor3 = Color3.fromRGB(200, 80, 40)
+SpawnFireBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+SpawnFireBtn.Font = Enum.Font.SourceSansBold
+SpawnFireBtn.TextSize = 14
+SpawnFireBtn.Text = "Spawn Fire"
+SpawnFireBtn.BorderSizePixel = 0
+SpawnFireBtn.Parent = FireContent
+Instance.new("UICorner", SpawnFireBtn).CornerRadius = UDim.new(0, 6)
 
 -- Dropdown Toggle Logic
-local audioExpanded = false
-AudioSpamToggleBtn.MouseButton1Click:Connect(function()
-    audioExpanded = not audioExpanded
-    if audioExpanded then
-        AudioSpamFrame.Size = UDim2.new(1, -5, 0, 100)
-        AudioSpamContent.Visible = true
-        AudioSpamToggleBtn.Text = "  🔊 Snap Audio Spammer [ ▲ ]"
+local fireExpanded = false
+FireToggleBtn.MouseButton1Click:Connect(function()
+    fireExpanded = not fireExpanded
+    if fireExpanded then
+        FireSpawnFrame.Size = UDim2.new(1, -5, 0, 100)
+        FireContent.Visible = true
+        FireToggleBtn.Text = "  🔥 FE Fire Spawner [ ▲ ]"
     else
-        AudioSpamFrame.Size = UDim2.new(1, -5, 0, 30)
-        AudioSpamContent.Visible = false
-        AudioSpamToggleBtn.Text = "  🔊 Snap Audio Spammer [ ▼ ]"
+        FireSpawnFrame.Size = UDim2.new(1, -5, 0, 30)
+        FireContent.Visible = false
+        FireToggleBtn.Text = "  🔥 FE Fire Spawner [ ▼ ]"
     end
 end)
 
--- Spam Logic (Stabilized Anti-Freeze Version)
-local isAudioSpamming = false
-SpamAudioBtn.MouseButton1Click:Connect(function()
-    isAudioSpamming = not isAudioSpamming
+-- The Bypassed Spawner Logic
+SpawnFireBtn.MouseButton1Click:Connect(function()
+    -- Read the input box, default to 5 if they typed gibberish
+    local amount = tonumber(FireInput.Text) or 5 
     local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
 
-    if isAudioSpamming then
-        SpamAudioBtn.Text = "⏹️ Stop Audio Spam"
-        SpamAudioBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+    if Send then
+        SpawnFireBtn.Text = "Spawning " .. amount .. " Fires..."
+        SpawnFireBtn.BackgroundColor3 = Color3.fromRGB(255, 150, 50)
         
         task.spawn(function()
-            while isAudioSpamming do
-                -- Grab the ID from the box, or use your default one
-                local audioId = tonumber(AudioInput.Text) or 135545038339685
-                
-                if Send then 
-                    -- Step 1: Send FALSE
-                    Send("listen_snap_audio", audioId, false)
-                    task.wait(0.1) 
-                    
-                    if not isAudioSpamming then break end
-                    
-                    -- Step 2: Send TRUE twice
-                    Send("listen_snap_audio", audioId, true)
-                    task.wait(0.1) 
-                    
-                    if not isAudioSpamming then break end
-                    
-                    Send("listen_snap_audio", audioId, true)
-                end
-                
-                -- Wait 0.5 seconds so the UI doesn't crash
-                task.wait(0.5) 
+            for i = 1, amount do
+                Send("request_fire")
+                task.wait(0.05) -- Safe delay to prevent network lag
             end
             
-            -- When turned off, tell the server to cleanly stop the audio
-            if Send then
-                local audioId = tonumber(AudioInput.Text) or 135545038339685
-                Send("listen_snap_audio", audioId, false)
-            end
+            SpawnFireBtn.Text = "Fires Spawned!"
+            SpawnFireBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
+            task.wait(1.5)
+            SpawnFireBtn.Text = "Spawn Fire"
+            SpawnFireBtn.BackgroundColor3 = Color3.fromRGB(200, 80, 40)
         end)
     else
-        SpamAudioBtn.Text = "▶️ Start Audio Spam"
-        SpamAudioBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+        SpawnFireBtn.Text = "Network Error"
+        SpawnFireBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+        task.wait(1.5)
+        SpawnFireBtn.Text = "Spawn Fire"
+        SpawnFireBtn.BackgroundColor3 = Color3.fromRGB(200, 80, 40)
     end
 end)
-
 
 -- ========== MASS SERVER FLING (Underground Uppercut + Auto-Respawn & Stack Logs) ==========
 local RunService = game:GetService("RunService")
