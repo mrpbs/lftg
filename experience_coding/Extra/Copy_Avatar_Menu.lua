@@ -1886,9 +1886,8 @@ local function requestToolSpawn()
 end
 
 SpawnToolBtn.MouseButton1Click:Connect(requestToolSpawn)
-
 -- ==========================================
--- INVENTORY CYCLE RAPID FIRE (SERVER BYPASS)
+-- INVENTORY CYCLE RAPID FIRE (INSTANT EQUIP BYPASS)
 -- ==========================================
 local isFiring = false
 
@@ -1900,21 +1899,12 @@ NoCooldownBtn.MouseButton1Click:Connect(function()
         NoCooldownBtn.Text = "⚡ Rapid Fire (Stocking...)"
         NoCooldownBtn.BackgroundColor3 = Color3.fromRGB(200, 150, 0)
         
-        -- Automatically stock up on Rocket Launchers to cycle through
         task.spawn(function()
-            local char = game:GetService("Players").LocalPlayer.Character
-            local bp = game:GetService("Players").LocalPlayer:FindFirstChild("Backpack")
-            local count = 0
-            
-            if char then for _, v in ipairs(char:GetChildren()) do if v.Name == "RocketLauncher" then count = count + 1 end end end
-            if bp then for _, v in ipairs(bp:GetChildren()) do if v.Name == "RocketLauncher" then count = count + 1 end end end
-            
-            -- Get up to 7 launchers for a smooth, endless cycle
-            if count < 7 and Send then
-                for i = 1, (7 - count) do
-                    Send("get_tool", "RocketLauncher")
-                    task.wait(0.3) -- Small wait to prevent network rate limits
-                end
+            -- Quickly grab 10 launchers to build our ammo belt
+            for i = 1, 10 do
+                if not noCooldownEnabled then break end
+                if Send then Send("get_tool", "RocketLauncher") end
+                task.wait(0.1)
             end
             
             if noCooldownEnabled then
@@ -1939,44 +1929,49 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         if noCooldownEnabled then
             local char = player.Character
-            local hum = char and char:FindFirstChildOfClass("Humanoid")
             local currentTool = char and char:FindFirstChildOfClass("Tool")
             
-            -- Only activate if you are currently holding a Rocket Launcher
             if currentTool and currentTool.Name == "RocketLauncher" then
                 isFiring = true
                 
                 task.spawn(function()
                     local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
+                    local bp = player:FindFirstChild("Backpack")
                     
-                    while isFiring and noCooldownEnabled and char and hum do
-                        -- Gather ALL Rocket Launchers in your inventory
+                    while isFiring and noCooldownEnabled and char and bp do
+                        -- Find all loaded Rocket Launchers
                         local launchers = {}
-                        local bp = player:FindFirstChild("Backpack")
-                        
                         for _, v in ipairs(char:GetChildren()) do if v.Name == "RocketLauncher" then table.insert(launchers, v) end end
-                        if bp then for _, v in ipairs(bp:GetChildren()) do if v.Name == "RocketLauncher" then table.insert(launchers, v) end end end
+                        for _, v in ipairs(bp:GetChildren()) do if v.Name == "RocketLauncher" then table.insert(launchers, v) end end
                         
-                        -- Cycle through them and fire
+                        -- Auto-Replenish Ammo Belt if running low!
+                        if #launchers < 6 and Send then
+                            Send("get_tool", "RocketLauncher")
+                        end
+                        
                         for _, launcher in ipairs(launchers) do
                             if not isFiring or not noCooldownEnabled then break end
                             
-                            -- Auto-equip the next launcher so the server accepts the remote
-                            if launcher.Parent ~= char then
-                                hum:EquipTool(launcher)
-                                task.wait(0.05) -- Let the server process the equip
-                            end
+                            -- ⚡ INSTANT EQUIP EXPLOIT: Bypasses slow Roblox equip animations!
+                            launcher.Parent = char
                             
-                            -- Aim and fire directly at your mouse
                             local handle = launcher:FindFirstChild("Handle")
                             local spawnPos = handle and handle.Position or (char:GetPivot().Position + Vector3.new(0, 2, 0))
                             local targetCFrame = CFrame.new(spawnPos, mouse.Hit.Position)
                             
                             if Send then Send("shoot_rocket", launcher, targetCFrame) end
                             
-                            -- Tiny delay before swapping to the next launcher to prevent visual glitches
-                            task.wait(0.1)
+                            -- ⚡ INSTANT UNEQUIP: Put it back in the backpack to cool down
+                            launcher.Parent = bp
+                            
+                            task.wait(0.04) -- Firing speed (25 rockets a second!)
                         end
+                    end
+                    
+                    -- Re-equip one launcher so the player isn't left empty-handed when they stop firing
+                    if char and bp then
+                        local lastLauncher = bp:FindFirstChild("RocketLauncher")
+                        if lastLauncher then lastLauncher.Parent = char end
                     end
                 end)
             end
@@ -1989,6 +1984,7 @@ UserInputService.InputEnded:Connect(function(input)
         isFiring = false
     end
 end)
+
 
 
 -- ==========================================
