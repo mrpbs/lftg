@@ -2240,21 +2240,34 @@ FireToggleBtn.MouseButton1Click:Connect(function()
         FireToggleBtn.Text = "  🔥 FE Fire Spawner [ ▼ ]"
     end
 end)
-
--- The Bypassed Spawner Logic
+-- The Bypassed Spawner Logic (Exact Original Mimic)
 SpawnFireBtn.MouseButton1Click:Connect(function()
-    -- Read the input box, default to 5 if they typed gibberish
     local amount = tonumber(FireInput.Text) or 5 
-    local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
+    
+    -- Find the global network functions
+    local g = getgenv().g or getgenv()
+    local Send = g.Send
 
     if Send then
         SpawnFireBtn.Text = "Spawning " .. amount .. " Fires..."
         SpawnFireBtn.BackgroundColor3 = Color3.fromRGB(255, 150, 50)
         
         task.spawn(function()
+            -- 1. Mimic the hub's exact pre-fire wait (fw(0.2))
+            task.wait(0.2)
+            
+            -- 2. Attempt to run the hub's specific amount setter if it exists
+            pcall(function()
+                if type(g.set_fire_amount_FE) == "function" then
+                    g.set_fire_amount_FE(amount)
+                elseif type(getgenv().set_fire_amount_FE) == "function" then
+                    getgenv().set_fire_amount_FE(amount)
+                end
+            end)
+            
+            -- 3. Fire all requests instantly on the same frame (No task.wait inside the loop!)
             for i = 1, amount do
                 Send("request_fire")
-                task.wait(0.05) -- Safe delay to prevent network lag
             end
             
             SpawnFireBtn.Text = "Fires Spawned!"
@@ -2271,6 +2284,7 @@ SpawnFireBtn.MouseButton1Click:Connect(function()
         SpawnFireBtn.BackgroundColor3 = Color3.fromRGB(200, 80, 40)
     end
 end)
+
 
 -- ========== MASS SERVER FLING (Underground Uppercut + Auto-Respawn & Stack Logs) ==========
 local RunService = game:GetService("RunService")
