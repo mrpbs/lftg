@@ -1774,11 +1774,11 @@ ApplyScaleBtn.MouseButton1Click:Connect(function()
     end
 end)
 ------
--- ==============================================================
--- 🛠️ SMART PREMIUM TOOL SPAWNER (Hold for Options + No Cooldown)
+-- -- ==============================================================
+-- 🛠️ SMART PREMIUM TOOL SPAWNER (Hold for Options)
 -- ==============================================================
 local noCooldownEnabled = false
-local noCooldownConnection = nil
+local isFiring = false
 
 -- 1. Main Container
 local ToolContainer = Instance.new("Frame")
@@ -1827,7 +1827,7 @@ SpawnToolBtn.BorderSizePixel = 0
 SpawnToolBtn.Parent = ToolContainer
 Instance.new("UICorner", SpawnToolBtn).CornerRadius = UDim.new(0, 6)
 
--- 5. No Cooldown Toggle Button
+-- 5. Rapid Fire Toggle Button
 local NoCooldownBtn = Instance.new("TextButton")
 NoCooldownBtn.Size = UDim2.new(1, -20, 0, 32)
 NoCooldownBtn.Position = UDim2.new(0, 10, 0, 120)
@@ -1835,26 +1835,35 @@ NoCooldownBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
 NoCooldownBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 NoCooldownBtn.Font = Enum.Font.SourceSansBold
 NoCooldownBtn.TextSize = 14
-NoCooldownBtn.Text = "⚡ No Cooldown: OFF"
+NoCooldownBtn.Text = "⚡ Rapid Fire: OFF"
 NoCooldownBtn.BorderSizePixel = 0
 NoCooldownBtn.Parent = ToolContainer
 Instance.new("UICorner", NoCooldownBtn).CornerRadius = UDim.new(0, 6)
+
+-- 6. Explosive Trait Toggle Button (NEW!)
+local ExplosiveTraitBtn = Instance.new("TextButton")
+ExplosiveTraitBtn.Size = UDim2.new(1, -20, 0, 32)
+ExplosiveTraitBtn.Position = UDim2.new(0, 10, 0, 158)
+ExplosiveTraitBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+ExplosiveTraitBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ExplosiveTraitBtn.Font = Enum.Font.SourceSansBold
+ExplosiveTraitBtn.TextSize = 14
+ExplosiveTraitBtn.Text = "💣 Explosive Trait: OFF"
+ExplosiveTraitBtn.BorderSizePixel = 0
+ExplosiveTraitBtn.Parent = ToolContainer
+Instance.new("UICorner", ExplosiveTraitBtn).CornerRadius = UDim.new(0, 6)
 
 -- ==========================================
 -- TOOL SPAWN LOGIC
 -- ==========================================
 local knownTools = {
     "Jetpack", "RocketLauncher", "Parachute", "Segway", "Hoverboard", 
-    "Glider", "BoomBox", "Sign", "Stroller", "Skateboard", "Flashlight"
+    "Glider", "BoomBox", "Sign", "Stroller", "Skateboard", "Flashlight", "Explosive"
 }
 
-local function requestToolSpawn()
+SpawnToolBtn.MouseButton1Click:Connect(function()
     local inputName = string.lower(ToolInput.Text:gsub("%s+", ""))
-    if inputName == "" then 
-        SpawnToolBtn.Text = "Type a name first!"
-        task.delay(1.2, function() SpawnToolBtn.Text = "Get Tool" end)
-        return 
-    end
+    if inputName == "" then return end
 
     local foundName = nil
     for _, v in ipairs(knownTools) do
@@ -1875,22 +1884,12 @@ local function requestToolSpawn()
             SpawnToolBtn.Text = "Get Tool"
             SpawnToolBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
         end)
-    else
-        SpawnToolBtn.Text = "Network Error"
-        SpawnToolBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-        task.delay(1.5, function()
-            SpawnToolBtn.Text = "Get Tool"
-            SpawnToolBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
-        end)
     end
-end
+end)
 
-SpawnToolBtn.MouseButton1Click:Connect(requestToolSpawn)
 -- ==========================================
--- ASYNC DUAL-THREAD RAPID FIRE (STABILIZED TIMING)
+-- ASYNC DUAL-THREAD RAPID FIRE (STABILIZED)
 -- ==========================================
-local isFiring = false
-
 NoCooldownBtn.MouseButton1Click:Connect(function()
     noCooldownEnabled = not noCooldownEnabled
     
@@ -1919,14 +1918,13 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
             
             if currentTool and currentTool.Name == "RocketLauncher" then
                 isFiring = true
-                
                 local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
                 
-                -- Initial cleanup
                 if bp then
                     for _, v in ipairs(bp:GetChildren()) do
                         if v.Name == "RocketLauncher" then 
                             if Send then Send("delete_tool") end
+                           if Send then Send("get_tool", "RocketLauncher") end
                             v:Destroy() 
                         end
                     end
@@ -1934,7 +1932,6 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
                 if Send then Send("delete_tool") end
                 currentTool:Destroy()
                 
-                -- 🚀 THREAD 1: THE LOADER (Spams requests)
                 task.spawn(function()
                     while isFiring and noCooldownEnabled do
                         if Send then Send("get_tool", "RocketLauncher") end
@@ -1942,40 +1939,26 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
                     end
                 end)
                 
-                -- 💥 THREAD 2: THE SHOOTER (Stabilized)
                 task.spawn(function()
                     while isFiring and noCooldownEnabled and char and bp do
                         local newLauncher = bp:FindFirstChild("RocketLauncher")
-                        
                         if newLauncher then
-                            -- 1. Instant equip
                             newLauncher.Parent = char
-                            
-                            -- ⏳ FIX: Wait 30ms for the server to recognize it's in your hand
                             task.wait(0.03) 
                             
-                            -- 2. Aim and FIRE
                             local handle = newLauncher:FindFirstChild("Handle")
                             local spawnPos = handle and handle.Position or (char:GetPivot().Position + Vector3.new(0, 2, 0))
                             local targetCFrame = CFrame.new(spawnPos, mouse.Hit.Position)
                             
-                            if Send then 
-                                Send("shoot_rocket", newLauncher, targetCFrame) 
-                            end
-                            
-                            -- ⏳ FIX: Wait 30ms for the server to actually launch the rocket
+                            if Send then Send("shoot_rocket", newLauncher, targetCFrame) end
                             task.wait(0.03)
                             
-                            -- 3. Now it is safe to delete and bypass the inventory cap
                             if Send then Send("delete_tool") end
                             newLauncher:Destroy()
                         else
-                            -- Wait for ammo to arrive
                             task.wait()
                         end
                     end
-                    
-                    -- When you let go, restock 1 launcher so you aren't empty-handed
                     if Send then Send("get_tool", "RocketLauncher") end
                 end)
             end
@@ -1990,14 +1973,67 @@ UserInputService.InputEnded:Connect(function(input)
 end)
 
 -- ==========================================
+-- 💣 EXPLOSIVE TRAIT (WALKING MINE DROPPER)
+-- ==========================================
+local explosiveTraitEnabled = false
+local explosiveTraitLoop = nil
+local lastMinePos = Vector3.new(0, 0, 0)
+
+ExplosiveTraitBtn.MouseButton1Click:Connect(function()
+    explosiveTraitEnabled = not explosiveTraitEnabled
+    local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
+    
+    if explosiveTraitEnabled then
+        ExplosiveTraitBtn.Text = "💣 Explosive Trait: ON"
+        ExplosiveTraitBtn.BackgroundColor3 = Color3.fromRGB(200, 100, 50) -- Explosive Orange!
+        
+        -- Automatically request the Explosive tool from the server
+        if Send then Send("get_tool", "Explosive") end
+        
+        explosiveTraitLoop = game:GetService("RunService").Heartbeat:Connect(function()
+            local char = player.Character
+            local root = char and char:FindFirstChild("HumanoidRootPart")
+            
+            -- Only run if you actually have the explosive equipped in your hand!
+            local currentTool = char and char:FindFirstChildOfClass("Tool")
+            if currentTool and currentTool.Name == "Explosive" and root then
+                
+                local currentPos = root.Position
+                -- Check if we have walked at least 6 studs away from the last dropped mine
+                if (currentPos - lastMinePos).Magnitude > 6 then
+                    lastMinePos = currentPos
+                    
+                    -- Drop the explosive right at your feet!
+                    -- (Vector3.new(0,1,0) is the "Y-axis normal" telling the server it's placed on the ground)
+                    local dropPos = currentPos - Vector3.new(0, 2.5, 0) 
+                    
+                    if Send then
+                        Send("place", dropPos, Vector3.new(0, 1, 0))
+                    end
+                end
+                
+            end
+        end)
+    else
+        ExplosiveTraitBtn.Text = "💣 Explosive Trait: OFF"
+        ExplosiveTraitBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+        
+        if explosiveTraitLoop then
+            explosiveTraitLoop:Disconnect()
+            explosiveTraitLoop = nil
+        end
+    end
+end)
+
+-- ==========================================
 -- SMART HOLD CONNECTION
 -- ==========================================
 applySmartHold(
     ToolMainBtn,    
     ToolContainer,  
     40,             
-    165,            
-    1,              
+    200,            -- Increased height to 200px to perfectly fit the new Explosive button
+    0.5,              
     function()
         if ToolInput.Text ~= "" then
             for _, conn in ipairs(getconnections(SpawnToolBtn.MouseButton1Click)) do
