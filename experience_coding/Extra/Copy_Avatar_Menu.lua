@@ -1888,54 +1888,72 @@ end
 SpawnToolBtn.MouseButton1Click:Connect(requestToolSpawn)
 
 -- ==========================================
--- NO COOLDOWN LOGIC
+-- RAPID FIRE / NO COOLDOWN LOGIC
 -- ==========================================
-local function applyRateLimiterBypass()
-    pcall(function()
-        local reps = game:GetService("ReplicatedStorage")
-        local msgs = reps:FindFirstChild("Messages", true)
-        if msgs and require then
-            local messageMod = require(msgs)
-            if type(messageMod) == "table" and messageMod.rate_limiter then
-                messageMod.rate_limiter.is_limited = function() return false end
-            end
-        end
-    end)
-end
+local isFiring = false
 
 NoCooldownBtn.MouseButton1Click:Connect(function()
     noCooldownEnabled = not noCooldownEnabled
     
     if noCooldownEnabled then
-        NoCooldownBtn.Text = "⚡ No Cooldown: ON"
+        NoCooldownBtn.Text = "⚡ Rapid Fire Rockets: ON"
         NoCooldownBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
-        applyRateLimiterBypass()
-        
-        -- Continuously reset tool debounce and client cooldown timers
-        noCooldownConnection = RunService.Stepped:Connect(function()
-            local char = LocalPlayer.Character
-            if not char then return end
-            
-            for _, item in ipairs(char:GetChildren()) do
-                if item:IsA("Tool") then
-                    item.Enabled = true
-                    if item:GetAttribute("cooldown") then
-                        item:SetAttribute("cooldown", 0)
-                    end
-                    if item:GetAttribute("debounce") then
-                        item:SetAttribute("debounce", false)
-                    end
-                end
-            end
-        end)
     else
-        NoCooldownBtn.Text = "⚡ No Cooldown: OFF"
+        NoCooldownBtn.Text = "⚡ Rapid Fire Rockets: OFF"
         NoCooldownBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
-        
-        if noCooldownConnection then
-            noCooldownConnection:Disconnect()
-            noCooldownConnection = nil
+        isFiring = false
+    end
+end)
+
+local UserInputService = game:GetService("UserInputService")
+local mouse = game:GetService("Players").LocalPlayer:GetMouse()
+
+-- Hooks into your clicks to completely bypass the tool's built-in script
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    -- We want to ignore clicks on UI buttons, but allow game clicks
+    if gameProcessed and input.UserInputType ~= Enum.UserInputType.Touch then return end
+    
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        if noCooldownEnabled then
+            local char = game:GetService("Players").LocalPlayer.Character
+            local launcher = char and char:FindFirstChild("RocketLauncher")
+            
+            -- If we are holding the Rocket Launcher, intercept the click!
+            if launcher then
+                isFiring = true
+                task.spawn(function()
+                    local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
+                    while isFiring and noCooldownEnabled and char:FindFirstChild("RocketLauncher") do
+                        local cam = workspace.CurrentCamera
+                        
+                        -- Calculate where the rocket should spawn (slightly above the head)
+                        local head = char:FindFirstChild("Head")
+                        local spawnPos = head and (head.Position + Vector3.new(0, 3, 0)) or cam.CFrame.Position
+                        
+                        -- Aiming logic: Use mouse for PC, use Camera look direction for Mobile
+                        local targetPos = mouse.Hit.Position
+                        if input.UserInputType == Enum.UserInputType.Touch then
+                            targetPos = cam.CFrame.Position + (cam.CFrame.LookVector * 1000)
+                        end
+                        
+                        -- Create the exact CFrame payload you reverse-engineered
+                        local cf = CFrame.new(spawnPos, targetPos)
+                        
+                        -- Fire the remote directly, ignoring the game's cooldown
+                        if Send then Send("shoot_rocket", launcher, cf) end
+                        
+                        -- The speed of the rapid fire (0.05 seconds = 20 rockets per second!)
+                        task.wait(0.05)
+                    end
+                end)
+            end
         end
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        isFiring = false -- Stop shooting when you let go
     end
 end)
 
@@ -1943,25 +1961,26 @@ end)
 -- SMART HOLD CONNECTION
 -- ==========================================
 applySmartHold(
-    ToolMainBtn,    -- The button
-    ToolContainer,  -- The container frame
+    SpawnToolBtn.Parent.Parent:FindFirstChildWhichIsA("TextButton"), -- The main button
+    SpawnToolBtn.Parent.Parent,  -- The container frame
     40,             -- Normal height
     165,            -- Expanded height (fits inputs, spawn btn & cooldown btn)
-    1,            -- Hold duration (1.4s)
+    1.4,            -- Hold duration (1.4s)
     
     -- Short click action (quick-get tool if text is present)
     function()
         if ToolInput.Text ~= "" then
-            requestToolSpawn()
+            -- requestToolSpawn() -- Ensure this points to your spawn function
         end
     end,
     
     -- UI text updater on expand/collapse
     function(isExpanded)
+        local MainBtn = SpawnToolBtn.Parent.Parent:FindFirstChildWhichIsA("TextButton")
         if isExpanded then
-            ToolMainBtn.Text = "🛠️ Tool Spawner [▲ Options]"
+            MainBtn.Text = "🛠️ Premium Tool Spawner [▲ Options]"
         else
-            ToolMainBtn.Text = "🛠️ Tool Spawner (Hold for Options)"
+            MainBtn.Text = "🛠️ Premium Tool Spawner (Hold for Options)"
         end
     end
 )
