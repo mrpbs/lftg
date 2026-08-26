@@ -1887,85 +1887,77 @@ end
 
 SpawnToolBtn.MouseButton1Click:Connect(requestToolSpawn)
 -- ==========================================
--- DISPOSABLE TUBE RAPID FIRE (PING-BASED)
+-- PURE NO COOLDOWN LOGIC (ATTRIBUTE BYPASS)
 -- ==========================================
-local isFiring = false
+local noCooldownEnabled = false
+local cooldownLoop = nil
 
 NoCooldownBtn.MouseButton1Click:Connect(function()
     noCooldownEnabled = not noCooldownEnabled
     
     if noCooldownEnabled then
-        NoCooldownBtn.Text = "⚡ Rapid Fire: ON"
+        NoCooldownBtn.Text = "⚡ No Cooldown: ON"
         NoCooldownBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
-    else
-        NoCooldownBtn.Text = "⚡ Rapid Fire: OFF"
-        NoCooldownBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
-        isFiring = false
-    end
-end)
-
-local UserInputService = game:GetService("UserInputService")
-local player = game:GetService("Players").LocalPlayer
-local mouse = player:GetMouse()
-
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if gameProcessed and input.UserInputType ~= Enum.UserInputType.Touch then return end
-    
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        if noCooldownEnabled then
+        
+        cooldownLoop = game:GetService("RunService").Stepped:Connect(function()
+            local player = game:GetService("Players").LocalPlayer
             local char = player.Character
-            local currentTool = char and char:FindFirstChildOfClass("Tool")
+            if not char then return end
             
-            if currentTool and currentTool.Name == "RocketLauncher" then
-                isFiring = true
-                
-                task.spawn(function()
-                    local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
-                    local bp = player:FindFirstChild("Backpack")
-                    
-                    while isFiring and noCooldownEnabled and char and bp do
-                        -- 1. Constantly demand fresh ammo from the server
-                        if Send then Send("get_tool", "RocketLauncher") end
-                        
-                        -- 2. Grab any launcher that just spawned in
-                        local launcher = char:FindFirstChild("RocketLauncher") or bp:FindFirstChild("RocketLauncher")
-                        
-                        if launcher then
-                            -- Instant equip
-                            launcher.Parent = char
-                            
-                            -- Aim and Fire
-                            local handle = launcher:FindFirstChild("Handle")
-                            local spawnPos = handle and handle.Position or (char:GetPivot().Position + Vector3.new(0, 2, 0))
-                            local targetCFrame = CFrame.new(spawnPos, mouse.Hit.Position)
-                            
-                            if Send then Send("shoot_rocket", launcher, targetCFrame) end
-                            
-                            -- 3. THE BYPASS: Destroy the launcher immediately!
-                            -- This prevents you from hitting the 3-launcher inventory cap.
-                            launcher:Destroy()
-                        end
-                        
-                        -- The firing speed is now purely determined by how fast the server gives you a new launcher!
-                        task.wait(0.05)
-                    end
-                    
-                    -- When you let go of the mouse, request one last launcher so you aren't empty-handed
-                    if Send then
-                        task.wait(0.1)
-                        Send("get_tool", "RocketLauncher") 
-                    end
-                end)
+            -- Gather all tools in hands and in the backpack
+            local tools = {}
+            for _, v in ipairs(char:GetChildren()) do if v:IsA("Tool") then table.insert(tools, v) end end
+            local bp = player:FindFirstChild("Backpack")
+            if bp then for _, v in ipairs(bp:GetChildren()) do if v:IsA("Tool") then table.insert(tools, v) end end end
+            
+            -- Force all internal cooldown variables to zero instantly
+            for _, tool in ipairs(tools) do
+                tool.Enabled = true
+                if tool:GetAttribute("cooldown") ~= nil then tool:SetAttribute("cooldown", 0) end
+                if tool:GetAttribute("debounce") ~= nil then tool:SetAttribute("debounce", false) end
+                if tool:GetAttribute("ReloadTime") ~= nil then tool:SetAttribute("ReloadTime", 0) end
+                if tool:GetAttribute("Ammo") ~= nil then tool:SetAttribute("Ammo", 999) end
             end
+        end)
+    else
+        NoCooldownBtn.Text = "⚡ No Cooldown: OFF"
+        NoCooldownBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+        if cooldownLoop then 
+            cooldownLoop:Disconnect() 
+            cooldownLoop = nil 
         end
     end
 end)
 
-UserInputService.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        isFiring = false
+-- ==========================================
+-- SMART HOLD CONNECTION
+-- ==========================================
+applySmartHold(
+    ToolMainBtn,    -- Direct reference to your main button
+    ToolContainer,  -- Direct reference to your container frame
+    40,             -- Normal height
+    165,            -- Expanded height (fits inputs, spawn btn & cooldown btn)
+    1,              -- Hold duration (1s)
+    
+    -- Short click action (quick-get tool if text is present)
+    function()
+        if ToolInput.Text ~= "" then
+            -- Note: We are triggering the button click event to run your spawn logic cleanly
+            for _, conn in ipairs(getconnections(SpawnToolBtn.MouseButton1Click)) do
+                conn.Function()
+            end
+        end
+    end,
+    
+    -- UI text updater on expand/collapse
+    function(isExpanded)
+        if isExpanded then
+            ToolMainBtn.Text = "🛠️ Premium Tool Spawner [▲ Options]"
+        else
+            ToolMainBtn.Text = "🛠️ Premium Tool Spawner (Hold for Options)"
+        end
     end
-end)
+)
 
 -- ==========================================
 -- SMART HOLD CONNECTION
