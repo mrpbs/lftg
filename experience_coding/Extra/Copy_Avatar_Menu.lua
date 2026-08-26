@@ -1523,7 +1523,9 @@ applySmartHold(
             FlyBtn.Text = localFlyEnabled and "✈️ Local Fly: ON (Hold for Options)" or "✈️ Local Fly: OFF (Hold for Options)"
         end
     end
-)==============================================================
+)
+
+==============================================================
 -- 🛠️ SMART PREMIUM TOOL SPAWNER (Hold for Options + No Cooldown)
 -- ==============================================================
 local noCooldownEnabled = false
