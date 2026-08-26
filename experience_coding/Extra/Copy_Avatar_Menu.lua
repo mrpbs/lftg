@@ -1887,9 +1887,10 @@ end
 
 SpawnToolBtn.MouseButton1Click:Connect(requestToolSpawn)
 -- ==========================================
--- INVENTORY CYCLE RAPID FIRE (INSTANT EQUIP BYPASS)
+-- INVENTORY CYCLE RAPID FIRE (MACHINE GUN FIX)
 -- ==========================================
 local isFiring = false
+local cycleIndex = 1 -- Keeps track of which launcher is next in line
 
 NoCooldownBtn.MouseButton1Click:Connect(function()
     noCooldownEnabled = not noCooldownEnabled
@@ -1900,11 +1901,11 @@ NoCooldownBtn.MouseButton1Click:Connect(function()
         NoCooldownBtn.BackgroundColor3 = Color3.fromRGB(200, 150, 0)
         
         task.spawn(function()
-            -- Quickly grab 10 launchers to build our ammo belt
-            for i = 1, 10 do
+            -- Grab a few launchers to start the cycle
+            for i = 1, 5 do
                 if not noCooldownEnabled then break end
                 if Send then Send("get_tool", "RocketLauncher") end
-                task.wait(0.1)
+                task.wait(0.2)
             end
             
             if noCooldownEnabled then
@@ -1939,36 +1940,39 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
                     local bp = player:FindFirstChild("Backpack")
                     
                     while isFiring and noCooldownEnabled and char and bp do
-                        -- Find all loaded Rocket Launchers
+                        -- 1. Gather all available launchers
                         local launchers = {}
                         for _, v in ipairs(char:GetChildren()) do if v.Name == "RocketLauncher" then table.insert(launchers, v) end end
                         for _, v in ipairs(bp:GetChildren()) do if v.Name == "RocketLauncher" then table.insert(launchers, v) end end
                         
-                        -- Auto-Replenish Ammo Belt if running low!
-                        if #launchers < 6 and Send then
+                        -- 2. If we are running low, silently request more ammo from the server
+                        if #launchers < 4 and Send then
                             Send("get_tool", "RocketLauncher")
                         end
                         
-                        for _, launcher in ipairs(launchers) do
-                            if not isFiring or not noCooldownEnabled then break end
+                        -- 3. Cycle sequentially to the next ready launcher
+                        if #launchers > 0 then
+                            if cycleIndex > #launchers then cycleIndex = 1 end
+                            local launcher = launchers[cycleIndex]
+                            cycleIndex = cycleIndex + 1
                             
-                            -- ⚡ INSTANT EQUIP EXPLOIT: Bypasses slow Roblox equip animations!
+                            -- Instant equip, aim, and fire
                             launcher.Parent = char
-                            
                             local handle = launcher:FindFirstChild("Handle")
                             local spawnPos = handle and handle.Position or (char:GetPivot().Position + Vector3.new(0, 2, 0))
                             local targetCFrame = CFrame.new(spawnPos, mouse.Hit.Position)
                             
                             if Send then Send("shoot_rocket", launcher, targetCFrame) end
                             
-                            -- ⚡ INSTANT UNEQUIP: Put it back in the backpack to cool down
+                            -- Instant unequip so it can reload in the backpack
                             launcher.Parent = bp
-                            
-                            task.wait(0.04) -- Firing speed (25 rockets a second!)
                         end
+                        
+                        -- ⚡ THE MAGIC TIMING: 0.2 seconds gives the perfect, endless machine-gun rhythm
+                        task.wait(0.2)
                     end
                     
-                    -- Re-equip one launcher so the player isn't left empty-handed when they stop firing
+                    -- Re-equip a launcher when you let go of the mouse so you aren't empty-handed
                     if char and bp then
                         local lastLauncher = bp:FindFirstChild("RocketLauncher")
                         if lastLauncher then lastLauncher.Parent = char end
@@ -1984,7 +1988,6 @@ UserInputService.InputEnded:Connect(function(input)
         isFiring = false
     end
 end)
-
 
 
 -- ==========================================
