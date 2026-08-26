@@ -1887,7 +1887,7 @@ end
 
 SpawnToolBtn.MouseButton1Click:Connect(requestToolSpawn)
 -- ==========================================
--- SYNCHRONIZED "GIVE -> FIRE -> REMOVE" BYPASS
+-- SYNCHRONIZED "GIVE -> FIRE -> SERVER DELETE" BYPASS
 -- ==========================================
 local isFiring = false
 
@@ -1927,18 +1927,22 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
                     -- Clean up any extra launchers in the backpack to start fresh
                     if bp then
                         for _, v in ipairs(bp:GetChildren()) do
-                            if v.Name == "RocketLauncher" then v:Destroy() end
+                            if v.Name == "RocketLauncher" then 
+                                if Send then Send("delete_tool") end
+                                v:Destroy() 
+                            end
                         end
                     end
                     
                     -- Destroy the one currently in your hand to begin the cycle cleanly
+                    if Send then Send("delete_tool") end
                     currentTool:Destroy()
                     
                     while isFiring and noCooldownEnabled and char and bp do
                         -- STEP 1: Ask the server to GIVE the gun
                         if Send then Send("get_tool", "RocketLauncher") end
                         
-                        -- STEP 2: Wait perfectly for it to arrive (Prevents the "no rocket" bug)
+                        -- STEP 2: Wait perfectly for it to arrive
                         local newLauncher = bp:WaitForChild("RocketLauncher", 1)
                         
                         if newLauncher then
@@ -1953,9 +1957,15 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
                             local spawnPos = handle and handle.Position or (char:GetPivot().Position + Vector3.new(0, 2, 0))
                             local targetCFrame = CFrame.new(spawnPos, mouse.Hit.Position)
                             
-                            if Send then Send("shoot_rocket", newLauncher, targetCFrame) end
+                            if Send then 
+                                Send("shoot_rocket", newLauncher, targetCFrame) 
+                                
+                                -- STEP 5: PROPER SERVER DELETION (Your Exploit!)
+                                -- Tells the server to clear our inventory cap
+                                Send("delete_tool")
+                            end
                             
-                            -- STEP 5: REMOVE it instantly to clear the cooldown and inventory cap
+                            -- Locally destroy it to keep our screen clean and reduce lag
                             newLauncher:Destroy()
                         else
                             -- If the server is lagging, wait a tiny bit before asking again
@@ -2001,6 +2011,7 @@ applySmartHold(
         end
     end
 )
+
 -- ========== VEHICLE SPAWNER TOOL (Collapsible) ==========
 local VehSpawnFrame = Instance.new("Frame")
 VehSpawnFrame.Size = UDim2.new(1, -5, 0, 30) -- Starts collapsed
