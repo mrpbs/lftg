@@ -1887,7 +1887,7 @@ end
 
 SpawnToolBtn.MouseButton1Click:Connect(requestToolSpawn)
 -- ==========================================
--- ASYNC DUAL-THREAD RAPID FIRE (STABILIZED TIMING)
+-- AUTO-TURRET TARGETING SYSTEM (CLIENT MARKER)
 -- ==========================================
 local isFiring = false
 
@@ -1895,10 +1895,10 @@ NoCooldownBtn.MouseButton1Click:Connect(function()
     noCooldownEnabled = not noCooldownEnabled
     
     if noCooldownEnabled then
-        NoCooldownBtn.Text = "⚡ Rapid Fire: ON"
+        NoCooldownBtn.Text = "🎯 Auto-Turret: ON"
         NoCooldownBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
     else
-        NoCooldownBtn.Text = "⚡ Rapid Fire: OFF"
+        NoCooldownBtn.Text = "🎯 Auto-Turret: OFF"
         NoCooldownBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
         isFiring = false
     end
@@ -1908,74 +1908,97 @@ local UserInputService = game:GetService("UserInputService")
 local player = game:GetService("Players").LocalPlayer
 local mouse = player:GetMouse()
 
+-- Create the invisible/holographic target marker
+local targetMarker = Instance.new("Part")
+targetMarker.Shape = Enum.PartType.Ball
+targetMarker.Size = Vector3.new(3, 3, 3)
+targetMarker.Color = Color3.fromRGB(255, 50, 50) -- Neon Red
+targetMarker.Material = Enum.Material.Neon
+targetMarker.Anchored = true
+targetMarker.CanCollide = false
+targetMarker.CastShadow = false
+targetMarker.Transparency = 1 -- Hidden by default
+targetMarker.Parent = workspace
+
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed and input.UserInputType ~= Enum.UserInputType.Touch then return end
     
+    -- RIGHT CLICK TO STOP FIRING
+    if input.UserInputType == Enum.UserInputType.MouseButton2 then
+        isFiring = false
+        targetMarker.Transparency = 1 -- Hide the marker
+        return
+    end
+    
+    -- LEFT CLICK TO SET TARGET AND START FIRING
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         if noCooldownEnabled then
             local char = player.Character
-            local bp = player:FindFirstChild("Backpack")
             local currentTool = char and char:FindFirstChildOfClass("Tool")
             
             if currentTool and currentTool.Name == "RocketLauncher" then
+                -- Lock the target and show the marker!
+                targetMarker.Position = mouse.Hit.Position
+                targetMarker.Transparency = 0.4
+                
+                -- If we are already firing, we just updated the target location! No need to start a new loop.
+                if isFiring then return end 
+                
                 isFiring = true
                 
-                local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
-                
-                -- Initial cleanup
-                if bp then
-                    for _, v in ipairs(bp:GetChildren()) do
-                        if v.Name == "RocketLauncher" then 
-                            if Send then Send("delete_tool") end
-                            v:Destroy() 
+                task.spawn(function()
+                    local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
+                    local bp = player:FindFirstChild("Backpack")
+                    
+                    -- Clean up any extra launchers in the backpack to start fresh
+                    if bp then
+                        for _, v in ipairs(bp:GetChildren()) do
+                            if v.Name == "RocketLauncher" then 
+                                if Send then Send("delete_tool") end
+                                v:Destroy() 
+                            end
                         end
                     end
-                end
-                if Send then Send("delete_tool") end
-                currentTool:Destroy()
-                
-                -- 🚀 THREAD 1: THE LOADER (Spams requests)
-                task.spawn(function()
-                    while isFiring and noCooldownEnabled do
-                        if Send then Send("get_tool", "RocketLauncher") end
-                        task.wait(0.05) 
+                    
+                    -- Destroy the one currently in your hand to begin the cycle cleanly
+                    local handTool = char:FindFirstChild("RocketLauncher")
+                    if handTool then
+                        if Send then Send("delete_tool") end
+                        handTool:Destroy()
                     end
-                end)
-                
-                -- 💥 THREAD 2: THE SHOOTER (Stabilized)
-                task.spawn(function()
+                    
                     while isFiring and noCooldownEnabled and char and bp do
-                        local newLauncher = bp:FindFirstChild("RocketLauncher")
+                        -- STEP 1: Ask the server to GIVE the gun
+                        if Send then Send("get_tool", "RocketLauncher") end
+                        
+                        -- STEP 2: Wait perfectly for it to arrive
+                        local newLauncher = bp:WaitForChild("RocketLauncher", 1)
                         
                         if newLauncher then
-                            -- 1. Instant equip
+                            -- STEP 3: Instant equip
                             newLauncher.Parent = char
+                            task.wait(0.03) -- Let server process equip
                             
-                            -- ⏳ FIX: Wait 30ms for the server to recognize it's in your hand
-                            task.wait(0.03) 
-                            
-                            -- 2. Aim and FIRE
+                            -- STEP 4: Aim perfectly at the glowing Target Marker!
                             local handle = newLauncher:FindFirstChild("Handle")
                             local spawnPos = handle and handle.Position or (char:GetPivot().Position + Vector3.new(0, 2, 0))
-                            local targetCFrame = CFrame.new(spawnPos, mouse.Hit.Position)
+                            local targetCFrame = CFrame.new(spawnPos, targetMarker.Position)
                             
                             if Send then 
                                 Send("shoot_rocket", newLauncher, targetCFrame) 
                             end
+                            task.wait(0.03) -- Let server process the shot
                             
-                            -- ⏳ FIX: Wait 30ms for the server to actually launch the rocket
-                            task.wait(0.03)
-                            
-                            -- 3. Now it is safe to delete and bypass the inventory cap
+                            -- STEP 5: PROPER SERVER DELETION
                             if Send then Send("delete_tool") end
                             newLauncher:Destroy()
                         else
-                            -- Wait for ammo to arrive
-                            task.wait()
+                            task.wait(0.1)
                         end
                     end
                     
-                    -- When you let go, restock 1 launcher so you aren't empty-handed
+                    -- When firing is stopped (via right-click or turning it off)
+                    targetMarker.Transparency = 1
                     if Send then Send("get_tool", "RocketLauncher") end
                 end)
             end
@@ -1983,11 +2006,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
-UserInputService.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        isFiring = false
-    end
-end)
+-- We remove the InputEnded stop event, because we want it to keep shooting after letting go of the left click!
 
 -- ==========================================
 -- SMART HOLD CONNECTION
