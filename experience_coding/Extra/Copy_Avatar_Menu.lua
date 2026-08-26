@@ -1523,258 +1523,7 @@ applySmartHold(
             FlyBtn.Text = localFlyEnabled and "✈️ Local Fly: ON (Hold for Options)" or "✈️ Local Fly: OFF (Hold for Options)"
         end
     end
-)
--- ========== AVATAR SCALER TOOL (Collapsible) ==========
-local ScalerFrame = Instance.new("Frame")
-ScalerFrame.Size = UDim2.new(1, -5, 0, 30) -- Starts collapsed
-ScalerFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 38)
-ScalerFrame.BorderSizePixel = 0
-ScalerFrame.ClipsDescendants = true
-ScalerFrame.Parent = ToolsScroll
-
--- The Clickable Title / Dropdown Button
-local ScalerToggleBtn = Instance.new("TextButton")
-ScalerToggleBtn.Size = UDim2.new(1, 0, 0, 30)
-ScalerToggleBtn.Position = UDim2.new(0, 0, 0, 0)
-ScalerToggleBtn.Text = "  📏 Custom Avatar Scaler [ ▼ ]"
-ScalerToggleBtn.TextColor3 = Color3.fromRGB(0, 255, 200)
-ScalerToggleBtn.Font = Enum.Font.SourceSansBold
-ScalerToggleBtn.TextSize = 14
-ScalerToggleBtn.TextXAlignment = Enum.TextXAlignment.Left
-ScalerToggleBtn.BackgroundColor3 = Color3.fromRGB(25, 25, 32)
-ScalerToggleBtn.BorderSizePixel = 0
-ScalerToggleBtn.Parent = ScalerFrame
-
--- Container for all the inputs (Hidden by default)
-local ScalerContent = Instance.new("Frame")
-ScalerContent.Size = UDim2.new(1, 0, 1, -30)
-ScalerContent.Position = UDim2.new(0, 0, 0, 30)
-ScalerContent.BackgroundTransparency = 1
-ScalerContent.Visible = false
-ScalerContent.Parent = ScalerFrame
-
--- 1. Height
-local HeightLabel = Instance.new("TextLabel")
-HeightLabel.Size = UDim2.new(0, 60, 0, 20)
-HeightLabel.Position = UDim2.new(0, 5, 0, 5)
-HeightLabel.Text = "Height:"
-HeightLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-HeightLabel.Font = Enum.Font.SourceSansBold
-HeightLabel.TextSize = 13
-HeightLabel.BackgroundTransparency = 1
-HeightLabel.Parent = ScalerContent
-
-local HeightInput = Instance.new("TextBox")
-HeightInput.Size = UDim2.new(0.3, -20, 0, 20)
-HeightInput.Position = UDim2.new(0, 65, 0, 5)
-HeightInput.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
-HeightInput.TextColor3 = Color3.fromRGB(255, 255, 255)
-HeightInput.Font = Enum.Font.Code
-HeightInput.TextSize = 13
-HeightInput.Text = "1"
-HeightInput.Parent = ScalerContent
-
--- 2. Width
-local WidthLabel = Instance.new("TextLabel")
-WidthLabel.Size = UDim2.new(0, 60, 0, 20)
-WidthLabel.Position = UDim2.new(0, 5, 0, 30)
-WidthLabel.Text = "Width:"
-WidthLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-WidthLabel.Font = Enum.Font.SourceSansBold
-WidthLabel.TextSize = 13
-WidthLabel.BackgroundTransparency = 1
-WidthLabel.Parent = ScalerContent
-
-local WidthInput = Instance.new("TextBox")
-WidthInput.Size = UDim2.new(0.3, -20, 0, 20)
-WidthInput.Position = UDim2.new(0, 65, 0, 30)
-WidthInput.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
-WidthInput.TextColor3 = Color3.fromRGB(255, 255, 255)
-WidthInput.Font = Enum.Font.Code
-WidthInput.TextSize = 13
-WidthInput.Text = "1"
-WidthInput.Parent = ScalerContent
-
--- 3. Depth
-local DepthLabel = Instance.new("TextLabel")
-DepthLabel.Size = UDim2.new(0, 60, 0, 20)
-DepthLabel.Position = UDim2.new(0, 5, 0, 55)
-DepthLabel.Text = "Depth:"
-DepthLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-DepthLabel.Font = Enum.Font.SourceSansBold
-DepthLabel.TextSize = 13
-DepthLabel.BackgroundTransparency = 1
-DepthLabel.Parent = ScalerContent
-
-local DepthInput = Instance.new("TextBox")
-DepthInput.Size = UDim2.new(0.3, -20, 0, 20)
-DepthInput.Position = UDim2.new(0, 65, 0, 55)
-DepthInput.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
-DepthInput.TextColor3 = Color3.fromRGB(255, 255, 255)
-DepthInput.Font = Enum.Font.Code
-DepthInput.TextSize = 13
-DepthInput.Text = "1"
-DepthInput.Parent = ScalerContent
-
--- 4. Head
-local HeadLabel = Instance.new("TextLabel")
-HeadLabel.Size = UDim2.new(0, 60, 0, 20)
-HeadLabel.Position = UDim2.new(0, 5, 0, 80)
-HeadLabel.Text = "Head:"
-HeadLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-HeadLabel.Font = Enum.Font.SourceSansBold
-HeadLabel.TextSize = 13
-HeadLabel.BackgroundTransparency = 1
-HeadLabel.Parent = ScalerContent
-
-local HeadInput = Instance.new("TextBox")
-HeadInput.Size = UDim2.new(0.3, -20, 0, 20)
-HeadInput.Position = UDim2.new(0, 65, 0, 80)
-HeadInput.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
-HeadInput.TextColor3 = Color3.fromRGB(255, 255, 255)
-HeadInput.Font = Enum.Font.Code
-HeadInput.TextSize = 13
-HeadInput.Text = "1"
-HeadInput.Parent = ScalerContent
-
--- 5. BodyType
-local BodyTypeLabel = Instance.new("TextLabel")
-BodyTypeLabel.Size = UDim2.new(0, 60, 0, 20)
-BodyTypeLabel.Position = UDim2.new(0, 5, 0, 105)
-BodyTypeLabel.Text = "BodyType:"
-BodyTypeLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-BodyTypeLabel.Font = Enum.Font.SourceSansBold
-BodyTypeLabel.TextSize = 13
-BodyTypeLabel.BackgroundTransparency = 1
-BodyTypeLabel.Parent = ScalerContent
-
-local BodyTypeInput = Instance.new("TextBox")
-BodyTypeInput.Size = UDim2.new(0.3, -20, 0, 20)
-BodyTypeInput.Position = UDim2.new(0, 65, 0, 105)
-BodyTypeInput.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
-BodyTypeInput.TextColor3 = Color3.fromRGB(255, 255, 255)
-BodyTypeInput.Font = Enum.Font.Code
-BodyTypeInput.TextSize = 13
-BodyTypeInput.Text = "0"
-BodyTypeInput.Parent = ScalerContent
-
-local ApplyScaleBtn = Instance.new("TextButton")
-ApplyScaleBtn.Size = UDim2.new(0.4, 0, 0, 120) 
-ApplyScaleBtn.Position = UDim2.new(0.6, -5, 0, 5)
-ApplyScaleBtn.BackgroundColor3 = Color3.fromRGB(249, 180, 0)
-ApplyScaleBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
-ApplyScaleBtn.Font = Enum.Font.SourceSansBold
-ApplyScaleBtn.TextSize = 14
-ApplyScaleBtn.Text = "Apply Sizes"
-ApplyScaleBtn.BorderSizePixel = 0
-ApplyScaleBtn.Parent = ScalerContent
-
--- Dropdown Toggle Logic
-local scalerExpanded = false
-ScalerToggleBtn.MouseButton1Click:Connect(function()
-    scalerExpanded = not scalerExpanded
-    if scalerExpanded then
-        ScalerFrame.Size = UDim2.new(1, -5, 0, 165)
-        ScalerContent.Visible = true
-        ScalerToggleBtn.Text = "  📏 Custom Avatar Scaler [ ▲ ]"
-    else
-        ScalerFrame.Size = UDim2.new(1, -5, 0, 30)
-        ScalerContent.Visible = false
-        ScalerToggleBtn.Text = "  📏 Custom Avatar Scaler [ ▼ ]"
-    end
-end)
-
--- Apply Button Logic
-ApplyScaleBtn.MouseButton1Click:Connect(function()
-    local char = LocalPlayer.Character
-    if not char then return end
-    local humanoid = char:FindFirstChildOfClass("Humanoid")
-    if not humanoid then return end
-
-    local success, description = pcall(function() return humanoid:GetAppliedDescription() end)
-    if not success or not description then return end
-
-    ApplyScaleBtn.Text = "Scanning..."
-    
-    local outfitData = {}
-    local function getVal(prop)
-        local ok, val = pcall(function() return description[prop] end)
-        return (ok and val ~= nil) and val or nil
-    end
-
-    local hc = getVal("HeadColor")
-    if typeof(hc) == "Color3" then outfitData.SkinTone = {hc.R, hc.G, hc.B} end
-
-    local props = {"Face", "Shirt", "Pants", "GraphicTShirt", "Head", "Torso", "LeftArm", "RightArm", "LeftLeg", "RightLeg", "IdleAnimation", "WalkAnimation", "RunAnimation", "JumpAnimation", "FallAnimation", "ClimbAnimation", "SwimAnimation", "ProportionScale"}
-    for _, p in ipairs(props) do outfitData[p] = getVal(p) end
-
-    outfitData.Accessories = {}
-    pcall(function()
-        local accs = description:GetAccessories(true)
-        if accs then
-            for _, a in pairs(accs) do
-                table.insert(outfitData.Accessories, {
-                    AssetId = a.AssetId,
-                    IsLayered = a.IsLayered,
-                    AccessoryType = a.AccessoryType and tostring(a.AccessoryType):gsub("Enum.AccessoryType.", "") or a.AccessoryType
-                })
-            end
-        end
-    end)
-
-    -- INJECT ALL CUSTOM SIZES
-    outfitData.HeightScale = tonumber(HeightInput.Text) or 1
-    outfitData.WidthScale = tonumber(WidthInput.Text) or 1
-    outfitData.DepthScale = tonumber(DepthInput.Text) or 1
-    outfitData.HeadScale = tonumber(HeadInput.Text) or 1
-    outfitData.BodyTypeScale = tonumber(BodyTypeInput.Text) or 0
-
-    local payload = buildBatchPayload(outfitData)
-    local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
-
-    if not Send then
-        ApplyScaleBtn.Text = "Loading Net..."
-        pcall(function() loadstring(game:HttpGet("https://pastebin.com/raw/GiEmv8Qf"))() end)
-        task.wait(1)
-        Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
-    end
-
-    if Send then
-        ApplyScaleBtn.Text = "Applying..."
-        task.spawn(function()
-            for i = 1, 3 do Send("wear_outfit_from_desc", payload) task.wait(0.1) end
-            task.wait(0.2)
-            
-            if outfitData.SkinTone then 
-                pcall(function() 
-                    local c = Color3.new(outfitData.SkinTone[1], outfitData.SkinTone[2], outfitData.SkinTone[3]) 
-                    for i = 1, 3 do Send("skin_tone", c) task.wait(0.1) end 
-                end) 
-            end
-            
-            for i=1,3 do Send("body_scale", "HeightScale", outfitData.HeightScale * 100) task.wait(0.05) end
-            for i=1,3 do Send("body_scale", "WidthScale", outfitData.WidthScale * 100) task.wait(0.05) end
-            for i=1,3 do Send("body_scale", "DepthScale", outfitData.DepthScale * 100) task.wait(0.05) end
-            for i=1,3 do Send("body_scale", "HeadScale", outfitData.HeadScale * 100) task.wait(0.05) end
-            for i=1,3 do Send("body_scale", "BodyTypeScale", outfitData.BodyTypeScale * 100) task.wait(0.05) end
-            if outfitData.ProportionScale then for i=1,3 do Send("body_scale", "ProportionScale", outfitData.ProportionScale * 100) task.wait(0.05) end end
-
-            ApplyScaleBtn.Text = "Size Applied!"
-            ApplyScaleBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
-            task.wait(1.5)
-            ApplyScaleBtn.Text = "Apply Sizes"
-            ApplyScaleBtn.BackgroundColor3 = Color3.fromRGB(249, 180, 0)
-        end)
-    else
-        ApplyScaleBtn.Text = "Net Error"
-        ApplyScaleBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-        task.wait(1.5)
-        ApplyScaleBtn.Text = "Apply Sizes"
-        ApplyScaleBtn.BackgroundColor3 = Color3.fromRGB(249, 180, 0)
-    end
-end)
-------
--- ==============================================================
+)==============================================================
 -- 🛠️ SMART PREMIUM TOOL SPAWNER (Hold for Options + No Cooldown)
 -- ==============================================================
 local noCooldownEnabled = false
@@ -1887,7 +1636,7 @@ end
 
 SpawnToolBtn.MouseButton1Click:Connect(requestToolSpawn)
 -- ==========================================
--- SYNCHRONIZED "GIVE -> FIRE -> SERVER DELETE" BYPASS
+-- ASYNC DUAL-THREAD RAPID FIRE (MAX SPEED)
 -- ==========================================
 local isFiring = false
 
@@ -1917,63 +1666,61 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
             local bp = player:FindFirstChild("Backpack")
             local currentTool = char and char:FindFirstChildOfClass("Tool")
             
-            -- Trigger the loop if you click while holding the Rocket Launcher
             if currentTool and currentTool.Name == "RocketLauncher" then
                 isFiring = true
                 
-                task.spawn(function()
-                    local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
-                    
-                    -- Clean up any extra launchers in the backpack to start fresh
-                    if bp then
-                        for _, v in ipairs(bp:GetChildren()) do
-                            if v.Name == "RocketLauncher" then 
-                                if Send then Send("delete_tool") end
-                                v:Destroy() 
-                            end
+                local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
+                
+                -- Initial cleanup
+                if bp then
+                    for _, v in ipairs(bp:GetChildren()) do
+                        if v.Name == "RocketLauncher" then 
+                            if Send then Send("delete_tool") end
+                            v:Destroy() 
                         end
                     end
-                    
-                    -- Destroy the one currently in your hand to begin the cycle cleanly
-                    if Send then Send("delete_tool") end
-                    currentTool:Destroy()
-                    
-                    while isFiring and noCooldownEnabled and char and bp do
-                        -- STEP 1: Ask the server to GIVE the gun
+                end
+                if Send then Send("delete_tool") end
+                currentTool:Destroy()
+                
+                -- 🚀 THREAD 1: THE LOADER (Spams requests endlessly without waiting)
+                task.spawn(function()
+                    while isFiring and noCooldownEnabled do
                         if Send then Send("get_tool", "RocketLauncher") end
-                        
-                        -- STEP 2: Wait perfectly for it to arrive
-                        local newLauncher = bp:WaitForChild("RocketLauncher", 1)
+                        -- Requesting a new launcher 20 times a second!
+                        task.wait(0.05) 
+                    end
+                end)
+                
+                -- 💥 THREAD 2: THE SHOOTER (Fires the exact millisecond ammo arrives)
+                task.spawn(function()
+                    while isFiring and noCooldownEnabled and char and bp do
+                        -- Instantly grab any launcher that appears
+                        local newLauncher = bp:FindFirstChild("RocketLauncher")
                         
                         if newLauncher then
-                            -- STEP 3: Instant equip
+                            -- Instant equip
                             newLauncher.Parent = char
+                            task.wait() -- 1 frame for server to register it in your hand
                             
-                            -- Wait exactly 1 physics frame so the server registers it in your hand
-                            task.wait() 
-                            
-                            -- STEP 4: Aim and FIRE
+                            -- Aim and FIRE
                             local handle = newLauncher:FindFirstChild("Handle")
                             local spawnPos = handle and handle.Position or (char:GetPivot().Position + Vector3.new(0, 2, 0))
                             local targetCFrame = CFrame.new(spawnPos, mouse.Hit.Position)
                             
                             if Send then 
                                 Send("shoot_rocket", newLauncher, targetCFrame) 
-                                
-                                -- STEP 5: PROPER SERVER DELETION (Your Exploit!)
-                                -- Tells the server to clear our inventory cap
-                                Send("delete_tool")
+                                Send("delete_tool") 
                             end
                             
-                            -- Locally destroy it to keep our screen clean and reduce lag
                             newLauncher:Destroy()
                         else
-                            -- If the server is lagging, wait a tiny bit before asking again
-                            task.wait(0.1)
+                            -- If backpack is empty, wait exactly 1 frame and check again
+                            task.wait()
                         end
                     end
                     
-                    -- When you let go of the mouse, request one last launcher so you aren't empty-handed
+                    -- When you let go, restock 1 launcher so you aren't empty-handed
                     if Send then Send("get_tool", "RocketLauncher") end
                 end)
             end
@@ -2488,6 +2235,257 @@ end)
 
 
 
+-- ========== AVATAR SCALER TOOL (Collapsible) ==========
+local ScalerFrame = Instance.new("Frame")
+ScalerFrame.Size = UDim2.new(1, -5, 0, 30) -- Starts collapsed
+ScalerFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 38)
+ScalerFrame.BorderSizePixel = 0
+ScalerFrame.ClipsDescendants = true
+ScalerFrame.Parent = ToolsScroll
+
+-- The Clickable Title / Dropdown Button
+local ScalerToggleBtn = Instance.new("TextButton")
+ScalerToggleBtn.Size = UDim2.new(1, 0, 0, 30)
+ScalerToggleBtn.Position = UDim2.new(0, 0, 0, 0)
+ScalerToggleBtn.Text = "  📏 Custom Avatar Scaler [ ▼ ]"
+ScalerToggleBtn.TextColor3 = Color3.fromRGB(0, 255, 200)
+ScalerToggleBtn.Font = Enum.Font.SourceSansBold
+ScalerToggleBtn.TextSize = 14
+ScalerToggleBtn.TextXAlignment = Enum.TextXAlignment.Left
+ScalerToggleBtn.BackgroundColor3 = Color3.fromRGB(25, 25, 32)
+ScalerToggleBtn.BorderSizePixel = 0
+ScalerToggleBtn.Parent = ScalerFrame
+
+-- Container for all the inputs (Hidden by default)
+local ScalerContent = Instance.new("Frame")
+ScalerContent.Size = UDim2.new(1, 0, 1, -30)
+ScalerContent.Position = UDim2.new(0, 0, 0, 30)
+ScalerContent.BackgroundTransparency = 1
+ScalerContent.Visible = false
+ScalerContent.Parent = ScalerFrame
+
+-- 1. Height
+local HeightLabel = Instance.new("TextLabel")
+HeightLabel.Size = UDim2.new(0, 60, 0, 20)
+HeightLabel.Position = UDim2.new(0, 5, 0, 5)
+HeightLabel.Text = "Height:"
+HeightLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+HeightLabel.Font = Enum.Font.SourceSansBold
+HeightLabel.TextSize = 13
+HeightLabel.BackgroundTransparency = 1
+HeightLabel.Parent = ScalerContent
+
+local HeightInput = Instance.new("TextBox")
+HeightInput.Size = UDim2.new(0.3, -20, 0, 20)
+HeightInput.Position = UDim2.new(0, 65, 0, 5)
+HeightInput.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
+HeightInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+HeightInput.Font = Enum.Font.Code
+HeightInput.TextSize = 13
+HeightInput.Text = "1"
+HeightInput.Parent = ScalerContent
+
+-- 2. Width
+local WidthLabel = Instance.new("TextLabel")
+WidthLabel.Size = UDim2.new(0, 60, 0, 20)
+WidthLabel.Position = UDim2.new(0, 5, 0, 30)
+WidthLabel.Text = "Width:"
+WidthLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+WidthLabel.Font = Enum.Font.SourceSansBold
+WidthLabel.TextSize = 13
+WidthLabel.BackgroundTransparency = 1
+WidthLabel.Parent = ScalerContent
+
+local WidthInput = Instance.new("TextBox")
+WidthInput.Size = UDim2.new(0.3, -20, 0, 20)
+WidthInput.Position = UDim2.new(0, 65, 0, 30)
+WidthInput.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
+WidthInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+WidthInput.Font = Enum.Font.Code
+WidthInput.TextSize = 13
+WidthInput.Text = "1"
+WidthInput.Parent = ScalerContent
+
+-- 3. Depth
+local DepthLabel = Instance.new("TextLabel")
+DepthLabel.Size = UDim2.new(0, 60, 0, 20)
+DepthLabel.Position = UDim2.new(0, 5, 0, 55)
+DepthLabel.Text = "Depth:"
+DepthLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+DepthLabel.Font = Enum.Font.SourceSansBold
+DepthLabel.TextSize = 13
+DepthLabel.BackgroundTransparency = 1
+DepthLabel.Parent = ScalerContent
+
+local DepthInput = Instance.new("TextBox")
+DepthInput.Size = UDim2.new(0.3, -20, 0, 20)
+DepthInput.Position = UDim2.new(0, 65, 0, 55)
+DepthInput.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
+DepthInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+DepthInput.Font = Enum.Font.Code
+DepthInput.TextSize = 13
+DepthInput.Text = "1"
+DepthInput.Parent = ScalerContent
+
+-- 4. Head
+local HeadLabel = Instance.new("TextLabel")
+HeadLabel.Size = UDim2.new(0, 60, 0, 20)
+HeadLabel.Position = UDim2.new(0, 5, 0, 80)
+HeadLabel.Text = "Head:"
+HeadLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+HeadLabel.Font = Enum.Font.SourceSansBold
+HeadLabel.TextSize = 13
+HeadLabel.BackgroundTransparency = 1
+HeadLabel.Parent = ScalerContent
+
+local HeadInput = Instance.new("TextBox")
+HeadInput.Size = UDim2.new(0.3, -20, 0, 20)
+HeadInput.Position = UDim2.new(0, 65, 0, 80)
+HeadInput.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
+HeadInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+HeadInput.Font = Enum.Font.Code
+HeadInput.TextSize = 13
+HeadInput.Text = "1"
+HeadInput.Parent = ScalerContent
+
+-- 5. BodyType
+local BodyTypeLabel = Instance.new("TextLabel")
+BodyTypeLabel.Size = UDim2.new(0, 60, 0, 20)
+BodyTypeLabel.Position = UDim2.new(0, 5, 0, 105)
+BodyTypeLabel.Text = "BodyType:"
+BodyTypeLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+BodyTypeLabel.Font = Enum.Font.SourceSansBold
+BodyTypeLabel.TextSize = 13
+BodyTypeLabel.BackgroundTransparency = 1
+BodyTypeLabel.Parent = ScalerContent
+
+local BodyTypeInput = Instance.new("TextBox")
+BodyTypeInput.Size = UDim2.new(0.3, -20, 0, 20)
+BodyTypeInput.Position = UDim2.new(0, 65, 0, 105)
+BodyTypeInput.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
+BodyTypeInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+BodyTypeInput.Font = Enum.Font.Code
+BodyTypeInput.TextSize = 13
+BodyTypeInput.Text = "0"
+BodyTypeInput.Parent = ScalerContent
+
+local ApplyScaleBtn = Instance.new("TextButton")
+ApplyScaleBtn.Size = UDim2.new(0.4, 0, 0, 120) 
+ApplyScaleBtn.Position = UDim2.new(0.6, -5, 0, 5)
+ApplyScaleBtn.BackgroundColor3 = Color3.fromRGB(249, 180, 0)
+ApplyScaleBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
+ApplyScaleBtn.Font = Enum.Font.SourceSansBold
+ApplyScaleBtn.TextSize = 14
+ApplyScaleBtn.Text = "Apply Sizes"
+ApplyScaleBtn.BorderSizePixel = 0
+ApplyScaleBtn.Parent = ScalerContent
+
+-- Dropdown Toggle Logic
+local scalerExpanded = false
+ScalerToggleBtn.MouseButton1Click:Connect(function()
+    scalerExpanded = not scalerExpanded
+    if scalerExpanded then
+        ScalerFrame.Size = UDim2.new(1, -5, 0, 165)
+        ScalerContent.Visible = true
+        ScalerToggleBtn.Text = "  📏 Custom Avatar Scaler [ ▲ ]"
+    else
+        ScalerFrame.Size = UDim2.new(1, -5, 0, 30)
+        ScalerContent.Visible = false
+        ScalerToggleBtn.Text = "  📏 Custom Avatar Scaler [ ▼ ]"
+    end
+end)
+
+-- Apply Button Logic
+ApplyScaleBtn.MouseButton1Click:Connect(function()
+    local char = LocalPlayer.Character
+    if not char then return end
+    local humanoid = char:FindFirstChildOfClass("Humanoid")
+    if not humanoid then return end
+
+    local success, description = pcall(function() return humanoid:GetAppliedDescription() end)
+    if not success or not description then return end
+
+    ApplyScaleBtn.Text = "Scanning..."
+    
+    local outfitData = {}
+    local function getVal(prop)
+        local ok, val = pcall(function() return description[prop] end)
+        return (ok and val ~= nil) and val or nil
+    end
+
+    local hc = getVal("HeadColor")
+    if typeof(hc) == "Color3" then outfitData.SkinTone = {hc.R, hc.G, hc.B} end
+
+    local props = {"Face", "Shirt", "Pants", "GraphicTShirt", "Head", "Torso", "LeftArm", "RightArm", "LeftLeg", "RightLeg", "IdleAnimation", "WalkAnimation", "RunAnimation", "JumpAnimation", "FallAnimation", "ClimbAnimation", "SwimAnimation", "ProportionScale"}
+    for _, p in ipairs(props) do outfitData[p] = getVal(p) end
+
+    outfitData.Accessories = {}
+    pcall(function()
+        local accs = description:GetAccessories(true)
+        if accs then
+            for _, a in pairs(accs) do
+                table.insert(outfitData.Accessories, {
+                    AssetId = a.AssetId,
+                    IsLayered = a.IsLayered,
+                    AccessoryType = a.AccessoryType and tostring(a.AccessoryType):gsub("Enum.AccessoryType.", "") or a.AccessoryType
+                })
+            end
+        end
+    end)
+
+    -- INJECT ALL CUSTOM SIZES
+    outfitData.HeightScale = tonumber(HeightInput.Text) or 1
+    outfitData.WidthScale = tonumber(WidthInput.Text) or 1
+    outfitData.DepthScale = tonumber(DepthInput.Text) or 1
+    outfitData.HeadScale = tonumber(HeadInput.Text) or 1
+    outfitData.BodyTypeScale = tonumber(BodyTypeInput.Text) or 0
+
+    local payload = buildBatchPayload(outfitData)
+    local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
+
+    if not Send then
+        ApplyScaleBtn.Text = "Loading Net..."
+        pcall(function() loadstring(game:HttpGet("https://pastebin.com/raw/GiEmv8Qf"))() end)
+        task.wait(1)
+        Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
+    end
+
+    if Send then
+        ApplyScaleBtn.Text = "Applying..."
+        task.spawn(function()
+            for i = 1, 3 do Send("wear_outfit_from_desc", payload) task.wait(0.1) end
+            task.wait(0.2)
+            
+            if outfitData.SkinTone then 
+                pcall(function() 
+                    local c = Color3.new(outfitData.SkinTone[1], outfitData.SkinTone[2], outfitData.SkinTone[3]) 
+                    for i = 1, 3 do Send("skin_tone", c) task.wait(0.1) end 
+                end) 
+            end
+            
+            for i=1,3 do Send("body_scale", "HeightScale", outfitData.HeightScale * 100) task.wait(0.05) end
+            for i=1,3 do Send("body_scale", "WidthScale", outfitData.WidthScale * 100) task.wait(0.05) end
+            for i=1,3 do Send("body_scale", "DepthScale", outfitData.DepthScale * 100) task.wait(0.05) end
+            for i=1,3 do Send("body_scale", "HeadScale", outfitData.HeadScale * 100) task.wait(0.05) end
+            for i=1,3 do Send("body_scale", "BodyTypeScale", outfitData.BodyTypeScale * 100) task.wait(0.05) end
+            if outfitData.ProportionScale then for i=1,3 do Send("body_scale", "ProportionScale", outfitData.ProportionScale * 100) task.wait(0.05) end end
+
+            ApplyScaleBtn.Text = "Size Applied!"
+            ApplyScaleBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
+            task.wait(1.5)
+            ApplyScaleBtn.Text = "Apply Sizes"
+            ApplyScaleBtn.BackgroundColor3 = Color3.fromRGB(249, 180, 0)
+        end)
+    else
+        ApplyScaleBtn.Text = "Net Error"
+        ApplyScaleBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+        task.wait(1.5)
+        ApplyScaleBtn.Text = "Apply Sizes"
+        ApplyScaleBtn.BackgroundColor3 = Color3.fromRGB(249, 180, 0)
+    end
+end)
+------
+-- 
 
 -- Resize Handle (Bottom Right Corner)
 local ResizeHandle = Instance.new("TextButton")
