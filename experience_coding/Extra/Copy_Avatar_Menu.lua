@@ -1839,6 +1839,20 @@ NoCooldownBtn.Text = "⚡ Rapid Fire: OFF"
 NoCooldownBtn.BorderSizePixel = 0
 NoCooldownBtn.Parent = ToolContainer
 Instance.new("UICorner", NoCooldownBtn).CornerRadius = UDim.new(0, 6)
+-- ==========================================
+-- 🎆 "ANNOY SERVER" UI BUTTON
+-- ==========================================
+local KillAllBtn = Instance.new("TextButton")
+KillAllBtn.Size = UDim2.new(1, -20, 0, 32)
+KillAllBtn.Position = UDim2.new(0, 10, 0, 160) -- Positioned right below the Rapid Fire button
+KillAllBtn.BackgroundColor3 = Color3.fromRGB(150, 40, 40)
+KillAllBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+KillAllBtn.Font = Enum.Font.SourceSansBold
+KillAllBtn.TextSize = 14
+KillAllBtn.Text = "🎆 RL ANNOY ALL: OFF"
+KillAllBtn.BorderSizePixel = 0
+KillAllBtn.Parent = ToolContent -- ⚠️ UPDATE THIS TO YOUR TOOL MENU FRAME NAME!
+Instance.new("UICorner", KillAllBtn).CornerRadius = UDim.new(0, 6)
 
 -- 6. Explosive Trait Toggle Button (NEW!)
 local ExplosiveTraitBtn = Instance.new("TextButton")
@@ -1982,6 +1996,93 @@ end)
 UserInputService.InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         isFiring = false
+    end
+end)
+-- ==========================================
+-- 🎆 THE MICHAEL BAY EXPERIENCE (ANNOY ALL)
+-- ==========================================
+local isKillAllActive = false
+
+local function isAlive(targetPlayer)
+    if not targetPlayer or not targetPlayer.Character then return false end
+    local head = targetPlayer.Character:FindFirstChild("Head")
+    return head ~= nil 
+end
+
+KillAllBtn.MouseButton1Click:Connect(function()
+    isKillAllActive = not isKillAllActive
+    
+    if isKillAllActive then
+        KillAllBtn.Text = "🎆 RL ANNOY ALL: ON"
+        KillAllBtn.BackgroundColor3 = Color3.fromRGB(200, 80, 20)
+        
+        -- 🛑 ANTI-CONFLICT: Turn off Rapid Fire so they don't break each other
+        if noCooldownEnabled then
+            noCooldownEnabled = false
+            NoCooldownBtn.Text = "⚡ Rapid Fire: OFF"
+            NoCooldownBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+        end
+        
+        local player = game:GetService("Players").LocalPlayer
+        local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
+        
+        if Send then Send("delete_tool") end
+        
+        task.spawn(function()
+            while isKillAllActive do
+                local char = player.Character
+                local bp = player:FindFirstChild("Backpack")
+                
+                if not char or not bp then 
+                    task.wait(1)
+                    continue 
+                end
+                
+                for _, targetPlayer in ipairs(game:GetService("Players"):GetPlayers()) do
+                    if not isKillAllActive then break end 
+                    
+                    if targetPlayer ~= player and isAlive(targetPlayer) then
+                        
+                        -- Fire a rapid-burst of 3 rockets at their face
+                        for burst = 1, 3 do
+                            if Send then Send("get_tool", "RocketLauncher") end
+                            local newLauncher = bp:WaitForChild("RocketLauncher", 0.15)
+                            
+                            if newLauncher then
+                                newLauncher.Parent = char
+                                local handle = newLauncher:FindFirstChild("Handle")
+                                local spawnPos = handle and handle.Position or (char:GetPivot().Position + Vector3.new(0, 2, 0))
+                                
+                                local success, targetCFrame = pcall(function()
+                                    local headPos = targetPlayer.Character.Head.Position
+                                    -- Add a tiny random spread so the explosions surround their camera
+                                    local spread = Vector3.new(
+                                        math.random(-3, 3), 
+                                        math.random(-3, 3), 
+                                        math.random(-3, 3)
+                                    )
+                                    return CFrame.new(spawnPos, headPos + spread)
+                                end)
+                                
+                                if success and targetCFrame then
+                                    if Send then Send("shoot_rocket", newLauncher, targetCFrame) end
+                                end
+                                
+                                if Send then Send("delete_tool") end
+                                newLauncher:Destroy()
+                            end
+                            task.wait(0.01) -- Minimum delay for the burst
+                        end
+                    end
+                end
+                task.wait(0.1) -- Short breather before the next server sweep
+            end
+            
+            if Send then Send("get_tool", "RocketLauncher") end
+        end)
+    else
+        KillAllBtn.Text = "🎆 RL ANNOY ALL: OFF"
+        KillAllBtn.BackgroundColor3 = Color3.fromRGB(150, 40, 40)
     end
 end)
 
