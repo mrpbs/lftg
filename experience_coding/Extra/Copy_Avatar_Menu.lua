@@ -1841,23 +1841,10 @@ NoCooldownBtn.Parent = ToolContainer
 Instance.new("UICorner", NoCooldownBtn).CornerRadius = UDim.new(0, 6)
 
 
-local ShotgunBtn = Instance.new("TextButton")
-ShotgunBtn.Size = UDim2.new(1, -20, 0, 32)
-ShotgunBtn.Position = UDim2.new(0, 10, 0, 160) 
-ShotgunBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
-ShotgunBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-ShotgunBtn.Font = Enum.Font.SourceSansBold
-ShotgunBtn.TextSize = 14
-ShotgunBtn.Text = "💥 True Shotgun: OFF"
-ShotgunBtn.BorderSizePixel = 0
-ShotgunBtn.Parent = ToolContainer 
-Instance.new("UICorner", ShotgunBtn).CornerRadius = UDim.new(0, 6)
-
-
 -- 6. Explosive Trait Toggle Button 
 local ExplosiveTraitBtn = Instance.new("TextButton")
 ExplosiveTraitBtn.Size = UDim2.new(1, -20, 0, 32)
-ExplosiveTraitBtn.Position = UDim2.new(0, 10, 0, 200) -- 3rd Button (Pushed down by 40)
+ExplosiveTraitBtn.Position = UDim2.new(0, 10, 0, 160) -- 3rd Button (Pushed down by 40)
 ExplosiveTraitBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
 ExplosiveTraitBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 ExplosiveTraitBtn.Font = Enum.Font.SourceSansBold
@@ -2092,74 +2079,181 @@ UserInputService.InputEnded:Connect(function(input)
 end)
 
 -- ==========================================
--- 💣 EXPLOSIVE TRAIT (AURA MINE SPAMMER)
+-- 💣 EXPLOSIVE TRAIT: CARPET BOMBING (RADIUS SPAM)
 -- ==========================================
-local explosiveTraitEnabled = false
+local isScattering = false
+local currentRadius = 50 -- Default radius
+local visualCircle = nil
+local updateLoop = nil
+
+-- 1. 🔘 THE TOGGLE BUTTON
+local ExplosiveTraitBtn = Instance.new("TextButton")
+ExplosiveTraitBtn.Size = UDim2.new(1, -20, 0, 32)
+ExplosiveTraitBtn.Position = UDim2.new(0, 10, 0, 200) -- Adjust Y position as needed
+ExplosiveTraitBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+ExplosiveTraitBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ExplosiveTraitBtn.Font = Enum.Font.SourceSansBold
+ExplosiveTraitBtn.TextSize = 14
+ExplosiveTraitBtn.Text = "💣 Scatter Mines: OFF"
+ExplosiveTraitBtn.BorderSizePixel = 0
+ExplosiveTraitBtn.Parent = ToolContainer -- Make sure this matches your UI frame
+Instance.new("UICorner", ExplosiveTraitBtn).CornerRadius = UDim.new(0, 6)
+
+-- 2. 🎚️ THE RADIUS SLIDER
+local SliderBg = Instance.new("TextButton") -- Using a button to detect mouse clicks
+SliderBg.Size = UDim2.new(1, -20, 0, 20)
+SliderBg.Position = UDim2.new(0, 10, 0, 236) -- Placed right below the button
+SliderBg.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+SliderBg.Text = ""
+SliderBg.AutoButtonColor = false
+SliderBg.Parent = ToolContainer
+Instance.new("UICorner", SliderBg).CornerRadius = UDim.new(0, 4)
+
+local SliderFill = Instance.new("Frame")
+SliderFill.Size = UDim2.new(0.5, 0, 1, 0) -- Starts at 50% (Radius 50)
+SliderFill.BackgroundColor3 = Color3.fromRGB(200, 100, 50)
+SliderFill.BorderSizePixel = 0
+SliderFill.Parent = SliderBg
+Instance.new("UICorner", SliderFill).CornerRadius = UDim.new(0, 4)
+
+local SliderLabel = Instance.new("TextLabel")
+SliderLabel.Size = UDim2.new(1, 0, 1, 0)
+SliderLabel.BackgroundTransparency = 1
+SliderLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+SliderLabel.Font = Enum.Font.SourceSansBold
+SliderLabel.TextSize = 13
+SliderLabel.Text = "Radius: 50"
+SliderLabel.Parent = SliderBg
+
+-- 🖱️ Slider Math & Drag Logic
+local UserInputService = game:GetService("UserInputService")
+local isDraggingSlider = false
+
+SliderBg.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        isDraggingSlider = true
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        isDraggingSlider = false
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if isDraggingSlider and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local mousePos = UserInputService:GetMouseLocation().X
+        local bgPos = SliderBg.AbsolutePosition.X
+        local bgSize = SliderBg.AbsoluteSize.X
+        
+        -- Calculate percentage and clamp it between 0.01 (Radius 1) and 1 (Radius 100)
+        local percent = math.clamp((mousePos - bgPos) / bgSize, 0.01, 1)
+        SliderFill.Size = UDim2.new(percent, 0, 1, 0)
+        
+        currentRadius = math.floor(percent * 100)
+        SliderLabel.Text = "Radius: " .. currentRadius
+    end
+end)
+
+-- 3. 💥 THE CARPET BOMBING LOGIC
+local player = game:GetService("Players").LocalPlayer
+
+local function cleanUpVisualizer()
+    if visualCircle then
+        visualCircle:Destroy()
+        visualCircle = nil
+    end
+    if updateLoop then
+        updateLoop:Disconnect()
+        updateLoop = nil
+    end
+end
 
 ExplosiveTraitBtn.MouseButton1Click:Connect(function()
-    explosiveTraitEnabled = not explosiveTraitEnabled
+    isScattering = not isScattering
     local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
-    local player = game:GetService("Players").LocalPlayer
     
-    if explosiveTraitEnabled then
-        ExplosiveTraitBtn.Text = "💣 Explosive Trait: ON"
-        ExplosiveTraitBtn.BackgroundColor3 = Color3.fromRGB(200, 100, 50) -- Explosive Orange
+    if isScattering then
+        ExplosiveTraitBtn.Text = "💣 Scatter Mines: ON"
+        ExplosiveTraitBtn.BackgroundColor3 = Color3.fromRGB(200, 100, 50)
         
+        -- 🎨 Create the Client-Side Visual Circle
+        visualCircle = Instance.new("Part")
+        visualCircle.Shape = Enum.PartType.Cylinder
+        visualCircle.Material = Enum.Material.ForceField
+        visualCircle.Color = Color3.fromRGB(200, 50, 50)
+        visualCircle.Transparency = 0.5
+        visualCircle.Anchored = true
+        visualCircle.CanCollide = false
+        visualCircle.CastShadow = false
+        visualCircle.Parent = workspace
+        
+        -- 🔄 Update the circle's position constantly
+        updateLoop = game:GetService("RunService").RenderStepped:Connect(function()
+            local char = player.Character
+            local root = char and char:FindFirstChild("HumanoidRootPart")
+            if root and visualCircle then
+                -- Cylinders lay sideways, so we rotate it 90 degrees to lay flat on the floor
+                visualCircle.Size = Vector3.new(0.2, currentRadius * 2, currentRadius * 2)
+                visualCircle.CFrame = CFrame.new(root.Position - Vector3.new(0, 2.9, 0)) * CFrame.Angles(0, 0, math.rad(90))
+            end
+        end)
+        
+        -- 💣 The Spawner Loop
         task.spawn(function()
-            while explosiveTraitEnabled do
+            while isScattering do
                 local char = player.Character
                 local root = char and char:FindFirstChild("HumanoidRootPart")
                 
                 if root and Send then
-                    -- Scan every player in the server
-                    for _, targetPlayer in ipairs(game:GetService("Players"):GetPlayers()) do
-                        if not explosiveTraitEnabled then break end
+                    -- Get the tool
+                    Send("get_tool", "Explosive")
+                    local bp = player:FindFirstChild("Backpack")
+                    local currentExp = char:FindFirstChild("Explosive") or (bp and bp:FindFirstChild("Explosive"))
+                    
+                    if currentExp then
+                        pcall(function() currentExp.Parent = char end)
                         
-                        -- Only target other players who are alive
-                        if targetPlayer ~= player and targetPlayer.Character then
-                            local targetRoot = targetPlayer.Character:FindFirstChild("HumanoidRootPart")
-                            
-                            if targetRoot then
-                                -- Check if they are near you (within 150 studs)
-                                local distance = (root.Position - targetRoot.Position).Magnitude
-                                if distance <= 150 then
-                                    
-                                    -- 1. Constantly ask for explosives to keep inventory full
-                                    Send("get_tool", "Explosive")
-                                    local bp = player:FindFirstChild("Backpack")
-                                    local currentExp = (char:FindFirstChild("Explosive") or (bp and bp:FindFirstChild("Explosive")))
-                                    
-                                    if currentExp then
-                                        -- 2. Force it into your hands instantly
-                                        pcall(function() currentExp.Parent = char end)
-                                        
-                                        -- 3. Calculate the drop position exactly at their feet
-                                        local dropPos = targetRoot.Position - Vector3.new(0, 2.5, 0)
-                                        
-                                        -- 4. Spam the remote 3 times per person to overwhelm the limit
-                                        for i = 1, 3 do
-                                            Send("place", dropPos, Vector3.new(0, 1, 0))
-                                        end
-                                        
-                                        -- 5. Delete to instantly bypass cooldown/limit checks
-                                        Send("delete_tool")
-                                        currentExp:Destroy()
-                                    end
-                                end
-                            end
+                        -- 📐 Scatter Math: Picks a perfectly random spot inside the circle!
+                        local radiusMath = currentRadius * math.sqrt(math.random())
+                        local angleMath = math.random() * 2 * math.pi
+                        
+                        local randomX = radiusMath * math.cos(angleMath)
+                        local randomZ = radiusMath * math.sin(angleMath)
+                        
+                        -- Calculate the final drop position
+                        local dropPos = root.Position + Vector3.new(randomX, -2.5, randomZ)
+                        
+                        -- Bypass limit by sending 2 requests to that specific random spot
+                        for i = 1, 2 do
+                            Send("place", dropPos, Vector3.new(0, 1, 0))
                         end
+                        
+                        -- Delete instantly
+                        Send("delete_tool")
+                        currentExp:Destroy()
                     end
                 end
-                
-                -- Wait a tiny fraction of a second before sweeping the area again
-                task.wait(0.05) 
+                -- Wait practically zero time to spam as fast as possible
+                task.wait(0.01) 
             end
             
-            -- Clean up hands when turned off
             if Send then Send("delete_tool") end
         end)
     else
-        ExplosiveTraitBtn.Text = "💣 Explosive Trait: OFF"
+        ExplosiveTraitBtn.Text = "💣 Scatter Mines: OFF"
+        ExplosiveTraitBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+        cleanUpVisualizer()
+    end
+end)
+
+-- If the player dies, clean up the circle so it doesn't get stuck
+player.CharacterAdded:Connect(function()
+    if isScattering then
+        cleanUpVisualizer()
+        isScattering = false
+        ExplosiveTraitBtn.Text = "💣 Scatter Mines: OFF"
         ExplosiveTraitBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
     end
 end)
@@ -2171,7 +2265,7 @@ applySmartHold(
     ToolMainBtn,    
     ToolContainer,  
     40,             
-    250,            -- Increased height to 200px to perfectly fit the new Explosive button
+    276,            -- Increased height to 200px to perfectly fit the new Explosive button
     0.5,              
     function()
         if ToolInput.Text ~= "" then
