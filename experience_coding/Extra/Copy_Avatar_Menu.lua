@@ -2094,7 +2094,7 @@ UserInputService.InputEnded:Connect(function(input)
 end)
 
 -- ==========================================
--- 💣 EXPLOSIVE TRAIT: CARPET BOMBING (RADIUS SPAM)
+-- 💣 SCATTER MINES: CARPET BOMBING LOGIC
 -- ==========================================
 local isScattering = false
 local currentRadius = 50 
@@ -2102,14 +2102,12 @@ local visualCircle = nil
 local updateLoop = nil
 local player = game:GetService("Players").LocalPlayer
 
-
--- 2. 🎚️ GENERATE THE RADIUS SLIDER (Using your existing function!)
-local radSlider = createSlider(ToolContainer, "Mines Radius: ", 1, 10000, 50, function(newValue)
+-- 🎚️ GENERATE THE RADIUS SLIDER (Make sure createSlider is defined above this!)
+local radSlider = createSlider(ToolContainer, "Mines Radius: ", 1, 1000, 50, function(newValue)
     currentRadius = newValue
 end)
 radSlider.Position = UDim2.new(0, 10, 0, 240)
 
--- 3. 💥 CARPET BOMBING LOGIC
 local function cleanUpVisualizer()
     if visualCircle then
         visualCircle:Destroy()
@@ -2164,15 +2162,14 @@ ScatterMinesBtn.MouseButton1Click:Connect(function()
                     if currentExp then
                         pcall(function() currentExp.Parent = char end)
                         
-                        -- 📐 Scatter Math: Randomly drop anywhere inside the circle
-                        local radiusMath = currentRadius * math.sqrt(math.random())
-                        local angleMath = math.random() * 2 * math.pi
-                        local randomX = radiusMath * math.cos(angleMath)
-                        local randomZ = radiusMath * math.sin(angleMath)
-                        
-                        local dropPos = root.Position + Vector3.new(randomX, -2.5, randomZ)
-                        
-                        for i = 1, 2 do
+                        -- 📐 Simplified Scatter: Picks 5 DIFFERENT spots per tick to flood huge areas!
+                        for i = 1, 5 do
+                            -- Dead-simple math: pick a random X and Z between negative and positive radius
+                            local randomX = math.random(-currentRadius, currentRadius)
+                            local randomZ = math.random(-currentRadius, currentRadius)
+                            
+                            local dropPos = root.Position + Vector3.new(randomX, -2.5, randomZ)
+                            
                             Send("place", dropPos, Vector3.new(0, 1, 0))
                         end
                         
@@ -2201,7 +2198,6 @@ player.CharacterAdded:Connect(function()
         ScatterMinesBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
     end
 end)
-
 -- ==========================================
 -- SMART HOLD CONNECTION
 -- ==========================================
