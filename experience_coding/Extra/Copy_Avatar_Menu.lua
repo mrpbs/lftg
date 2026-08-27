@@ -1830,7 +1830,7 @@ Instance.new("UICorner", SpawnToolBtn).CornerRadius = UDim.new(0, 6)
 -- 5. Rapid Fire Toggle Button
 local NoCooldownBtn = Instance.new("TextButton")
 NoCooldownBtn.Size = UDim2.new(1, -20, 0, 32)
-NoCooldownBtn.Position = UDim2.new(0, 10, 0, 120)
+NoCooldownBtn.Position = UDim2.new(0, 10, 0, 120) -- 1st Button
 NoCooldownBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
 NoCooldownBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 NoCooldownBtn.Font = Enum.Font.SourceSansBold
@@ -1839,25 +1839,26 @@ NoCooldownBtn.Text = "⚡ Rapid Fire: OFF"
 NoCooldownBtn.BorderSizePixel = 0
 NoCooldownBtn.Parent = ToolContainer
 Instance.new("UICorner", NoCooldownBtn).CornerRadius = UDim.new(0, 6)
+
 -- ==========================================
 -- 🎆 "ANNOY SERVER" UI BUTTON
 -- ==========================================
 local KillAllBtn = Instance.new("TextButton")
 KillAllBtn.Size = UDim2.new(1, -20, 0, 32)
-KillAllBtn.Position = UDim2.new(0, 10, 0, 160) -- Positioned right below the Rapid Fire button
+KillAllBtn.Position = UDim2.new(0, 10, 0, 160) -- 2nd Button (Pushed down by 40)
 KillAllBtn.BackgroundColor3 = Color3.fromRGB(150, 40, 40)
 KillAllBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 KillAllBtn.Font = Enum.Font.SourceSansBold
 KillAllBtn.TextSize = 14
 KillAllBtn.Text = "🎆 RL ANNOY ALL: OFF"
 KillAllBtn.BorderSizePixel = 0
-KillAllBtn.Parent = ToolContainer -- ⚠️ UPDATE THIS TO YOUR TOOL MENU FRAME NAME!
+KillAllBtn.Parent = ToolContainer 
 Instance.new("UICorner", KillAllBtn).CornerRadius = UDim.new(0, 6)
 
--- 6. Explosive Trait Toggle Button (NEW!)
+-- 6. Explosive Trait Toggle Button 
 local ExplosiveTraitBtn = Instance.new("TextButton")
 ExplosiveTraitBtn.Size = UDim2.new(1, -20, 0, 32)
-ExplosiveTraitBtn.Position = UDim2.new(0, 10, 0, 158)
+ExplosiveTraitBtn.Position = UDim2.new(0, 10, 0, 200) -- 3rd Button (Pushed down by 40)
 ExplosiveTraitBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
 ExplosiveTraitBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 ExplosiveTraitBtn.Font = Enum.Font.SourceSansBold
