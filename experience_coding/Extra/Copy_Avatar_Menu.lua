@@ -2005,7 +2005,7 @@ local isOverclocked = false
 local isFiring = false
 
 -- ⚠️ Change 'YourButtonVariable' to match the name of your button!
-YourButtonVariable.MouseButton1Click:Connect(function()
+ShotgunBtn.MouseButton1Click:Connect(function()
     isOverclocked = not isOverclocked
     if isOverclocked then
         YourButtonVariable.Text = "💥 Overclocked Barrage: ON"
