@@ -2092,66 +2092,75 @@ UserInputService.InputEnded:Connect(function(input)
 end)
 
 -- ==========================================
--- 💣 EXPLOSIVE TRAIT (WALKING MINE DROPPER)
+-- 💣 EXPLOSIVE TRAIT (AURA MINE SPAMMER)
 -- ==========================================
 local explosiveTraitEnabled = false
-local explosiveTraitLoop = nil
-local lastMinePos = Vector3.new(0, 0, 0)
 
 ExplosiveTraitBtn.MouseButton1Click:Connect(function()
     explosiveTraitEnabled = not explosiveTraitEnabled
     local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
+    local player = game:GetService("Players").LocalPlayer
     
     if explosiveTraitEnabled then
         ExplosiveTraitBtn.Text = "💣 Explosive Trait: ON"
-        ExplosiveTraitBtn.BackgroundColor3 = Color3.fromRGB(200, 100, 50) -- Explosive Orange!
+        ExplosiveTraitBtn.BackgroundColor3 = Color3.fromRGB(200, 100, 50) -- Explosive Orange
         
-        -- Automatically request the Explosive tool from the server
-        if Send then Send("get_tool", "Explosive") end
-        
-        explosiveTraitLoop = game:GetService("RunService").Heartbeat:Connect(function()
-            local char = player.Character
-            local root = char and char:FindFirstChild("HumanoidRootPart")
-            
-            -- Only run if you actually have the explosive equipped in your hand!
-            local currentTool = char and char:FindFirstChildOfClass("Tool")
-            if currentTool and currentTool.Name == "Explosive" and root then
+        task.spawn(function()
+            while explosiveTraitEnabled do
+                local char = player.Character
+                local root = char and char:FindFirstChild("HumanoidRootPart")
                 
-                local currentPos = root.Position
-                -- Check if we have walked at least 6 studs away from the last dropped mine
-                if (currentPos - lastMinePos).Magnitude > 6 then
-                    lastMinePos = currentPos
-                    
-                    -- Drop the explosive right at your feet!
-                    -- (Vector3.new(0,1,0) is the "Y-axis normal" telling the server it's placed on the ground)
-                    local dropPos = currentPos - Vector3.new(0, 2.5, 0) 
-                    
-                   if Send then
-    -- 1. Drop the mine
-    Send("place", dropPos, Vector3.new(0, 1, 0))
-    
-    -- 2. Ask the server for a new one immediately
-    Send("get_tool", "Explosive")
-    
-    -- 3. Auto-equip it so the loop doesn't break
-    task.spawn(function()
-        local bp = player:FindFirstChild("Backpack")
-        local newExp = bp and bp:WaitForChild("Explosive", 1)
-        if newExp and char then newExp.Parent = char end
-  end)
+                if root and Send then
+                    -- Scan every player in the server
+                    for _, targetPlayer in ipairs(game:GetService("Players"):GetPlayers()) do
+                        if not explosiveTraitEnabled then break end
+                        
+                        -- Only target other players who are alive
+                        if targetPlayer ~= player and targetPlayer.Character then
+                            local targetRoot = targetPlayer.Character:FindFirstChild("HumanoidRootPart")
+                            
+                            if targetRoot then
+                                -- Check if they are near you (within 150 studs)
+                                local distance = (root.Position - targetRoot.Position).Magnitude
+                                if distance <= 150 then
+                                    
+                                    -- 1. Constantly ask for explosives to keep inventory full
+                                    Send("get_tool", "Explosive")
+                                    local bp = player:FindFirstChild("Backpack")
+                                    local currentExp = (char:FindFirstChild("Explosive") or (bp and bp:FindFirstChild("Explosive")))
+                                    
+                                    if currentExp then
+                                        -- 2. Force it into your hands instantly
+                                        pcall(function() currentExp.Parent = char end)
+                                        
+                                        -- 3. Calculate the drop position exactly at their feet
+                                        local dropPos = targetRoot.Position - Vector3.new(0, 2.5, 0)
+                                        
+                                        -- 4. Spam the remote 3 times per person to overwhelm the limit
+                                        for i = 1, 3 do
+                                            Send("place", dropPos, Vector3.new(0, 1, 0))
+                                        end
+                                        
+                                        -- 5. Delete to instantly bypass cooldown/limit checks
+                                        Send("delete_tool")
+                                        currentExp:Destroy()
+                                    end
+                                end
+                            end
+                        end
                     end
-                end -- <--- This 'end' closes the Magnitude distance check
+                end
                 
-            end -- <--- This 'end' closes the currentTool check
+                -- Wait a tiny fraction of a second before sweeping the area again
+                task.wait(0.05) 
+            end
+            
+            -- Clean up hands when turned off
+            if Send then Send("delete_tool") end
         end)
     else
         ExplosiveTraitBtn.Text = "💣 Explosive Trait: OFF"
         ExplosiveTraitBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
-        
-        if explosiveTraitLoop then
-            explosiveTraitLoop:Disconnect()
-            explosiveTraitLoop = nil
-        end
     end
 end)
 
