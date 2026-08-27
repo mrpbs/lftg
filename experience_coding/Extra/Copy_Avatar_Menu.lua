@@ -2973,24 +2973,22 @@ local function createDetailedAssetCard(categoryName, assetId, rawPropertySource)
         end
     end)
 end
--- ========== AUTO-RL TARGETING SYSTEM (AUTO-START & ANTI-CONFLICT) ==========
+-- ========== AUTO-RL TARGETING SYSTEM (ULTRA-SECURE & CRASH-PROOF) ==========
 local autoRLTarget = nil
 local isAutoFiring = false
 
--- 🛡️ Crash-Proof Validation Function
+-- 🛡️ Target Validation
 local function isValidTarget(targ)
     if not targ then return false end
-    
     local success, isValid = pcall(function()
         if not targ.Parent then return false end 
         local char = targ.Character
-        if not char then return false end
+        if not char or not char.Parent then return false end
         if not char:FindFirstChild("HumanoidRootPart") then return false end
         local hum = char:FindFirstChild("Humanoid")
         if hum and hum.Health <= 0 then return false end
         return true
     end)
-    
     return success and isValid
 end
 
@@ -3002,77 +3000,98 @@ task.spawn(function()
         local char = player.Character
         local bp = player:FindFirstChild("Backpack")
         
-        -- 1. If we have a valid target, AUTO-START immediately!
         if isValidTarget(autoRLTarget) then
-            
             if not isAutoFiring then
                 isAutoFiring = true
                 
-                -- 🛑 ANTI-CONFLICT: Force turn off manual Rapid Fire so they don't fight
+                -- 🛑 ANTI-CONFLICT: Turn off Rapid Fire
                 if noCooldownEnabled then
                     noCooldownEnabled = false
-                    -- (If you want the Rapid Fire button to turn grey automatically, 
-                    -- you can add NoCooldownBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65) here!)
+                    if NoCooldownBtn then
+                        NoCooldownBtn.Text = "⚡ Rapid Fire: OFF"
+                        NoCooldownBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+                    end
                 end
                 
                 local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
                 
-                -- Clear inventory to start fresh
-                if Send then Send("delete_tool") end
-                if char then
-                    for _, v in ipairs(char:GetChildren()) do
-                        if v:IsA("Tool") and v.Name == "RocketLauncher" then v:Destroy() end
+                -- Clear inventory
+                pcall(function()
+                    if Send then Send("delete_tool") end
+                    if char then
+                        for _, v in ipairs(char:GetChildren()) do
+                            if v:IsA("Tool") and v.Name == "RocketLauncher" then v:Destroy() end
+                        end
                     end
-                end
-                if bp then
-                    for _, v in ipairs(bp:GetChildren()) do
-                        if v.Name == "RocketLauncher" then v:Destroy() end
+                    if bp then
+                        for _, v in ipairs(bp:GetChildren()) do
+                            if v.Name == "RocketLauncher" then v:Destroy() end
+                        end
                     end
-                end
+                end)
                 
-                -- 💥 SINGLE SYNCHRONIZED LOOP
+                -- 💥 THE SYNCHRONIZED LOOP
                 while isAutoFiring do
                     local currentChar = player.Character
                     local currentBp = player:FindFirstChild("Backpack")
                     
-                    -- Immediately break safely if they disconnect or die
-                    if not isValidTarget(autoRLTarget) or not currentChar or not currentBp then
+                    -- Break immediately if YOU die or TARGET dies
+                    if not isValidTarget(autoRLTarget) or not currentChar or not currentChar.Parent or not currentBp then
                         break
                     end
                     
-                    -- AUTO-EQUIP: We request the tool ourselves, no need to hold one beforehand!
-                    if Send then Send("get_tool", "RocketLauncher") end
-                    local newLauncher = currentBp:WaitForChild("RocketLauncher", 0.2)
+                    -- Check if we already have a launcher (fixes rate-limit spam)
+                    local newLauncher = currentChar:FindFirstChild("RocketLauncher") or currentBp:FindFirstChild("RocketLauncher")
+                    
+                    if not newLauncher then
+                        if Send then Send("get_tool", "RocketLauncher") end
+                        
+                        -- Custom Wait: Checks both Backpack AND Character simultaneously for 0.2s
+                        local timer = 0
+                        while timer < 0.2 do
+                            newLauncher = currentChar:FindFirstChild("RocketLauncher") or currentBp:FindFirstChild("RocketLauncher")
+                            if newLauncher then break end
+                            timer = timer + task.wait(0.01)
+                        end
+                    end
                     
                     if newLauncher then
-                        newLauncher.Parent = currentChar
-                        
-                        local handle = newLauncher:FindFirstChild("Handle")
-                        local spawnPos = handle and handle.Position or (currentChar:GetPivot().Position + Vector3.new(0, 2, 0))
-                        
-                        -- Final safety check right before aiming
-                        local success, targetCFrame = pcall(function()
-                            return CFrame.new(spawnPos, autoRLTarget.Character.HumanoidRootPart.Position)
+                        -- PROTECTED EQUIP: Prevents the Thread Crash if you die while equipping
+                        local equipSuccess = pcall(function()
+                            newLauncher.Parent = currentChar
                         end)
                         
-                        if success and targetCFrame then
-                            if Send then Send("shoot_rocket", newLauncher, targetCFrame) end
+                        if equipSuccess then
+                            local handle = newLauncher:FindFirstChild("Handle")
+                            local spawnPos = handle and handle.Position or (currentChar:GetPivot().Position + Vector3.new(0, 2, 0))
+                            
+                            -- PROTECTED AIM
+                            local aimSuccess, targetCFrame = pcall(function()
+                                return CFrame.new(spawnPos, autoRLTarget.Character.HumanoidRootPart.Position)
+                            end)
+                            
+                            if aimSuccess and targetCFrame then
+                                if Send then Send("shoot_rocket", newLauncher, targetCFrame) end
+                            end
                         end
                         
-                        if Send then Send("delete_tool") end
-                        newLauncher:Destroy()
+                        -- PROTECTED DELETE
+                        pcall(function()
+                            if Send then Send("delete_tool") end
+                            newLauncher:Destroy()
+                        end)
+                    else
+                        -- If the server lagged and didn't give a tool, wait slightly so we don't spam the network
+                        task.wait(0.05)
                     end
                     
                     task.wait(0.01) 
                 end
                 
                 isAutoFiring = false
-                
-                -- Restock cleanly when the loop breaks
                 if Send then Send("get_tool", "RocketLauncher") end
             end
         else
-            -- 🧹 Auto-Clear Target if they left the game
             if autoRLTarget and not autoRLTarget.Parent then
                 autoRLTarget = nil
             end
