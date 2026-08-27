@@ -2168,9 +2168,9 @@ SpawnVehBtn.MouseButton1Click:Connect(function()
     end
 end)
 -- ==========================================
--- 💥 TANK RAPID-FIRE GATLING LOGIC
+-- 💥 TANK RAPID-FIRE GATLING LOGIC (Crash-Proof)
 -- ==========================================
-CarpetBombBtn.Text = "💥 Rapid-Fire Cannon (Tank)" -- Update the button text!
+CarpetBombBtn.Text = "💥 Rapid-Fire Cannon (Tank)"
 
 CarpetBombBtn.MouseButton1Click:Connect(function()
     local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
@@ -2179,7 +2179,6 @@ CarpetBombBtn.MouseButton1Click:Connect(function()
     local vehicles = workspace:FindFirstChild("Vehicles")
     local tank = vehicles and vehicles:FindFirstChild("Tank")
     
-    -- We only need the gun barrel part for this
     local turretBase = tank and tank:FindFirstChild("Custom")
     local turretGun = turretBase and turretBase:FindFirstChild("Custom")
     
@@ -2188,16 +2187,23 @@ CarpetBombBtn.MouseButton1Click:Connect(function()
         CarpetBombBtn.BackgroundColor3 = Color3.fromRGB(255, 100, 0)
         
         task.spawn(function()
-            -- Fire 10 rockets rapidly in the exact direction you are currently aiming
             for i = 1, 10 do
-                -- Grab the current, server-approved physical angle of the gun
-                local currentCFrame = turretGun.CFrame
+                -- Protective bubble so the UI never gets stuck again
+                local success, err = pcall(function()
+                    -- Safely get the CFrame regardless of if it's a Part or Model
+                    local currentCFrame = turretGun:IsA("Model") and turretGun:GetPivot() or turretGun.CFrame
+                    
+                    Send("shoot_turret", turretGun, currentCFrame)
+                end)
                 
-                Send("shoot_turret", turretGun, currentCFrame)
-                task.wait(0.05) -- Just enough delay so the server doesn't drop packets
+                if not success then
+                    warn("Tank Fire Error: " .. tostring(err))
+                end
+                
+                task.wait(0.05) 
             end
             
-            task.wait(1)
+            task.wait(0.5)
             CarpetBombBtn.Text = "💥 Rapid-Fire Cannon (Tank)"
             CarpetBombBtn.BackgroundColor3 = Color3.fromRGB(150, 40, 40)
         end)
