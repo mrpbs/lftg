@@ -1868,6 +1868,12 @@ ScatterMinesBtn.Parent = ToolContainer
 Instance.new("UICorner", ScatterMinesBtn).CornerRadius = UDim.new(0, 6)
 
 
+-- 2. 🎚️ GENERATE THE RADIUS SLIDER (Using your existing function!)
+local radSlider = createSlider(ToolContainer, "Radius: ", 1, 10000, 50, function(newValue)
+    currentRadius = newValue
+end)
+radSlider.Position = UDim2.new(0, 10, 0, 240)
+
 -- ==========================================
 -- TOOL SPAWN LOGIC
 -- ==========================================
@@ -2100,11 +2106,6 @@ local currentRadius = 50
 local visualCircle = nil
 local updateLoop = nil
 local player = game:GetService("Players").LocalPlayer
-
--- 2. 🎚️ GENERATE THE RADIUS SLIDER (Using your existing function!)
-createSlider(ToolContainer, "Radius: ", 1, 10000, 50, function(newValue)
-    currentRadius = newValue
-end)
 
 -- 3. 💥 CARPET BOMBING LOGIC
 local function cleanUpVisualizer()
