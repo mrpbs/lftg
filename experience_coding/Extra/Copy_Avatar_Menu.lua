@@ -2167,10 +2167,11 @@ SpawnVehBtn.MouseButton1Click:Connect(function()
         end)
     end
 end)
+-- ==========================================
+-- 💥 TANK RAPID-FIRE GATLING LOGIC
+-- ==========================================
+CarpetBombBtn.Text = "💥 Rapid-Fire Cannon (Tank)" -- Update the button text!
 
--- ==========================================
--- 💥 TANK CARPET BOMBER LOGIC (Two-Step Bypass)
--- ==========================================
 CarpetBombBtn.MouseButton1Click:Connect(function()
     local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
     local workspace = game:GetService("Workspace")
@@ -2178,44 +2179,33 @@ CarpetBombBtn.MouseButton1Click:Connect(function()
     local vehicles = workspace:FindFirstChild("Vehicles")
     local tank = vehicles and vehicles:FindFirstChild("Tank")
     
-    -- The base is used to aim, the gun is used to shoot
-    local turretBase = tank and tank:FindFirstChild("Custom") 
+    -- We only need the gun barrel part for this
+    local turretBase = tank and tank:FindFirstChild("Custom")
     local turretGun = turretBase and turretBase:FindFirstChild("Custom")
     
-    if Send and turretBase and turretGun then
-        CarpetBombBtn.Text = "FIRING BARRAGE..."
+    if Send and turretGun then
+        CarpetBombBtn.Text = "FIRING WALL OF ROCKETS..."
         CarpetBombBtn.BackgroundColor3 = Color3.fromRGB(255, 100, 0)
         
         task.spawn(function()
-            -- Fire 12 rockets in a massive circle (every 30 degrees)
-            for angle = 0, 360, 30 do
-                -- 1. Calculate a target point 100 studs away in the current angle
-                local rad = math.rad(angle)
-                local direction = Vector3.new(math.sin(rad), -0.2, math.cos(rad)) -- Slight downward angle
-                local targetPos = turretBase.Position + (direction * 100)
+            -- Fire 10 rockets rapidly in the exact direction you are currently aiming
+            for i = 1, 10 do
+                -- Grab the current, server-approved physical angle of the gun
+                local currentCFrame = turretGun.CFrame
                 
-                -- 2. Send the Aim Command
-                Send("point_position", turretBase, targetPos)
-                
-                -- 3. Calculate the exact CFrame looking at that target
-                local shootCFrame = CFrame.lookAt(turretGun.Position, targetPos)
-                
-                -- 4. Send the Fire Command
-                Send("shoot_turret", turretGun, shootCFrame)
-                
-                -- Tiny delay so the server processes the rotation before the next shot
-                task.wait(0.05) 
+                Send("shoot_turret", turretGun, currentCFrame)
+                task.wait(0.05) -- Just enough delay so the server doesn't drop packets
             end
             
             task.wait(1)
-            CarpetBombBtn.Text = "💥 360° Carpet Bomb (Tank)"
+            CarpetBombBtn.Text = "💥 Rapid-Fire Cannon (Tank)"
             CarpetBombBtn.BackgroundColor3 = Color3.fromRGB(150, 40, 40)
         end)
     else
         CarpetBombBtn.Text = "Spawn a Tank First!"
         CarpetBombBtn.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
         task.delay(1.5, function()
-            CarpetBombBtn.Text = "💥 360° Carpet Bomb (Tank)"
+            CarpetBombBtn.Text = "💥 Rapid-Fire Cannon (Tank)"
             CarpetBombBtn.BackgroundColor3 = Color3.fromRGB(150, 40, 40)
         end)
     end
