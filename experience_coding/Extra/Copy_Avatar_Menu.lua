@@ -1854,6 +1854,20 @@ ExplosiveTraitBtn.BorderSizePixel = 0
 ExplosiveTraitBtn.Parent = ToolContainer
 Instance.new("UICorner", ExplosiveTraitBtn).CornerRadius = UDim.new(0, 6)
 
+-- 1. 🔘 THE TOGGLE BUTTON
+local ExplosiveTraitBtn = Instance.new("TextButton")
+ExplosiveTraitBtn.Size = UDim2.new(1, -20, 0, 32)
+ExplosiveTraitBtn.Position = UDim2.new(0, 10, 0, 200) -- Adjust this Y position depending on your UI layout
+ExplosiveTraitBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+ExplosiveTraitBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ExplosiveTraitBtn.Font = Enum.Font.SourceSansBold
+ExplosiveTraitBtn.TextSize = 14
+ExplosiveTraitBtn.Text = "💣 Scatter Mines: OFF"
+ExplosiveTraitBtn.BorderSizePixel = 0
+ExplosiveTraitBtn.Parent = ToolContainer 
+Instance.new("UICorner", ExplosiveTraitBtn).CornerRadius = UDim.new(0, 6)
+
+
 -- ==========================================
 -- TOOL SPAWN LOGIC
 -- ==========================================
@@ -2086,19 +2100,6 @@ local currentRadius = 50
 local visualCircle = nil
 local updateLoop = nil
 local player = game:GetService("Players").LocalPlayer
-
--- 1. 🔘 THE TOGGLE BUTTON
-local ExplosiveTraitBtn = Instance.new("TextButton")
-ExplosiveTraitBtn.Size = UDim2.new(1, -20, 0, 32)
-ExplosiveTraitBtn.Position = UDim2.new(0, 10, 0, 200) -- Adjust this Y position depending on your UI layout
-ExplosiveTraitBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
-ExplosiveTraitBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-ExplosiveTraitBtn.Font = Enum.Font.SourceSansBold
-ExplosiveTraitBtn.TextSize = 14
-ExplosiveTraitBtn.Text = "💣 Scatter Mines: OFF"
-ExplosiveTraitBtn.BorderSizePixel = 0
-ExplosiveTraitBtn.Parent = ToolContainer 
-Instance.new("UICorner", ExplosiveTraitBtn).CornerRadius = UDim.new(0, 6)
 
 -- 2. 🎚️ GENERATE THE RADIUS SLIDER (Using your existing function!)
 createSlider(ToolContainer, "Radius: ", 1, 100, 50, function(newValue)
