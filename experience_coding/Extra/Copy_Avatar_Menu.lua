@@ -1842,30 +1842,30 @@ Instance.new("UICorner", NoCooldownBtn).CornerRadius = UDim.new(0, 6)
 
 
 -- 6. Explosive Trait Toggle Button 
-local ExplosiveTraitBtn = Instance.new("TextButton")
-ExplosiveTraitBtn.Size = UDim2.new(1, -20, 0, 32)
-ExplosiveTraitBtn.Position = UDim2.new(0, 10, 0, 160) -- 3rd Button (Pushed down by 40)
-ExplosiveTraitBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
-ExplosiveTraitBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-ExplosiveTraitBtn.Font = Enum.Font.SourceSansBold
-ExplosiveTraitBtn.TextSize = 14
-ExplosiveTraitBtn.Text = "💣 Explosive Trait: OFF"
-ExplosiveTraitBtn.BorderSizePixel = 0
-ExplosiveTraitBtn.Parent = ToolContainer
-Instance.new("UICorner", ExplosiveTraitBtn).CornerRadius = UDim.new(0, 6)
+local ShotgunBtn = Instance.new("TextButton")
+ShotgunBtn.Size = UDim2.new(1, -20, 0, 32)
+ShotgunBtn.Position = UDim2.new(0, 10, 0, 160) -- 3rd Button (Pushed down by 40)
+ShotgunBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+ShotgunBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ShotgunBtn.Font = Enum.Font.SourceSansBold
+ShotgunBtn.TextSize = 14
+ShotgunBtn.Text = "💥 True Shotgun: OFF"
+ShotgunBtn.BorderSizePixel = 0
+ShotgunBtn.Parent = ToolContainer
+Instance.new("UICorner", ShotgunBtn).CornerRadius = UDim.new(0, 6)
 
 -- 1. 🔘 THE TOGGLE BUTTON
-local ExplosiveTraitBtn = Instance.new("TextButton")
-ExplosiveTraitBtn.Size = UDim2.new(1, -20, 0, 32)
-ExplosiveTraitBtn.Position = UDim2.new(0, 10, 0, 200) -- Adjust this Y position depending on your UI layout
-ExplosiveTraitBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
-ExplosiveTraitBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-ExplosiveTraitBtn.Font = Enum.Font.SourceSansBold
-ExplosiveTraitBtn.TextSize = 14
-ExplosiveTraitBtn.Text = "💣 Scatter Mines: OFF"
-ExplosiveTraitBtn.BorderSizePixel = 0
-ExplosiveTraitBtn.Parent = ToolContainer 
-Instance.new("UICorner", ExplosiveTraitBtn).CornerRadius = UDim.new(0, 6)
+local ScatterMinesBtn = Instance.new("TextButton")
+ScatterMinesBtn.Size = UDim2.new(1, -20, 0, 32)
+ScatterMinesBtn.Position = UDim2.new(0, 10, 0, 200) -- Adjust this Y position depending on your UI layout
+ScatterMinesBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+ScatterMinesBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ScatterMinesBtn.Font = Enum.Font.SourceSansBold
+ScatterMinesBtn.TextSize = 14
+ScatterMinesBtn.Text = "💣 Scatter Mines: OFF"
+ScatterMinesBtn.BorderSizePixel = 0
+ScatterMinesBtn.Parent = ToolContainer 
+Instance.new("UICorner", ScatterMinesBtn).CornerRadius = UDim.new(0, 6)
 
 
 -- ==========================================
@@ -2118,13 +2118,13 @@ local function cleanUpVisualizer()
     end
 end
 
-ExplosiveTraitBtn.MouseButton1Click:Connect(function()
+ScatterMinesBtn.MouseButton1Click:Connect(function()
     isScattering = not isScattering
     local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
     
     if isScattering then
-        ExplosiveTraitBtn.Text = "💣 Scatter Mines: ON"
-        ExplosiveTraitBtn.BackgroundColor3 = Color3.fromRGB(200, 100, 50)
+        ScatterMinesBtn.Text = "💣 Scatter Mines: ON"
+        ScatterMinesBtn.BackgroundColor3 = Color3.fromRGB(200, 100, 50)
         
         -- 🎨 Create the Client-Side Visual Circle
         visualCircle = Instance.new("Part")
@@ -2183,8 +2183,8 @@ ExplosiveTraitBtn.MouseButton1Click:Connect(function()
             if Send then Send("delete_tool") end
         end)
     else
-        ExplosiveTraitBtn.Text = "💣 Scatter Mines: OFF"
-        ExplosiveTraitBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+        ScatterMinesBtn.Text = "💣 Scatter Mines: OFF"
+        ScatterMinesBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
         cleanUpVisualizer()
     end
 end)
@@ -2194,8 +2194,8 @@ player.CharacterAdded:Connect(function()
     if isScattering then
         cleanUpVisualizer()
         isScattering = false
-        ExplosiveTraitBtn.Text = "💣 Scatter Mines: OFF"
-        ExplosiveTraitBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+        ScatterMinesBtn.Text = "💣 Scatter Mines: OFF"
+        ScatterMinesBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
     end
 end)
 
