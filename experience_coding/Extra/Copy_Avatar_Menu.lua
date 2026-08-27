@@ -1888,8 +1888,10 @@ SpawnToolBtn.MouseButton1Click:Connect(function()
 end)
 
 -- ==========================================
--- ASYNC DUAL-THREAD RAPID FIRE (STABILIZED)
+-- ⚡ SYNCHRONIZED RAPID FIRE (NO STUTTER)
 -- ==========================================
+local isFiring = false
+
 NoCooldownBtn.MouseButton1Click:Connect(function()
     noCooldownEnabled = not noCooldownEnabled
     
@@ -1920,46 +1922,49 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
                 isFiring = true
                 local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
                 
-                if bp then
-                    for _, v in ipairs(bp:GetChildren()) do
-                        if v.Name == "RocketLauncher" then 
-                            if Send then Send("delete_tool") end
-                           if Send then Send("get_tool", "RocketLauncher") end
-                            v:Destroy() 
-                        end
-                    end
-                end
+                -- Clear any glitched launchers out of your hands/inventory first
                 if Send then Send("delete_tool") end
                 currentTool:Destroy()
-                
-                task.spawn(function()
-                    while isFiring and noCooldownEnabled do
-                        if Send then Send("get_tool", "RocketLauncher") end
-                        task.wait(0.05) 
+                if bp then
+                    for _, v in ipairs(bp:GetChildren()) do
+                        if v.Name == "RocketLauncher" then v:Destroy() end
                     end
-                end)
+                end
                 
+                -- ONE SINGLE LOOP: Fetch -> Wait -> Equip -> Shoot -> Delete
                 task.spawn(function()
                     while isFiring and noCooldownEnabled and char and bp do
-                        local newLauncher = bp:FindFirstChild("RocketLauncher")
+                        -- 1. Ask the server for a fresh launcher
+                        if Send then Send("get_tool", "RocketLauncher") end
+                        
+                        -- 2. Wait up to 0.2s for it to actually appear (Prevents stutter!)
+                        local newLauncher = bp:WaitForChild("RocketLauncher", 0.2)
+                        
                         if newLauncher then
+                            -- 3. Equip it
                             newLauncher.Parent = char
-                            task.wait(0.03) 
                             
+                            -- 4. Calculate exact aim
                             local handle = newLauncher:FindFirstChild("Handle")
                             local spawnPos = handle and handle.Position or (char:GetPivot().Position + Vector3.new(0, 2, 0))
                             local targetCFrame = CFrame.new(spawnPos, mouse.Hit.Position)
                             
+                            -- 5. Shoot!
                             if Send then Send("shoot_rocket", newLauncher, targetCFrame) end
-                            task.wait(0.03)
                             
+                            -- 6. Delete the tool immediately to bypass the reload cooldown
                             if Send then Send("delete_tool") end
                             newLauncher:Destroy()
-                        else
-                            task.wait()
                         end
+                        
+                        -- 7. Tiny delay so Roblox doesn't crash your computer
+                        task.wait(0.01) 
                     end
-                    if Send then Send("get_tool", "RocketLauncher") end
+                    
+                    -- When you let go of the mouse, give you back 1 normal launcher
+                    if Send and noCooldownEnabled then 
+                        Send("get_tool", "RocketLauncher") 
+                    end
                 end)
             end
         end
@@ -2110,18 +2115,6 @@ SpawnVehBtn.BorderSizePixel = 0
 SpawnVehBtn.Parent = VehContainer
 Instance.new("UICorner", SpawnVehBtn).CornerRadius = UDim.new(0, 6)
 
--- 5. Carpet Bomber Action Button
-local CarpetBombBtn = Instance.new("TextButton")
-CarpetBombBtn.Size = UDim2.new(1, -20, 0, 32)
-CarpetBombBtn.Position = UDim2.new(0, 10, 0, 120)
-CarpetBombBtn.BackgroundColor3 = Color3.fromRGB(150, 40, 40)
-CarpetBombBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-CarpetBombBtn.Font = Enum.Font.SourceSansBold
-CarpetBombBtn.TextSize = 14
-CarpetBombBtn.Text = "💥 360° Carpet Bomb (Tank)"
-CarpetBombBtn.BorderSizePixel = 0
-CarpetBombBtn.Parent = VehContainer
-Instance.new("UICorner", CarpetBombBtn).CornerRadius = UDim.new(0, 6)
 
 -- ==========================================
 -- VEHICLE SPAWN LOGIC
@@ -2164,55 +2157,6 @@ SpawnVehBtn.MouseButton1Click:Connect(function()
         task.delay(1.5, function()
             SpawnVehBtn.Text = "Spawn Vehicle"
             SpawnVehBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
-        end)
-    end
-end)
--- ==========================================
--- 💥 TANK RAPID-FIRE GATLING LOGIC (Crash-Proof)
--- ==========================================
-CarpetBombBtn.Text = "💥 Rapid-Fire Cannon (Tank)"
-
-CarpetBombBtn.MouseButton1Click:Connect(function()
-    local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
-    local workspace = game:GetService("Workspace")
-    
-    local vehicles = workspace:FindFirstChild("Vehicles")
-    local tank = vehicles and vehicles:FindFirstChild("Tank")
-    
-    local turretBase = tank and tank:FindFirstChild("Custom")
-    local turretGun = turretBase and turretBase:FindFirstChild("Custom")
-    
-    if Send and turretGun then
-        CarpetBombBtn.Text = "FIRING WALL OF ROCKETS..."
-        CarpetBombBtn.BackgroundColor3 = Color3.fromRGB(255, 100, 0)
-        
-        task.spawn(function()
-            for i = 1, 10 do
-                -- Protective bubble so the UI never gets stuck again
-                local success, err = pcall(function()
-                    -- Safely get the CFrame regardless of if it's a Part or Model
-                    local currentCFrame = turretGun:IsA("Model") and turretGun:GetPivot() or turretGun.CFrame
-                    
-                    Send("shoot_turret", turretGun, currentCFrame)
-                end)
-                
-                if not success then
-                    warn("Tank Fire Error: " .. tostring(err))
-                end
-                
-                task.wait(0.05) 
-            end
-            
-            task.wait(0.5)
-            CarpetBombBtn.Text = "💥 Rapid-Fire Cannon (Tank)"
-            CarpetBombBtn.BackgroundColor3 = Color3.fromRGB(150, 40, 40)
-        end)
-    else
-        CarpetBombBtn.Text = "Spawn a Tank First!"
-        CarpetBombBtn.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
-        task.delay(1.5, function()
-            CarpetBombBtn.Text = "💥 Rapid-Fire Cannon (Tank)"
-            CarpetBombBtn.BackgroundColor3 = Color3.fromRGB(150, 40, 40)
         end)
     end
 end)
