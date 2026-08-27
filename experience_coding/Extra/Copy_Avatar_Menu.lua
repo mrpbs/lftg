@@ -1503,7 +1503,7 @@ applySmartHold(
     FlyContainer,  -- The frame to expand/shrink
     40,            -- Normal collapsed height
     225,           -- Expanded height (to fit 4 buttons + 1 slider)
-    1,           -- Hold duration
+    0.5,           -- Hold duration
     
     function()
         localFlyEnabled = not localFlyEnabled
@@ -2060,88 +2060,72 @@ applySmartHold(
         end
     end
 )
+-- ==============================================================
+-- 🚙 SMART VEHICLE SPAWNER & TANK CARPET BOMBER (Hold for Options)
+-- ==============================================================
+-- 1. Main Container
+local VehContainer = Instance.new("Frame")
+VehContainer.Size = UDim2.new(1, -5, 0, 40)
+VehContainer.BackgroundColor3 = Color3.fromRGB(30, 30, 38)
+VehContainer.BorderSizePixel = 0
+VehContainer.ClipsDescendants = true
+VehContainer.Parent = ToolsScroll
 
--- ========== VEHICLE SPAWNER TOOL (Collapsible) ==========
-local VehSpawnFrame = Instance.new("Frame")
-VehSpawnFrame.Size = UDim2.new(1, -5, 0, 30) -- Starts collapsed
-VehSpawnFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 38)
-VehSpawnFrame.BorderSizePixel = 0
-VehSpawnFrame.ClipsDescendants = true
-VehSpawnFrame.Parent = ToolsScroll
+-- 2. The Main Button (Vehicle Spawner Bar)
+local VehMainBtn = Instance.new("TextButton")
+VehMainBtn.Size = UDim2.new(1, 0, 0, 40)
+VehMainBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+VehMainBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+VehMainBtn.Font = Enum.Font.SourceSansBold
+VehMainBtn.TextSize = 16
+VehMainBtn.Text = "🚙 Vehicle Spawner (Hold for Options)"
+VehMainBtn.BorderSizePixel = 0
+VehMainBtn.Parent = VehContainer
+Instance.new("UICorner", VehMainBtn).CornerRadius = UDim.new(0, 8)
 
-local VehSpawnToggleBtn = Instance.new("TextButton")
-VehSpawnToggleBtn.Size = UDim2.new(1, 0, 0, 30)
-VehSpawnToggleBtn.Text = "  🚙 Premium Vehicle Spawner [ ▼ ]"
-VehSpawnToggleBtn.TextColor3 = Color3.fromRGB(0, 255, 200)
-VehSpawnToggleBtn.Font = Enum.Font.SourceSansBold
-VehSpawnToggleBtn.TextSize = 14
-VehSpawnToggleBtn.TextXAlignment = Enum.TextXAlignment.Left
-VehSpawnToggleBtn.BackgroundColor3 = Color3.fromRGB(25, 25, 32)
-VehSpawnToggleBtn.BorderSizePixel = 0
-VehSpawnToggleBtn.Parent = VehSpawnFrame
-
-local VehSpawnContent = Instance.new("Frame")
-VehSpawnContent.Size = UDim2.new(1, 0, 1, -30)
-VehSpawnContent.Position = UDim2.new(0, 0, 0, 30)
-VehSpawnContent.BackgroundTransparency = 1
-VehSpawnContent.Visible = false
-VehSpawnContent.Parent = VehSpawnFrame
-
+-- 3. Vehicle Name Input Box
 local VehInput = Instance.new("TextBox")
 VehInput.Size = UDim2.new(1, -20, 0, 30)
-VehInput.Position = UDim2.new(0, 10, 0, 10)
-VehInput.PlaceholderText = "Type car name (e.g. Monster Truck)"
+VehInput.Position = UDim2.new(0, 10, 0, 45)
+VehInput.PlaceholderText = "Type car name (e.g. Tank, Monster Truck)"
 VehInput.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
 VehInput.TextColor3 = Color3.fromRGB(255, 255, 255)
 VehInput.Font = Enum.Font.SourceSansBold
-VehInput.TextSize = 14
+VehInput.TextSize = 13
 VehInput.Text = ""
 VehInput.ClearTextOnFocus = false
-VehInput.Parent = VehSpawnContent
+VehInput.Parent = VehContainer
 Instance.new("UICorner", VehInput).CornerRadius = UDim.new(0, 6)
 
+-- 4. Spawn Vehicle Action Button
 local SpawnVehBtn = Instance.new("TextButton")
-SpawnVehBtn.Size = UDim2.new(1, -20, 0, 35)
-SpawnVehBtn.Position = UDim2.new(0, 10, 0, 50)
+SpawnVehBtn.Size = UDim2.new(1, -20, 0, 32)
+SpawnVehBtn.Position = UDim2.new(0, 10, 0, 82)
 SpawnVehBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
 SpawnVehBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 SpawnVehBtn.Font = Enum.Font.SourceSansBold
 SpawnVehBtn.TextSize = 14
 SpawnVehBtn.Text = "Spawn Vehicle"
 SpawnVehBtn.BorderSizePixel = 0
-SpawnVehBtn.Parent = VehSpawnContent
+SpawnVehBtn.Parent = VehContainer
 Instance.new("UICorner", SpawnVehBtn).CornerRadius = UDim.new(0, 6)
-----
 
--- 5. Carpet Bomber Button (NEW!)
+-- 5. Carpet Bomber Action Button
 local CarpetBombBtn = Instance.new("TextButton")
 CarpetBombBtn.Size = UDim2.new(1, -20, 0, 32)
-CarpetBombBtn.Position = UDim2.new(0, 10, 0, 120) -- Placed right below the Spawn button
+CarpetBombBtn.Position = UDim2.new(0, 10, 0, 120)
 CarpetBombBtn.BackgroundColor3 = Color3.fromRGB(150, 40, 40)
 CarpetBombBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 CarpetBombBtn.Font = Enum.Font.SourceSansBold
 CarpetBombBtn.TextSize = 14
 CarpetBombBtn.Text = "💥 360° Carpet Bomb (Tank)"
 CarpetBombBtn.BorderSizePixel = 0
-CarpetBombBtn.Parent = VehicleContainer -- Make sure this is your vehicle dropdown frame!
+CarpetBombBtn.Parent = VehContainer
 Instance.new("UICorner", CarpetBombBtn).CornerRadius = UDim.new(0, 6)
 
--- Dropdown Toggle Logic
-local vehSpawnExpanded = false
-VehSpawnToggleBtn.MouseButton1Click:Connect(function()
-    vehSpawnExpanded = not vehSpawnExpanded
-    if vehSpawnExpanded then
-        VehSpawnFrame.Size = UDim2.new(1, -5, 0, 100)
-        VehSpawnContent.Visible = true
-        VehSpawnToggleBtn.Text = "  🚙 Premium Vehicle Spawner [ ▲ ]"
-    else
-        VehSpawnFrame.Size = UDim2.new(1, -5, 0, 30)
-        VehSpawnContent.Visible = false
-        VehSpawnToggleBtn.Text = "  🚙 Premium Vehicle Spawner [ ▼ ]"
-    end
-end)
-
--- The exact master list pulled directly from Flames Hub
+-- ==========================================
+-- VEHICLE SPAWN LOGIC
+-- ==========================================
 local flamesHubCars = {
     "Magic Carpet", "EClass", "TowTruck", "Bicycle", "Fiat500", "Cayenne", "Jetski", "LuggageScooter",
     "MiniCooper", "GarbageTruck", "EScooter", "Monster Truck", "Yacht", "Stingray", "FireTruck", "VespaPizza",
@@ -2152,27 +2136,22 @@ local flamesHubCars = {
 }
 
 SpawnVehBtn.MouseButton1Click:Connect(function()
-    local inputName = string.lower(VehInput.Text)
+    local inputName = string.lower(VehInput.Text:gsub("%s+", ""))
     if inputName == "" then return end
 
     local foundName = nil
-    
-    -- Smart Search: Checks if what you typed is part of any car's real name
     for _, v in ipairs(flamesHubCars) do
-        if string.lower(v):find(inputName) then
+        if string.lower(v:gsub("%s+", "")):find(inputName, 1, true) then
             foundName = v
             break
         end
     end
 
-    -- Fallback to exact input if smart search couldn't find it
     local targetVeh = foundName or VehInput.Text 
-    
     local Get = getgenv().Get or (getgenv().g and getgenv().g.Get)
+    
     if Get then
-        -- Execute the vehicle spawn payload
         Get("spawn_vehicle", targetVeh)
-        
         SpawnVehBtn.Text = "Spawned: " .. targetVeh
         SpawnVehBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
         task.delay(1.5, function()
@@ -2188,6 +2167,7 @@ SpawnVehBtn.MouseButton1Click:Connect(function()
         end)
     end
 end)
+
 -- ==========================================
 -- 💥 TANK CARPET BOMBER LOGIC
 -- ==========================================
@@ -2195,7 +2175,6 @@ CarpetBombBtn.MouseButton1Click:Connect(function()
     local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
     local workspace = game:GetService("Workspace")
     
-    -- Search the map for your spawned Tank
     local vehicles = workspace:FindFirstChild("Vehicles")
     local tank = vehicles and vehicles:FindFirstChild("Tank")
     local turret = tank and tank:FindFirstChild("Custom") and tank.Custom:FindFirstChild("Custom")
@@ -2205,19 +2184,16 @@ CarpetBombBtn.MouseButton1Click:Connect(function()
         CarpetBombBtn.BackgroundColor3 = Color3.fromRGB(255, 100, 0)
         
         task.spawn(function()
-            -- Fire 24 rockets in a massive circle
             for angle = 0, 360, 15 do
-                -- Rotate the CFrame by the current angle
                 local spreadCFrame = CFrame.new(turret.Position) * CFrame.Angles(0, math.rad(angle), 0)
                 Send("shoot_turret", turret, spreadCFrame)
             end
             
-            task.wait(1) -- Cooldown so you don't break your UI
+            task.wait(1)
             CarpetBombBtn.Text = "💥 360° Carpet Bomb (Tank)"
             CarpetBombBtn.BackgroundColor3 = Color3.fromRGB(150, 40, 40)
         end)
     else
-        -- Error handling if you aren't in a tank
         CarpetBombBtn.Text = "Spawn a Tank First!"
         CarpetBombBtn.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
         task.delay(1.5, function()
@@ -2226,6 +2202,32 @@ CarpetBombBtn.MouseButton1Click:Connect(function()
         end)
     end
 end)
+
+-- ==========================================
+-- SMART HOLD CONNECTION
+-- ==========================================
+applySmartHold(
+    VehMainBtn,    
+    VehContainer,  
+    40,             
+    165,            -- Expands to 165px to fit the Input, Spawn Btn, and Carpet Bomb Btn
+    0.5,              
+    function()
+        if VehInput.Text ~= "" then
+            for _, conn in ipairs(getconnections(SpawnVehBtn.MouseButton1Click)) do
+                conn.Function()
+            end
+        end
+    end,
+    function(isExpanded)
+        if isExpanded then
+            VehMainBtn.Text = "🚙 Premium Vehicle Spawner [▲ Options]"
+        else
+            VehMainBtn.Text = "🚙 Premium Vehicle Spawner (Hold for Options)"
+        end
+    end
+)
+
 
 -- ========== FE FIRE SPAWNER (Bypassed Premium) ==========
 local FireSpawnFrame = Instance.new("Frame")
