@@ -1840,18 +1840,18 @@ NoCooldownBtn.BorderSizePixel = 0
 NoCooldownBtn.Parent = ToolContainer
 Instance.new("UICorner", NoCooldownBtn).CornerRadius = UDim.new(0, 6)
 
--- ==========================================
-local GhostShotgunBtn = Instance.new("TextButton")
-GhostShotgunBtn.Size = UDim2.new(1, -20, 0, 32)
-GhostShotgunBtn.Position = UDim2.new(0, 10, 0, 160) -- Placed exactly where Annoy All used to be
-GhostShotgunBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
-GhostShotgunBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-GhostShotgunBtn.Font = Enum.Font.SourceSansBold
-GhostShotgunBtn.TextSize = 14
-GhostShotgunBtn.Text = "👻 Ghost Shotgun: OFF"
-GhostShotgunBtn.BorderSizePixel = 0
-GhostShotgunBtn.Parent = ToolContainer -- Ensure this matches your UI frame!
-Instance.new("UICorner", GhostShotgunBtn).CornerRadius = UDim.new(0, 6)
+
+local ShotgunBtn = Instance.new("TextButton")
+ShotgunBtn.Size = UDim2.new(1, -20, 0, 32)
+ShotgunBtn.Position = UDim2.new(0, 10, 0, 160) 
+ShotgunBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+ShotgunBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ShotgunBtn.Font = Enum.Font.SourceSansBold
+ShotgunBtn.TextSize = 14
+ShotgunBtn.Text = "💥 True Shotgun: OFF"
+ShotgunBtn.BorderSizePixel = 0
+ShotgunBtn.Parent = ToolContainer 
+Instance.new("UICorner", ShotgunBtn).CornerRadius = UDim.new(0, 6)
 
 
 -- 6. Explosive Trait Toggle Button 
@@ -1999,26 +1999,25 @@ UserInputService.InputEnded:Connect(function(input)
     end
 end)
 -- ==========================================
--- 👻 GHOST SHOTGUN (INSTANT 5-BURST, NO LAG)
+-- 💥 TRUE SHOTGUN (RACE CONDITION EXPLOIT)
 -- ==========================================
-local isGhostFiring = false
+local isShotgunActive = false
 
-GhostShotgunBtn.MouseButton1Click:Connect(function()
-    isGhostFiring = not isGhostFiring
-    
-    if isGhostFiring then
-        GhostShotgunBtn.Text = "👻 Ghost Shotgun: ON"
-        GhostShotgunBtn.BackgroundColor3 = Color3.fromRGB(150, 50, 200) -- Purple Theme
+ShotgunBtn.MouseButton1Click:Connect(function()
+    isShotgunActive = not isShotgunActive
+    if isShotgunActive then
+        ShotgunBtn.Text = "💥 True Shotgun: ON"
+        ShotgunBtn.BackgroundColor3 = Color3.fromRGB(200, 100, 20) 
         
-        -- 🛑 ANTI-CONFLICT: Turn off Rapid Fire so they don't fight over your mouse clicks
+        -- 🛑 ANTI-CONFLICT: Turn off Rapid Fire
         if noCooldownEnabled then
             noCooldownEnabled = false
             NoCooldownBtn.Text = "⚡ Rapid Fire: OFF"
             NoCooldownBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
         end
     else
-        GhostShotgunBtn.Text = "👻 Ghost Shotgun: OFF"
-        GhostShotgunBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+        ShotgunBtn.Text = "💥 True Shotgun: OFF"
+        ShotgunBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
     end
 end)
 
@@ -2030,32 +2029,37 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed and input.UserInputType ~= Enum.UserInputType.Touch then return end
     
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        if isGhostFiring then
+        if isShotgunActive then
             local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
             local char = player.Character
+            local bp = player:FindFirstChild("Backpack")
             
-            if not char or not Send then return end
-            
-            -- Instantly generate 5 fake tools, fire them, and delete them in 1 frame.
-            for i = 1, 5 do
-                -- 1. Create a fake ghost tool
-                local fakeLauncher = Instance.new("Tool")
-                fakeLauncher.Name = "RocketLauncher"
-                fakeLauncher.Parent = char -- Put it in our character so the server thinks we hold it
+            if Send and char and bp then
+                -- Clear hands to prevent bugs
+                Send("delete_tool")
                 
-                -- 2. Grab the exact Camera Origin just like the decompiled script does
-                local baseOrigin = mouse.Origin
+                -- 1. Get ONE real weapon
+                Send("get_tool", "RocketLauncher")
+                local newLauncher = bp:WaitForChild("RocketLauncher", 0.15)
                 
-                -- 3. Calculate a shotgun spread angle so they don't overlap perfectly
-                local spreadX = math.random(-15, 15) / 100
-                local spreadY = math.random(-15, 15) / 100
-                local spreadCFrame = baseOrigin * CFrame.Angles(spreadX, spreadY, 0)
-                
-                -- 4. Tell the server the fake tool fired!
-                Send("shoot_rocket", fakeLauncher, spreadCFrame)
-                
-                -- 5. Erase the ghost tool instantly
-                fakeLauncher:Destroy()
+                if newLauncher then
+                    newLauncher.Parent = char
+                    local baseOrigin = mouse.Origin
+                    
+                    -- 2. THE RACE CONDITION: Spam the remote 5 times in 1 millisecond on the SAME gun
+                    for i = 1, 5 do
+                        -- Add spread so they don't perfectly overlap and look like 1 rocket
+                        local spreadX = math.random(-15, 15) / 100
+                        local spreadY = math.random(-15, 15) / 100
+                        local spreadCFrame = baseOrigin * CFrame.Angles(spreadX, spreadY, 0)
+                        
+                        Send("shoot_rocket", newLauncher, spreadCFrame)
+                    end
+                    
+                    -- 3. Delete immediately after the burst hits the network
+                    Send("delete_tool")
+                    newLauncher:Destroy()
+                end
             end
         end
     end
