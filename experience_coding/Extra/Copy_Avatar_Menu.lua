@@ -1851,7 +1851,7 @@ KillAllBtn.Font = Enum.Font.SourceSansBold
 KillAllBtn.TextSize = 14
 KillAllBtn.Text = "🎆 RL ANNOY ALL: OFF"
 KillAllBtn.BorderSizePixel = 0
-KillAllBtn.Parent = ToolContent -- ⚠️ UPDATE THIS TO YOUR TOOL MENU FRAME NAME!
+KillAllBtn.Parent = ToolContainer -- ⚠️ UPDATE THIS TO YOUR TOOL MENU FRAME NAME!
 Instance.new("UICorner", KillAllBtn).CornerRadius = UDim.new(0, 6)
 
 -- 6. Explosive Trait Toggle Button (NEW!)
@@ -2157,7 +2157,7 @@ applySmartHold(
     ToolMainBtn,    
     ToolContainer,  
     40,             
-    280,            -- Increased height to 200px to perfectly fit the new Explosive button
+    250,            -- Increased height to 200px to perfectly fit the new Explosive button
     0.5,              
     function()
         if ToolInput.Text ~= "" then
