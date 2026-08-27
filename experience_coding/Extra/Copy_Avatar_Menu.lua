@@ -1999,25 +1999,30 @@ UserInputService.InputEnded:Connect(function(input)
     end
 end)
 -- ==========================================
--- 💥 TRUE SHOTGUN (RACE CONDITION EXPLOIT)
+-- 💥 OVERCLOCKED BARRAGE (LOGIC ONLY)
 -- ==========================================
-local isShotgunActive = false
+local isOverclocked = false
+local isFiring = false
 
-ShotgunBtn.MouseButton1Click:Connect(function()
-    isShotgunActive = not isShotgunActive
-    if isShotgunActive then
-        ShotgunBtn.Text = "💥 True Shotgun: ON"
-        ShotgunBtn.BackgroundColor3 = Color3.fromRGB(200, 100, 20) 
+-- ⚠️ Change 'YourButtonVariable' to match the name of your button!
+YourButtonVariable.MouseButton1Click:Connect(function()
+    isOverclocked = not isOverclocked
+    if isOverclocked then
+        YourButtonVariable.Text = "💥 Overclocked Barrage: ON"
+        YourButtonVariable.BackgroundColor3 = Color3.fromRGB(220, 40, 40) -- Aggressive Red
         
-        -- 🛑 ANTI-CONFLICT: Turn off Rapid Fire
+        -- 🛑 ANTI-CONFLICT: Turn off normal Rapid Fire if it's on
         if noCooldownEnabled then
             noCooldownEnabled = false
-            NoCooldownBtn.Text = "⚡ Rapid Fire: OFF"
-            NoCooldownBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+            if NoCooldownBtn then
+                NoCooldownBtn.Text = "⚡ Rapid Fire: OFF"
+                NoCooldownBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+            end
         end
     else
-        ShotgunBtn.Text = "💥 True Shotgun: OFF"
-        ShotgunBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+        YourButtonVariable.Text = "💥 Overclocked Barrage: OFF"
+        YourButtonVariable.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+        isFiring = false
     end
 end)
 
@@ -2029,42 +2034,63 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed and input.UserInputType ~= Enum.UserInputType.Touch then return end
     
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        if isShotgunActive then
+        if isOverclocked and not isFiring then
+            isFiring = true
             local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
-            local char = player.Character
-            local bp = player:FindFirstChild("Backpack")
             
-            if Send and char and bp then
-                -- Clear hands to prevent bugs
-                Send("delete_tool")
-                
-                -- 1. Get ONE real weapon
-                Send("get_tool", "RocketLauncher")
-                local newLauncher = bp:WaitForChild("RocketLauncher", 0.15)
-                
-                if newLauncher then
-                    newLauncher.Parent = char
-                    local baseOrigin = mouse.Origin
+            -- Clear out old inventory to prevent jams
+            if Send then Send("delete_tool") end
+            
+            task.spawn(function()
+                while isFiring and isOverclocked do
+                    local currentChar = player.Character
+                    local currentBp = player:FindFirstChild("Backpack")
                     
-                    -- 2. THE RACE CONDITION: Spam the remote 5 times in 1 millisecond on the SAME gun
-                    for i = 1, 50 do
-                        -- Add spread so they don't perfectly overlap and look like 1 rocket
-                        local spreadX = math.random(-15, 15) / 100
-                        local spreadY = math.random(-15, 15) / 100
-                        local spreadCFrame = baseOrigin * CFrame.Angles(spreadX, spreadY, 0)
+                    if not currentChar or not currentBp then break end
+                    
+                    -- 🔥 THE OVERLAP TRICK: Wraps the shot in its OWN background thread.
+                    task.spawn(function()
+                        if Send then Send("get_tool", "RocketLauncher") end
                         
-                        Send("shoot_rocket", newLauncher, spreadCFrame)
-                    end
+                        local newLauncher = currentBp:WaitForChild("RocketLauncher", 0.15)
+                        
+                        if newLauncher then
+                            pcall(function()
+                                newLauncher.Parent = currentChar
+                                local baseOrigin = mouse.Origin
+                                
+                                -- Spam the shoot remote 3 times for THIS specific gun to trigger the desync glitch
+                                for i = 1, 3 do
+                                    -- Add a tiny spread so the burst looks cool
+                                    local spreadX = math.random(-10, 10) / 100
+                                    local spreadY = math.random(-10, 10) / 100
+                                    local spreadCFrame = baseOrigin * CFrame.Angles(spreadX, spreadY, 0)
+                                    
+                                    if Send then Send("shoot_rocket", newLauncher, spreadCFrame) end
+                                end
+                                
+                                if Send then Send("delete_tool") end
+                                newLauncher:Destroy()
+                            end)
+                        end
+                    end)
                     
-                    -- 3. Delete immediately after the burst hits the network
-                    Send("delete_tool")
-                    newLauncher:Destroy()
+                    -- Wait a microscopic amount of time before spawning the next thread.
+                    task.wait(0.03) 
                 end
-            end
+                
+                -- Give you a gun back when you release the mouse
+                if Send and isOverclocked then Send("get_tool", "RocketLauncher") end
+            end)
         end
     end
 end)
 
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        isFiring = false
+    end
+end)
 
 -- ==========================================
 -- 💣 EXPLOSIVE TRAIT (WALKING MINE DROPPER)
