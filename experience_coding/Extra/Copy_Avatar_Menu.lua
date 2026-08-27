@@ -2082,83 +2082,30 @@ end)
 -- 💣 EXPLOSIVE TRAIT: CARPET BOMBING (RADIUS SPAM)
 -- ==========================================
 local isScattering = false
-local currentRadius = 50 -- Default radius
+local currentRadius = 50 
 local visualCircle = nil
 local updateLoop = nil
+local player = game:GetService("Players").LocalPlayer
 
 -- 1. 🔘 THE TOGGLE BUTTON
 local ExplosiveTraitBtn = Instance.new("TextButton")
 ExplosiveTraitBtn.Size = UDim2.new(1, -20, 0, 32)
-ExplosiveTraitBtn.Position = UDim2.new(0, 10, 0, 200) -- Adjust Y position as needed
+ExplosiveTraitBtn.Position = UDim2.new(0, 10, 0, 200) -- Adjust this Y position depending on your UI layout
 ExplosiveTraitBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
 ExplosiveTraitBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 ExplosiveTraitBtn.Font = Enum.Font.SourceSansBold
 ExplosiveTraitBtn.TextSize = 14
 ExplosiveTraitBtn.Text = "💣 Scatter Mines: OFF"
 ExplosiveTraitBtn.BorderSizePixel = 0
-ExplosiveTraitBtn.Parent = ToolContainer -- Make sure this matches your UI frame
+ExplosiveTraitBtn.Parent = ToolContainer 
 Instance.new("UICorner", ExplosiveTraitBtn).CornerRadius = UDim.new(0, 6)
 
--- 2. 🎚️ THE RADIUS SLIDER
-local SliderBg = Instance.new("TextButton") -- Using a button to detect mouse clicks
-SliderBg.Size = UDim2.new(1, -20, 0, 20)
-SliderBg.Position = UDim2.new(0, 10, 0, 236) -- Placed right below the button
-SliderBg.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-SliderBg.Text = ""
-SliderBg.AutoButtonColor = false
-SliderBg.Parent = ToolContainer
-Instance.new("UICorner", SliderBg).CornerRadius = UDim.new(0, 4)
-
-local SliderFill = Instance.new("Frame")
-SliderFill.Size = UDim2.new(0.5, 0, 1, 0) -- Starts at 50% (Radius 50)
-SliderFill.BackgroundColor3 = Color3.fromRGB(200, 100, 50)
-SliderFill.BorderSizePixel = 0
-SliderFill.Parent = SliderBg
-Instance.new("UICorner", SliderFill).CornerRadius = UDim.new(0, 4)
-
-local SliderLabel = Instance.new("TextLabel")
-SliderLabel.Size = UDim2.new(1, 0, 1, 0)
-SliderLabel.BackgroundTransparency = 1
-SliderLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-SliderLabel.Font = Enum.Font.SourceSansBold
-SliderLabel.TextSize = 13
-SliderLabel.Text = "Radius: 50"
-SliderLabel.Parent = SliderBg
-
--- 🖱️ Slider Math & Drag Logic
-local UserInputService = game:GetService("UserInputService")
-local isDraggingSlider = false
-
-SliderBg.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        isDraggingSlider = true
-    end
+-- 2. 🎚️ GENERATE THE RADIUS SLIDER (Using your existing function!)
+createSlider(ToolContainer, "Radius: ", 1, 100, 50, function(newValue)
+    currentRadius = newValue
 end)
 
-UserInputService.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        isDraggingSlider = false
-    end
-end)
-
-UserInputService.InputChanged:Connect(function(input)
-    if isDraggingSlider and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-        local mousePos = UserInputService:GetMouseLocation().X
-        local bgPos = SliderBg.AbsolutePosition.X
-        local bgSize = SliderBg.AbsoluteSize.X
-        
-        -- Calculate percentage and clamp it between 0.01 (Radius 1) and 1 (Radius 100)
-        local percent = math.clamp((mousePos - bgPos) / bgSize, 0.01, 1)
-        SliderFill.Size = UDim2.new(percent, 0, 1, 0)
-        
-        currentRadius = math.floor(percent * 100)
-        SliderLabel.Text = "Radius: " .. currentRadius
-    end
-end)
-
--- 3. 💥 THE CARPET BOMBING LOGIC
-local player = game:GetService("Players").LocalPlayer
-
+-- 3. 💥 CARPET BOMBING LOGIC
 local function cleanUpVisualizer()
     if visualCircle then
         visualCircle:Destroy()
@@ -2189,12 +2136,11 @@ ExplosiveTraitBtn.MouseButton1Click:Connect(function()
         visualCircle.CastShadow = false
         visualCircle.Parent = workspace
         
-        -- 🔄 Update the circle's position constantly
+        -- 🔄 Update the circle's position to follow you
         updateLoop = game:GetService("RunService").RenderStepped:Connect(function()
             local char = player.Character
             local root = char and char:FindFirstChild("HumanoidRootPart")
             if root and visualCircle then
-                -- Cylinders lay sideways, so we rotate it 90 degrees to lay flat on the floor
                 visualCircle.Size = Vector3.new(0.2, currentRadius * 2, currentRadius * 2)
                 visualCircle.CFrame = CFrame.new(root.Position - Vector3.new(0, 2.9, 0)) * CFrame.Angles(0, 0, math.rad(90))
             end
@@ -2207,7 +2153,6 @@ ExplosiveTraitBtn.MouseButton1Click:Connect(function()
                 local root = char and char:FindFirstChild("HumanoidRootPart")
                 
                 if root and Send then
-                    -- Get the tool
                     Send("get_tool", "Explosive")
                     local bp = player:FindFirstChild("Backpack")
                     local currentExp = char:FindFirstChild("Explosive") or (bp and bp:FindFirstChild("Explosive"))
@@ -2215,27 +2160,22 @@ ExplosiveTraitBtn.MouseButton1Click:Connect(function()
                     if currentExp then
                         pcall(function() currentExp.Parent = char end)
                         
-                        -- 📐 Scatter Math: Picks a perfectly random spot inside the circle!
+                        -- 📐 Scatter Math: Randomly drop anywhere inside the circle
                         local radiusMath = currentRadius * math.sqrt(math.random())
                         local angleMath = math.random() * 2 * math.pi
-                        
                         local randomX = radiusMath * math.cos(angleMath)
                         local randomZ = radiusMath * math.sin(angleMath)
                         
-                        -- Calculate the final drop position
                         local dropPos = root.Position + Vector3.new(randomX, -2.5, randomZ)
                         
-                        -- Bypass limit by sending 2 requests to that specific random spot
                         for i = 1, 2 do
                             Send("place", dropPos, Vector3.new(0, 1, 0))
                         end
                         
-                        -- Delete instantly
                         Send("delete_tool")
                         currentExp:Destroy()
                     end
                 end
-                -- Wait practically zero time to spam as fast as possible
                 task.wait(0.01) 
             end
             
@@ -2248,7 +2188,7 @@ ExplosiveTraitBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- If the player dies, clean up the circle so it doesn't get stuck
+-- Clean up the visualizer if your character resets or dies
 player.CharacterAdded:Connect(function()
     if isScattering then
         cleanUpVisualizer()
