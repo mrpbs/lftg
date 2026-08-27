@@ -1999,16 +1999,15 @@ UserInputService.InputEnded:Connect(function(input)
     end
 end)
 -- ==========================================
--- 💥 OVERCLOCKED BARRAGE (LOGIC ONLY)
+-- 💥 TRUE SHOTGUN LOGIC (NETWORK DESYNC)
 -- ==========================================
-local isOverclocked = false
+local isShotgunActive = false
 local isFiring = false
 
--- ⚠️ Change 'YourButtonVariable' to match the name of your button!
 ShotgunBtn.MouseButton1Click:Connect(function()
-    isOverclocked = not isOverclocked
-    if isOverclocked then
-        ShotgunBtn.Text = "💥 Overclocked Barrage: ON"
+    isShotgunActive = not isShotgunActive
+    if isShotgunActive then
+        ShotgunBtn.Text = "💥 True Shotgun: ON"
         ShotgunBtn.BackgroundColor3 = Color3.fromRGB(220, 40, 40) -- Aggressive Red
         
         -- 🛑 ANTI-CONFLICT: Turn off normal Rapid Fire if it's on
@@ -2020,7 +2019,7 @@ ShotgunBtn.MouseButton1Click:Connect(function()
             end
         end
     else
-        ShotgunBtn.Text = "💥 Overclocked Barrage: OFF"
+        ShotgunBtn.Text = "💥 True Shotgun: OFF"
         ShotgunBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
         isFiring = false
     end
@@ -2034,7 +2033,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed and input.UserInputType ~= Enum.UserInputType.Touch then return end
     
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        if isOverclocked and not isFiring then
+        if isShotgunActive and not isFiring then
             isFiring = true
             local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
             
@@ -2042,7 +2041,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
             if Send then Send("delete_tool") end
             
             task.spawn(function()
-                while isFiring and isOverclocked do
+                while isFiring and isShotgunActive do
                     local currentChar = player.Character
                     local currentBp = player:FindFirstChild("Backpack")
                     
@@ -2080,7 +2079,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
                 end
                 
                 -- Give you a gun back when you release the mouse
-                if Send and isOverclocked then Send("get_tool", "RocketLauncher") end
+                if Send and isShotgunActive then Send("get_tool", "RocketLauncher") end
             end)
         end
     end
