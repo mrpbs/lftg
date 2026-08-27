@@ -2047,7 +2047,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
                     local baseOrigin = mouse.Origin
                     
                     -- 2. THE RACE CONDITION: Spam the remote 5 times in 1 millisecond on the SAME gun
-                    for i = 1, 5 do
+                    for i = 1, 50 do
                         -- Add spread so they don't perfectly overlap and look like 1 rocket
                         local spreadX = math.random(-15, 15) / 100
                         local spreadY = math.random(-15, 15) / 100
