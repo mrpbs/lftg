@@ -2169,7 +2169,7 @@ SpawnVehBtn.MouseButton1Click:Connect(function()
 end)
 
 -- ==========================================
--- 💥 TANK CARPET BOMBER LOGIC
+-- 💥 TANK CARPET BOMBER LOGIC (Two-Step Bypass)
 -- ==========================================
 CarpetBombBtn.MouseButton1Click:Connect(function()
     local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
@@ -2177,16 +2177,34 @@ CarpetBombBtn.MouseButton1Click:Connect(function()
     
     local vehicles = workspace:FindFirstChild("Vehicles")
     local tank = vehicles and vehicles:FindFirstChild("Tank")
-    local turret = tank and tank:FindFirstChild("Custom") and tank.Custom:FindFirstChild("Custom")
     
-    if Send and turret then
+    -- The base is used to aim, the gun is used to shoot
+    local turretBase = tank and tank:FindFirstChild("Custom") 
+    local turretGun = turretBase and turretBase:FindFirstChild("Custom")
+    
+    if Send and turretBase and turretGun then
         CarpetBombBtn.Text = "FIRING BARRAGE..."
         CarpetBombBtn.BackgroundColor3 = Color3.fromRGB(255, 100, 0)
         
         task.spawn(function()
-            for angle = 0, 360, 15 do
-                local spreadCFrame = CFrame.new(turret.Position) * CFrame.Angles(0, math.rad(angle), 0)
-                Send("shoot_turret", turret, spreadCFrame)
+            -- Fire 12 rockets in a massive circle (every 30 degrees)
+            for angle = 0, 360, 30 do
+                -- 1. Calculate a target point 100 studs away in the current angle
+                local rad = math.rad(angle)
+                local direction = Vector3.new(math.sin(rad), -0.2, math.cos(rad)) -- Slight downward angle
+                local targetPos = turretBase.Position + (direction * 100)
+                
+                -- 2. Send the Aim Command
+                Send("point_position", turretBase, targetPos)
+                
+                -- 3. Calculate the exact CFrame looking at that target
+                local shootCFrame = CFrame.lookAt(turretGun.Position, targetPos)
+                
+                -- 4. Send the Fire Command
+                Send("shoot_turret", turretGun, shootCFrame)
+                
+                -- Tiny delay so the server processes the rotation before the next shot
+                task.wait(0.05) 
             end
             
             task.wait(1)
