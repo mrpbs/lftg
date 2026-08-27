@@ -2102,7 +2102,7 @@ local updateLoop = nil
 local player = game:GetService("Players").LocalPlayer
 
 -- 2. 🎚️ GENERATE THE RADIUS SLIDER (Using your existing function!)
-createSlider(ToolContainer, "Radius: ", 1, 100, 50, function(newValue)
+createSlider(ToolContainer, "Radius: ", 1, 10000, 50, function(newValue)
     currentRadius = newValue
 end)
 
