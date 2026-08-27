@@ -2884,69 +2884,93 @@ local function createDetailedAssetCard(categoryName, assetId, rawPropertySource)
         end
     end)
 end
--- ========== AUTO-RL TARGETING SYSTEM (SYNCHRONIZED) ==========
+-- ========== AUTO-RL TARGETING SYSTEM (BULLETPROOF) ==========
 local autoRLTarget = nil
 local isAutoFiring = false
 
 task.spawn(function()
     while true do
-        task.wait()
+        task.wait(0.1) -- Optimized idle loop
         
         local player = game:GetService("Players").LocalPlayer
         local char = player.Character
         local bp = player:FindFirstChild("Backpack")
-        local currentTool = char and char:FindFirstChildOfClass("Tool")
         
-        -- 1. Check if we have a target, they are alive, AND you pulled out the Launcher
-        if autoRLTarget and autoRLTarget.Character and autoRLTarget.Character:FindFirstChild("HumanoidRootPart") and currentTool and currentTool.Name == "RocketLauncher" then
+        -- 1. Check if we have a valid target who is alive
+        if autoRLTarget and autoRLTarget.Character and autoRLTarget.Character:FindFirstChild("HumanoidRootPart") then
             
-            isAutoFiring = true
-            local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
+            -- 2. Check if you own a Rocket Launcher (in hand OR in backpack)
+            local hasLauncher = false
+            if char and char:FindFirstChild("RocketLauncher") then hasLauncher = true end
+            if bp and bp:FindFirstChild("RocketLauncher") then hasLauncher = true end
             
-            -- Clear out your inventory to prepare the loop cleanly
-            if Send then Send("delete_tool") end
-            currentTool:Destroy()
-            if bp then
-                for _, v in ipairs(bp:GetChildren()) do
-                    if v.Name == "RocketLauncher" then v:Destroy() end
-                end
-            end
-            
-            -- 💥 ONE SINGLE LOOP: Fetch -> Wait -> Aim -> Shoot -> Delete
-            while isAutoFiring and autoRLTarget and autoRLTarget.Character and autoRLTarget.Character:FindFirstChild("HumanoidRootPart") and char and bp do
+            -- 3. If you have it, start the slaughter automatically
+            if hasLauncher and not isAutoFiring then
+                isAutoFiring = true
+                local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
                 
-                -- 1. Request ammo
+                -- Clear out old inventory to start completely fresh
+                if Send then Send("delete_tool") end
+                if char then
+                    for _, v in ipairs(char:GetChildren()) do
+                        if v:IsA("Tool") and v.Name == "RocketLauncher" then v:Destroy() end
+                    end
+                end
+                if bp then
+                    for _, v in ipairs(bp:GetChildren()) do
+                        if v.Name == "RocketLauncher" then v:Destroy() end
+                    end
+                end
+                
+                -- 💥 ONE SINGLE LOOP: Fetch -> Aim -> Shoot -> Delete
+                while isAutoFiring do
+                    -- Refresh local variables safely inside the loop in case of respawn
+                    local currentChar = player.Character
+                    local currentBp = player:FindFirstChild("Backpack")
+                    
+                    -- Break if target is lost, target dies, or you die
+                    if not (autoRLTarget and autoRLTarget.Character and autoRLTarget.Character:FindFirstChild("HumanoidRootPart")) then
+                        break
+                    end
+                    if not currentChar or not currentBp then
+                        break
+                    end
+                    
+                    -- Request ammo
+                    if Send then Send("get_tool", "RocketLauncher") end
+                    
+                    -- Wait up to 0.2s for it to arrive (Syncs perfectly with your ping)
+                    local newLauncher = currentBp:WaitForChild("RocketLauncher", 0.2)
+                    
+                    if newLauncher then
+                        -- Equip instantly
+                        newLauncher.Parent = currentChar
+                        
+                        -- Re-calculate perfect aimbot trajectory
+                        local handle = newLauncher:FindFirstChild("Handle")
+                        local spawnPos = handle and handle.Position or (currentChar:GetPivot().Position + Vector3.new(0, 2, 0))
+                        local targetPos = autoRLTarget.Character.HumanoidRootPart.Position
+                        local targetCFrame = CFrame.new(spawnPos, targetPos)
+                        
+                        -- Fire!
+                        if Send then Send("shoot_rocket", newLauncher, targetCFrame) end
+                        
+                        -- Delete to bypass the reload and inventory limits
+                        if Send then Send("delete_tool") end
+                        newLauncher:Destroy()
+                    end
+                    
+                    task.wait(0.01) 
+                end
+                
+                isAutoFiring = false
+                
+                -- Restock you with a normal launcher when they die or you untarget them
                 if Send then Send("get_tool", "RocketLauncher") end
-                
-                -- 2. Wait up to 0.2s for it to arrive (Prevents stutter & syncs with ping)
-                local newLauncher = bp:WaitForChild("RocketLauncher", 0.2)
-                
-                if newLauncher then
-                    -- 3. Equip instantly
-                    newLauncher.Parent = char
-                    
-                    -- 4. Calculate exact Aimbot trajectory right before firing
-                    local handle = newLauncher:FindFirstChild("Handle")
-                    local spawnPos = handle and handle.Position or (char:GetPivot().Position + Vector3.new(0, 2, 0))
-                    local targetPos = autoRLTarget.Character.HumanoidRootPart.Position
-                    local targetCFrame = CFrame.new(spawnPos, targetPos)
-                    
-                    -- 5. Fire perfectly at the target
-                    if Send then Send("shoot_rocket", newLauncher, targetCFrame) end
-                    
-                    -- 6. Delete to bypass the inventory cap and reload cooldown
-                    if Send then Send("delete_tool") end
-                    newLauncher:Destroy()
-                end
-                
-                -- Tiny delay to prevent UI freezing
-                task.wait(0.01) 
             end
-            
+        else
+            -- Failsafe to ensure it shuts down if target disconnects
             isAutoFiring = false
-            
-            -- Restock you with a normal launcher when they die or you untarget them
-            if Send then Send("get_tool", "RocketLauncher") end
         end
     end
 end)
