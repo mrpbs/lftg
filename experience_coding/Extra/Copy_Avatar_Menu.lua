@@ -2157,7 +2157,7 @@ applySmartHold(
     ToolMainBtn,    
     ToolContainer,  
     40,             
-    240,            -- Increased height to 200px to perfectly fit the new Explosive button
+    280,            -- Increased height to 200px to perfectly fit the new Explosive button
     0.5,              
     function()
         if ToolInput.Text ~= "" then
