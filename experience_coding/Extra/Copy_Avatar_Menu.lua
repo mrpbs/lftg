@@ -1888,7 +1888,7 @@ SpawnToolBtn.MouseButton1Click:Connect(function()
 end)
 
 -- ==========================================
--- ⚡ MAX-SPEED RAPID FIRE (AUTO-EQUIP)
+-- ⚡ MAX-SPEED RAPID FIRE (TRUE AUTO-EQUIP)
 -- ==========================================
 local isFiring = false
 
@@ -1913,66 +1913,66 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed and input.UserInputType ~= Enum.UserInputType.Touch then return end
     
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        if noCooldownEnabled then
+        -- We removed the 'hasLauncher' check. If it's enabled and you click, it just starts!
+        if noCooldownEnabled and not isFiring then
+            isFiring = true
+            
             local char = player.Character
             local bp = player:FindFirstChild("Backpack")
+            local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
             
-            -- Check if you own it (in hand OR in backpack)
-            local hasLauncher = false
-            if char and char:FindFirstChild("RocketLauncher") then hasLauncher = true end
-            if bp and bp:FindFirstChild("RocketLauncher") then hasLauncher = true end
+            -- Clear any old launchers out of your hands/inventory first
+            if Send then Send("delete_tool") end
+            if char then
+                for _, v in ipairs(char:GetChildren()) do
+                    if v:IsA("Tool") and v.Name == "RocketLauncher" then v:Destroy() end
+                end
+            end
+            if bp then
+                for _, v in ipairs(bp:GetChildren()) do
+                    if v.Name == "RocketLauncher" then v:Destroy() end
+                end
+            end
             
-            if hasLauncher then
-                isFiring = true
-                local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
-                
-                -- Clear any old launchers out of your hands/inventory first
-                if Send then Send("delete_tool") end
-                if char then
-                    for _, v in ipairs(char:GetChildren()) do
-                        if v:IsA("Tool") and v.Name == "RocketLauncher" then v:Destroy() end
-                    end
-                end
-                if bp then
-                    for _, v in ipairs(bp:GetChildren()) do
-                        if v.Name == "RocketLauncher" then v:Destroy() end
-                    end
-                end
-                
-                -- MAX SPEED LOOP
-                task.spawn(function()
-                    while isFiring and noCooldownEnabled and char and bp do
-                        -- 1. Ask the server for a fresh launcher
-                        if Send then Send("get_tool", "RocketLauncher") end
+            -- MAX SPEED LOOP
+            task.spawn(function()
+                while isFiring and noCooldownEnabled do
+                    -- Refresh variables inside the loop so it doesn't break if you respawn
+                    local currentChar = player.Character
+                    local currentBp = player:FindFirstChild("Backpack")
+                    
+                    if not currentChar or not currentBp then break end
+                    
+                    -- 1. Ask the server for a fresh launcher automatically
+                    if Send then Send("get_tool", "RocketLauncher") end
+                    
+                    -- 2. Wait just long enough for it to appear based on ping
+                    local newLauncher = currentBp:WaitForChild("RocketLauncher", 0.15)
+                    
+                    if newLauncher then
+                        -- 3. Equip instantly
+                        newLauncher.Parent = currentChar
                         
-                        -- 2. Wait just long enough for it to appear based on ping
-                        local newLauncher = bp:WaitForChild("RocketLauncher", 0.15)
+                        -- 4. Calculate exact aim
+                        local handle = newLauncher:FindFirstChild("Handle")
+                        local spawnPos = handle and handle.Position or (currentChar:GetPivot().Position + Vector3.new(0, 2, 0))
+                        local targetCFrame = CFrame.new(spawnPos, mouse.Hit.Position)
                         
-                        if newLauncher then
-                            -- 3. Equip instantly
-                            newLauncher.Parent = char
-                            
-                            -- 4. Calculate exact aim
-                            local handle = newLauncher:FindFirstChild("Handle")
-                            local spawnPos = handle and handle.Position or (char:GetPivot().Position + Vector3.new(0, 2, 0))
-                            local targetCFrame = CFrame.new(spawnPos, mouse.Hit.Position)
-                            
-                            -- 5. Shoot and immediately delete!
-                            if Send then Send("shoot_rocket", newLauncher, targetCFrame) end
-                            if Send then Send("delete_tool") end
-                            newLauncher:Destroy()
-                        end
-                        
-                        -- Using the absolute minimum yield time to prevent crashing
-                        task.wait() 
+                        -- 5. Shoot and immediately delete!
+                        if Send then Send("shoot_rocket", newLauncher, targetCFrame) end
+                        if Send then Send("delete_tool") end
+                        newLauncher:Destroy()
                     end
                     
-                    -- When you let go of the mouse, restock your inventory safely
-                    if Send and noCooldownEnabled then 
-                        Send("get_tool", "RocketLauncher") 
-                    end
-                end)
-            end
+                    -- Using the absolute minimum yield time to prevent crashing
+                    task.wait() 
+                end
+                
+                -- When you let go of the mouse, restock your inventory safely
+                if Send and noCooldownEnabled then 
+                    Send("get_tool", "RocketLauncher") 
+                end
+            end)
         end
     end
 end)
