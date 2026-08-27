@@ -2008,8 +2008,8 @@ local isFiring = false
 ShotgunBtn.MouseButton1Click:Connect(function()
     isOverclocked = not isOverclocked
     if isOverclocked then
-        YourButtonVariable.Text = "💥 Overclocked Barrage: ON"
-        YourButtonVariable.BackgroundColor3 = Color3.fromRGB(220, 40, 40) -- Aggressive Red
+        ShotgunBtn.Text = "💥 Overclocked Barrage: ON"
+        ShotgunBtn.BackgroundColor3 = Color3.fromRGB(220, 40, 40) -- Aggressive Red
         
         -- 🛑 ANTI-CONFLICT: Turn off normal Rapid Fire if it's on
         if noCooldownEnabled then
@@ -2020,8 +2020,8 @@ ShotgunBtn.MouseButton1Click:Connect(function()
             end
         end
     else
-        YourButtonVariable.Text = "💥 Overclocked Barrage: OFF"
-        YourButtonVariable.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+        ShotgunBtn.Text = "💥 Overclocked Barrage: OFF"
+        ShotgunBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
         isFiring = false
     end
 end)
