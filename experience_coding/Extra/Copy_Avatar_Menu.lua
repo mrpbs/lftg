@@ -1923,6 +1923,8 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
             
             -- Clear any old launchers out of your hands/inventory first
             if Send then Send("delete_tool") end
+             if Send then Send("get_tool", "RocketLauncher") end
+                 
             if char then
                 for _, v in ipairs(char:GetChildren()) do
                     if v:IsA("Tool") and v.Name == "RocketLauncher" then v:Destroy() end
