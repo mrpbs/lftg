@@ -1841,19 +1841,18 @@ NoCooldownBtn.Parent = ToolContainer
 Instance.new("UICorner", NoCooldownBtn).CornerRadius = UDim.new(0, 6)
 
 -- ==========================================
--- 🎆 "ANNOY SERVER" UI BUTTON
--- ==========================================
-local KillAllBtn = Instance.new("TextButton")
-KillAllBtn.Size = UDim2.new(1, -20, 0, 32)
-KillAllBtn.Position = UDim2.new(0, 10, 0, 160) -- 2nd Button (Pushed down by 40)
-KillAllBtn.BackgroundColor3 = Color3.fromRGB(150, 40, 40)
-KillAllBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-KillAllBtn.Font = Enum.Font.SourceSansBold
-KillAllBtn.TextSize = 14
-KillAllBtn.Text = "🎆 RL ANNOY ALL: OFF"
-KillAllBtn.BorderSizePixel = 0
-KillAllBtn.Parent = ToolContainer 
-Instance.new("UICorner", KillAllBtn).CornerRadius = UDim.new(0, 6)
+local GhostShotgunBtn = Instance.new("TextButton")
+GhostShotgunBtn.Size = UDim2.new(1, -20, 0, 32)
+GhostShotgunBtn.Position = UDim2.new(0, 10, 0, 160) -- Placed exactly where Annoy All used to be
+GhostShotgunBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+GhostShotgunBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+GhostShotgunBtn.Font = Enum.Font.SourceSansBold
+GhostShotgunBtn.TextSize = 14
+GhostShotgunBtn.Text = "👻 Ghost Shotgun: OFF"
+GhostShotgunBtn.BorderSizePixel = 0
+GhostShotgunBtn.Parent = ToolContainer -- Ensure this matches your UI frame!
+Instance.new("UICorner", GhostShotgunBtn).CornerRadius = UDim.new(0, 6)
+
 
 -- 6. Explosive Trait Toggle Button 
 local ExplosiveTraitBtn = Instance.new("TextButton")
@@ -2000,92 +1999,68 @@ UserInputService.InputEnded:Connect(function(input)
     end
 end)
 -- ==========================================
--- 🎆 THE MICHAEL BAY EXPERIENCE (ANNOY ALL)
+-- 👻 GHOST SHOTGUN (INSTANT 5-BURST, NO LAG)
 -- ==========================================
-local isKillAllActive = false
+local isGhostFiring = false
 
-local function isAlive(targetPlayer)
-    if not targetPlayer or not targetPlayer.Character then return false end
-    local head = targetPlayer.Character:FindFirstChild("Head")
-    return head ~= nil 
-end
-
-KillAllBtn.MouseButton1Click:Connect(function()
-    isKillAllActive = not isKillAllActive
+GhostShotgunBtn.MouseButton1Click:Connect(function()
+    isGhostFiring = not isGhostFiring
     
-    if isKillAllActive then
-        KillAllBtn.Text = "🎆 RL ANNOY ALL: ON"
-        KillAllBtn.BackgroundColor3 = Color3.fromRGB(200, 80, 20)
+    if isGhostFiring then
+        GhostShotgunBtn.Text = "👻 Ghost Shotgun: ON"
+        GhostShotgunBtn.BackgroundColor3 = Color3.fromRGB(150, 50, 200) -- Purple Theme
         
-        -- 🛑 ANTI-CONFLICT: Turn off Rapid Fire so they don't break each other
+        -- 🛑 ANTI-CONFLICT: Turn off Rapid Fire so they don't fight over your mouse clicks
         if noCooldownEnabled then
             noCooldownEnabled = false
             NoCooldownBtn.Text = "⚡ Rapid Fire: OFF"
             NoCooldownBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
         end
-        
-        local player = game:GetService("Players").LocalPlayer
-        local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
-        
-        if Send then Send("delete_tool") end
-        
-        task.spawn(function()
-            while isKillAllActive do
-                local char = player.Character
-                local bp = player:FindFirstChild("Backpack")
-                
-                if not char or not bp then 
-                    task.wait(1)
-                    continue 
-                end
-                
-                for _, targetPlayer in ipairs(game:GetService("Players"):GetPlayers()) do
-                    if not isKillAllActive then break end 
-                    
-                    if targetPlayer ~= player and isAlive(targetPlayer) then
-                        
-                        -- Fire a rapid-burst of 3 rockets at their face
-                        for burst = 1, 3 do
-                            if Send then Send("get_tool", "RocketLauncher") end
-                            local newLauncher = bp:WaitForChild("RocketLauncher", 0.15)
-                            
-                            if newLauncher then
-                                newLauncher.Parent = char
-                                local handle = newLauncher:FindFirstChild("Handle")
-                                local spawnPos = handle and handle.Position or (char:GetPivot().Position + Vector3.new(0, 2, 0))
-                                
-                                local success, targetCFrame = pcall(function()
-                                    local headPos = targetPlayer.Character.Head.Position
-                                    -- Add a tiny random spread so the explosions surround their camera
-                                    local spread = Vector3.new(
-                                        math.random(-3, 3), 
-                                        math.random(-3, 3), 
-                                        math.random(-3, 3)
-                                    )
-                                    return CFrame.new(spawnPos, headPos + spread)
-                                end)
-                                
-                                if success and targetCFrame then
-                                    if Send then Send("shoot_rocket", newLauncher, targetCFrame) end
-                                end
-                                
-                                if Send then Send("delete_tool") end
-                                newLauncher:Destroy()
-                            end
-                            task.wait(0.01) -- Minimum delay for the burst
-                        end
-                    end
-                end
-                task.wait(0.1) -- Short breather before the next server sweep
-            end
-            
-            if Send then Send("get_tool", "RocketLauncher") end
-        end)
     else
-        KillAllBtn.Text = "🎆 RL ANNOY ALL: OFF"
-        KillAllBtn.BackgroundColor3 = Color3.fromRGB(150, 40, 40)
+        GhostShotgunBtn.Text = "👻 Ghost Shotgun: OFF"
+        GhostShotgunBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
     end
 end)
+
+local UserInputService = game:GetService("UserInputService")
+local player = game:GetService("Players").LocalPlayer
+local mouse = player:GetMouse()
+
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed and input.UserInputType ~= Enum.UserInputType.Touch then return end
+    
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        if isGhostFiring then
+            local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
+            local char = player.Character
+            
+            if not char or not Send then return end
+            
+            -- Instantly generate 5 fake tools, fire them, and delete them in 1 frame.
+            for i = 1, 5 do
+                -- 1. Create a fake ghost tool
+                local fakeLauncher = Instance.new("Tool")
+                fakeLauncher.Name = "RocketLauncher"
+                fakeLauncher.Parent = char -- Put it in our character so the server thinks we hold it
+                
+                -- 2. Grab the exact Camera Origin just like the decompiled script does
+                local baseOrigin = mouse.Origin
+                
+                -- 3. Calculate a shotgun spread angle so they don't overlap perfectly
+                local spreadX = math.random(-15, 15) / 100
+                local spreadY = math.random(-15, 15) / 100
+                local spreadCFrame = baseOrigin * CFrame.Angles(spreadX, spreadY, 0)
+                
+                -- 4. Tell the server the fake tool fired!
+                Send("shoot_rocket", fakeLauncher, spreadCFrame)
+                
+                -- 5. Erase the ghost tool instantly
+                fakeLauncher:Destroy()
+            end
+        end
+    end
+end)
+
 
 -- ==========================================
 -- 💣 EXPLOSIVE TRAIT (WALKING MINE DROPPER)
