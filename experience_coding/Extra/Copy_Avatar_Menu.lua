@@ -2884,7 +2884,7 @@ local function createDetailedAssetCard(categoryName, assetId, rawPropertySource)
         end
     end)
 end
--- ========== AUTO-RL TARGETING SYSTEM (ANTI-CRASH) ==========
+-- ========== AUTO-RL TARGETING SYSTEM (AUTO-START & ANTI-CONFLICT) ==========
 local autoRLTarget = nil
 local isAutoFiring = false
 
@@ -2893,18 +2893,12 @@ local function isValidTarget(targ)
     if not targ then return false end
     
     local success, isValid = pcall(function()
-        -- 1. Check if they are still in the server
         if not targ.Parent then return false end 
-        
-        -- 2. Check if they have a physical body
         local char = targ.Character
         if not char then return false end
         if not char:FindFirstChild("HumanoidRootPart") then return false end
-        
-        -- 3. Check if they are alive
         local hum = char:FindFirstChild("Humanoid")
         if hum and hum.Health <= 0 then return false end
-        
         return true
     end)
     
@@ -2919,19 +2913,22 @@ task.spawn(function()
         local char = player.Character
         local bp = player:FindFirstChild("Backpack")
         
-        -- 1. Use the safe validation instead of raw checks
+        -- 1. If we have a valid target, AUTO-START immediately!
         if isValidTarget(autoRLTarget) then
             
-            -- 2. Check if you own a Rocket Launcher
-            local hasLauncher = false
-            if char and char:FindFirstChild("RocketLauncher") then hasLauncher = true end
-            if bp and bp:FindFirstChild("RocketLauncher") then hasLauncher = true end
-            
-            if hasLauncher and not isAutoFiring then
+            if not isAutoFiring then
                 isAutoFiring = true
+                
+                -- 🛑 ANTI-CONFLICT: Force turn off manual Rapid Fire so they don't fight
+                if noCooldownEnabled then
+                    noCooldownEnabled = false
+                    -- (If you want the Rapid Fire button to turn grey automatically, 
+                    -- you can add NoCooldownBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65) here!)
+                end
+                
                 local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
                 
-                -- Clear inventory
+                -- Clear inventory to start fresh
                 if Send then Send("delete_tool") end
                 if char then
                     for _, v in ipairs(char:GetChildren()) do
@@ -2954,6 +2951,7 @@ task.spawn(function()
                         break
                     end
                     
+                    -- AUTO-EQUIP: We request the tool ourselves, no need to hold one beforehand!
                     if Send then Send("get_tool", "RocketLauncher") end
                     local newLauncher = currentBp:WaitForChild("RocketLauncher", 0.2)
                     
