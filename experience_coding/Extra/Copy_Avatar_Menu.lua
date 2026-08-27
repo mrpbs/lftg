@@ -2111,6 +2111,20 @@ SpawnVehBtn.Text = "Spawn Vehicle"
 SpawnVehBtn.BorderSizePixel = 0
 SpawnVehBtn.Parent = VehSpawnContent
 Instance.new("UICorner", SpawnVehBtn).CornerRadius = UDim.new(0, 6)
+----
+
+-- 5. Carpet Bomber Button (NEW!)
+local CarpetBombBtn = Instance.new("TextButton")
+CarpetBombBtn.Size = UDim2.new(1, -20, 0, 32)
+CarpetBombBtn.Position = UDim2.new(0, 10, 0, 120) -- Placed right below the Spawn button
+CarpetBombBtn.BackgroundColor3 = Color3.fromRGB(150, 40, 40)
+CarpetBombBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+CarpetBombBtn.Font = Enum.Font.SourceSansBold
+CarpetBombBtn.TextSize = 14
+CarpetBombBtn.Text = "💥 360° Carpet Bomb (Tank)"
+CarpetBombBtn.BorderSizePixel = 0
+CarpetBombBtn.Parent = VehicleContainer -- Make sure this is your vehicle dropdown frame!
+Instance.new("UICorner", CarpetBombBtn).CornerRadius = UDim.new(0, 6)
 
 -- Dropdown Toggle Logic
 local vehSpawnExpanded = false
@@ -2171,6 +2185,44 @@ SpawnVehBtn.MouseButton1Click:Connect(function()
         task.delay(1.5, function()
             SpawnVehBtn.Text = "Spawn Vehicle"
             SpawnVehBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
+        end)
+    end
+end)
+-- ==========================================
+-- 💥 TANK CARPET BOMBER LOGIC
+-- ==========================================
+CarpetBombBtn.MouseButton1Click:Connect(function()
+    local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
+    local workspace = game:GetService("Workspace")
+    
+    -- Search the map for your spawned Tank
+    local vehicles = workspace:FindFirstChild("Vehicles")
+    local tank = vehicles and vehicles:FindFirstChild("Tank")
+    local turret = tank and tank:FindFirstChild("Custom") and tank.Custom:FindFirstChild("Custom")
+    
+    if Send and turret then
+        CarpetBombBtn.Text = "FIRING BARRAGE..."
+        CarpetBombBtn.BackgroundColor3 = Color3.fromRGB(255, 100, 0)
+        
+        task.spawn(function()
+            -- Fire 24 rockets in a massive circle
+            for angle = 0, 360, 15 do
+                -- Rotate the CFrame by the current angle
+                local spreadCFrame = CFrame.new(turret.Position) * CFrame.Angles(0, math.rad(angle), 0)
+                Send("shoot_turret", turret, spreadCFrame)
+            end
+            
+            task.wait(1) -- Cooldown so you don't break your UI
+            CarpetBombBtn.Text = "💥 360° Carpet Bomb (Tank)"
+            CarpetBombBtn.BackgroundColor3 = Color3.fromRGB(150, 40, 40)
+        end)
+    else
+        -- Error handling if you aren't in a tank
+        CarpetBombBtn.Text = "Spawn a Tank First!"
+        CarpetBombBtn.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+        task.delay(1.5, function()
+            CarpetBombBtn.Text = "💥 360° Carpet Bomb (Tank)"
+            CarpetBombBtn.BackgroundColor3 = Color3.fromRGB(150, 40, 40)
         end)
     end
 end)
