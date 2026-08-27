@@ -2059,7 +2059,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
                                 local baseOrigin = mouse.Origin
                                 
                                 -- Spam the shoot remote 3 times for THIS specific gun to trigger the desync glitch
-                                for i = 1, 3 do
+                                for i = 1, 7 do
                                     -- Add a tiny spread so the burst looks cool
                                     local spreadX = math.random(-10, 10) / 100
                                     local spreadY = math.random(-10, 10) / 100
