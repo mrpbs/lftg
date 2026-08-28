@@ -158,6 +158,74 @@ local function shareOutfitToAll(rawOutfitData, buttonElement, defaultText, defau
     end)
 end
 
+
+local function shareOutfitToFriends(rawOutfitData, buttonElement, defaultText, defaultColor, excludedPlayer)
+    local payload = buildBatchPayload(rawOutfitData)
+    payload.makeups = {} -- Vital to prevent server crash
+    
+    local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
+    
+    if not Send then 
+        buttonElement.Text = "No Net"
+        task.wait(2)
+        buttonElement.Text = defaultText
+        return 
+    end
+
+    buttonElement.Text = "Scanning..."
+    buttonElement.BackgroundColor3 = Color3.fromRGB(150, 50, 150)
+
+    task.spawn(function()
+        local embedData = {
+            outfit_id = -2,
+            app = "Avatar",
+            accept = "View",
+            content = "Custom Outfit",
+            func = "view_outfit",
+            desc = payload
+        }
+        local embedJson = HttpService:JSONEncode(embedData)
+        
+        local sharedCount = 0
+        local myId = LocalPlayer.UserId
+        
+        for _, p in ipairs(Players:GetPlayers()) do
+            -- 🛡️ THE FRIEND CHECK: LocalPlayer:IsFriendsWith(p.UserId)
+            if p ~= LocalPlayer and p ~= excludedPlayer and LocalPlayer:IsFriendsWith(p.UserId) and sharedCount < 20 then
+                task.spawn(function()
+                    pcall(function()
+                        local targetId = p.UserId
+                        Send("can_users_direct_chat", myId, targetId)
+                        
+                        local channelStr = ""
+                        if myId < targetId then
+                            channelStr = tostring(myId) .. " " .. tostring(targetId)
+                        else
+                            channelStr = tostring(targetId) .. " " .. tostring(myId)
+                        end
+                        
+                        Send("out_embed", channelStr, embedJson, "!EMBED")
+                    end)
+                end)
+                sharedCount = sharedCount + 1
+                task.wait(0.1) 
+            end
+        end
+        
+        if sharedCount > 0 then
+            buttonElement.Text = "Sent to " .. tostring(sharedCount) .. " Friends!"
+            buttonElement.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
+        else
+            buttonElement.Text = "No Friends Here!"
+            buttonElement.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+        end
+        
+        task.wait(2)
+        buttonElement.Text = defaultText
+        buttonElement.BackgroundColor3 = defaultColor
+    end)
+end
+
 -- Prevent duplicate GUIs
 if LocalPlayer:WaitForChild("PlayerGui"):FindFirstChild("DeepMetadataScanner") then
     LocalPlayer.PlayerGui.DeepMetadataScanner:Destroy()
@@ -3635,8 +3703,8 @@ outfitData.WalkAnimation = getVal("WalkAnimation")
         wlBtn.Parent = actionLayout
  -- ==========================================
 
-              -- ==========================================
-        -- ROW 2: TARGET RL BUTTON (NEW!)
+        -- ==========================================
+        -- ROW 2: TARGET RL BUTTON
         -- ==========================================
         local targetRlBtn = Instance.new("TextButton")
         if autoRLTarget == targetPlayer then
@@ -3652,9 +3720,35 @@ outfitData.WalkAnimation = getVal("WalkAnimation")
         targetRlBtn.BorderSizePixel = 0
         targetRlBtn.LayoutOrder = 7
         targetRlBtn.Parent = actionLayout
+        -- (Optional: add a UICorner here if you want round edges on target RL too)
+        -- Instance.new("UICorner", targetRlBtn).CornerRadius = UDim.new(0, 4)
 
-     -- ==========================================
-        -- LOGIC CONNECTIONS
+        -- ==========================================
+        -- ROW 2: SHARE TO FRIENDS BUTTON (NEW!)
+        -- ==========================================
+        local ShareFriendsBtn = Instance.new("TextButton")
+        ShareFriendsBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 50) -- Friendly Green
+        ShareFriendsBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        ShareFriendsBtn.Font = Enum.Font.SourceSansBold
+        ShareFriendsBtn.TextSize = 11 -- Matched to targetRlBtn text size
+        ShareFriendsBtn.Text = "Share to Friends"
+        ShareFriendsBtn.BorderSizePixel = 0
+        ShareFriendsBtn.LayoutOrder = 8 -- Snaps it directly after Target RL
+        ShareFriendsBtn.Parent = actionLayout 
+        
+        -- (Only add this UICorner if your other layout buttons have rounded corners)
+        -- Instance.new("UICorner", ShareFriendsBtn).CornerRadius = UDim.new(0, 4)
+
+        -- Connect it to the new function!
+        ShareFriendsBtn.MouseButton1Click:Connect(function()
+            -- Make sure 'lastScannedOutfit' is defined in this scope!
+            if lastScannedOutfit then
+                -- Note: We use 'targetPlayer' here instead of 'excludedPlayer' since that's what your code block uses
+                shareOutfitToFriends(lastScannedOutfit, ShareFriendsBtn, "Share to Friends", Color3.fromRGB(50, 150, 50), targetPlayer)
+            end
+        end)
+
+-- LOGIC CONNECTIONS
         -- ==========================================
    
          targetRlBtn.MouseButton1Click:Connect(function()
