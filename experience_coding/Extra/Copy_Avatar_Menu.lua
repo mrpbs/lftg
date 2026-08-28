@@ -3736,15 +3736,26 @@ outfitData.WalkAnimation = getVal("WalkAnimation")
         ShareFriendsBtn.LayoutOrder = 8 -- Snaps it directly after Target RL
         ShareFriendsBtn.Parent = actionLayout 
         
-        -- (Only add this UICorner if your other layout buttons have rounded corners)
-        -- Instance.new("UICorner", ShareFriendsBtn).CornerRadius = UDim.new(0, 4)
-
-   -- Connect it to the new function using the correct 'outfitData' variable!
-ShareFriendsBtn.MouseButton1Click:Connect(function()
+     ShareFriendsBtn.MouseButton1Click:Connect(function()
+    -- 1. Prove the click is actually registering
+    ShareFriendsBtn.Text = "Testing..."
+    
     if outfitData then
-        shareOutfitToFriends(outfitData, ShareFriendsBtn, "Share to Friends", Color3.fromRGB(50, 150, 50), targetPlayer)
+        -- 2. Wrap it in a protective pcall so it can't crash silently
+        local success, errorMessage = pcall(function()
+            shareOutfitToFriends(outfitData, ShareFriendsBtn, "Share to Friends", Color3.fromRGB(50, 150, 50), targetPlayer)
+        end)
+        
+        -- 3. If it crashed, print the exact error on the button!
+        if not success then
+            warn("SHARE FRIENDS ERROR: " .. tostring(errorMessage))
+            ShareFriendsBtn.Text = "Check F9 Console!"
+            ShareFriendsBtn.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+            task.wait(3)
+            ShareFriendsBtn.Text = "Share to Friends"
+            ShareFriendsBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
+        end
     else
-        -- Failsafe: Visually tells you if the data didn't load properly
         ShareFriendsBtn.Text = "Error: No Data"
         ShareFriendsBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
         task.wait(1.5)
