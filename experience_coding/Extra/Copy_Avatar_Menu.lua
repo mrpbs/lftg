@@ -3785,6 +3785,143 @@ outfitData.WalkAnimation = getVal("WalkAnimation")
         ShareFriendsBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
     end
 end)
+-- 3rd row
+
+
+        -- ==========================================
+        -- ROW 3: MOVEMENT & TROLLING (LayoutOrders 9, 10, 11)
+        -- ==========================================
+        local RunService = game:GetService("RunService")
+        local myPlayer = game:GetService("Players").LocalPlayer
+
+        -- 1. 🌌 TELEPORT BUTTON
+        local TpBtn = Instance.new("TextButton")
+        TpBtn.BackgroundColor3 = Color3.fromRGB(40, 100, 180) -- Blue
+        TpBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        TpBtn.Font = Enum.Font.SourceSansBold
+        TpBtn.TextSize = 11
+        TpBtn.Text = "Teleport"
+        TpBtn.BorderSizePixel = 0
+        TpBtn.LayoutOrder = 9
+        TpBtn.Parent = actionLayout 
+
+        TpBtn.MouseButton1Click:Connect(function()
+            local myChar = myPlayer.Character
+            local tChar = targetPlayer.Character
+            local myRoot = myChar and myChar:FindFirstChild("HumanoidRootPart")
+            local tRoot = tChar and tChar:FindFirstChild("HumanoidRootPart")
+            
+            if myRoot and tRoot then
+                -- Teleports you 3 studs in front of them, facing them
+                myRoot.CFrame = tRoot.CFrame * CFrame.new(0, 0, -3) * CFrame.Angles(0, math.rad(180), 0)
+                
+                -- Button flash effect
+                TpBtn.BackgroundColor3 = Color3.fromRGB(100, 200, 255)
+                task.wait(0.2)
+                TpBtn.BackgroundColor3 = Color3.fromRGB(40, 100, 180)
+            end
+        end)
+
+        -- 2. 🪑 HEAD SIT BUTTON
+        local HeadSitBtn = Instance.new("TextButton")
+        HeadSitBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65) 
+        HeadSitBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        HeadSitBtn.Font = Enum.Font.SourceSansBold
+        HeadSitBtn.TextSize = 11
+        HeadSitBtn.Text = "Head Sit"
+        HeadSitBtn.BorderSizePixel = 0
+        HeadSitBtn.LayoutOrder = 10
+        HeadSitBtn.Parent = actionLayout 
+
+        local isHeadSitting = false
+        local headSitLoop = nil
+
+        HeadSitBtn.MouseButton1Click:Connect(function()
+            isHeadSitting = not isHeadSitting
+            local char = myPlayer.Character
+            local root = char and char:FindFirstChild("HumanoidRootPart")
+            local hum = char and char:FindFirstChild("Humanoid")
+            
+            if isHeadSitting then
+                HeadSitBtn.Text = "Un-Sit"
+                HeadSitBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+                if hum then hum.Sit = true end
+                
+                headSitLoop = RunService.RenderStepped:Connect(function()
+                    pcall(function()
+                        local tChar = targetPlayer.Character
+                        local tHead = tChar and tChar:FindFirstChild("Head")
+                        if root and tHead then
+                            root.Velocity = Vector3.new(0, 0, 0)
+                            root.CFrame = tHead.CFrame * CFrame.new(0, 2, 0)
+                        else
+                            -- Auto-disable if they leave/die
+                            isHeadSitting = false
+                            HeadSitBtn.Text = "Head Sit"
+                            HeadSitBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+                            if headSitLoop then headSitLoop:Disconnect() end
+                        end
+                    end)
+                end)
+            else
+                HeadSitBtn.Text = "Head Sit"
+                HeadSitBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+                if hum then hum.Sit = false end
+                if headSitLoop then headSitLoop:Disconnect() end
+            end
+        end)
+
+        -- 3. 💥 HEAD BANG BUTTON (Using your exact Animation & CFrame)
+        local BangBtn = Instance.new("TextButton")
+        BangBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65) 
+        BangBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        BangBtn.Font = Enum.Font.SourceSansBold
+        BangBtn.TextSize = 11
+        BangBtn.Text = "Head Bang"
+        BangBtn.BorderSizePixel = 0
+        BangBtn.LayoutOrder = 11
+        BangBtn.Parent = actionLayout 
+
+        local isBanging = false
+        local bangLoop = nil
+
+        BangBtn.MouseButton1Click:Connect(function()
+            isBanging = not isBanging
+            local char = myPlayer.Character
+            local root = char and char:FindFirstChild("HumanoidRootPart")
+            
+            if isBanging then
+                BangBtn.Text = "Stop Bang"
+                BangBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+                
+                -- Calls your custom PlayAnim function
+                pcall(function() PlayAnim(5918726674, 0, 1) end)
+                
+                bangLoop = RunService.RenderStepped:Connect(function()
+                    pcall(function()
+                        local tChar = targetPlayer.Character
+                        local tRoot = tChar and tChar:FindFirstChild("HumanoidRootPart")
+                        if root and tRoot then
+                            root.Velocity = Vector3.new(0, 0, 0)
+                            -- Uses your exact CFrame math from the provided code
+                            root.CFrame = tRoot.CFrame * CFrame.new(0, 0, 1.1)
+                        else
+                            isBanging = false
+                            BangBtn.Text = "Head Bang"
+                            BangBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+                            if bangLoop then bangLoop:Disconnect() end
+                        end
+                    end)
+                end)
+            else
+                BangBtn.Text = "Head Bang"
+                BangBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+                
+                -- Calls your custom StopAnim function
+                pcall(function() StopAnim() end)
+                if bangLoop then bangLoop:Disconnect() end
+            end
+        end)
 
 -- LOGIC CONNECTIONS
         -- ==========================================
