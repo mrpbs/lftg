@@ -3744,7 +3744,7 @@ outfitData.WalkAnimation = getVal("WalkAnimation")
             -- Make sure 'lastScannedOutfit' is defined in this scope!
             if lastScannedOutfit then
                 -- Note: We use 'targetPlayer' here instead of 'excludedPlayer' since that's what your code block uses
-                shareOutfitToFriends(lastScannedOutfit, ShareFriendsBtn, "Share to Friends", Color3.fromRGB(50, 150, 50), targetPlayer)
+                shareOutfitToFriends(outfitData, ShareFriendsBtn, "Share to Friends", Color3.fromRGB(50, 150, 50), targetPlayer)
             end
         end)
 
