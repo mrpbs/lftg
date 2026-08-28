@@ -3739,14 +3739,19 @@ outfitData.WalkAnimation = getVal("WalkAnimation")
         -- (Only add this UICorner if your other layout buttons have rounded corners)
         -- Instance.new("UICorner", ShareFriendsBtn).CornerRadius = UDim.new(0, 4)
 
-        -- Connect it to the new function!
-        ShareFriendsBtn.MouseButton1Click:Connect(function()
-            -- Make sure 'lastScannedOutfit' is defined in this scope!
-            if lastScannedOutfit then
-                -- Note: We use 'targetPlayer' here instead of 'excludedPlayer' since that's what your code block uses
-                shareOutfitToFriends(outfitData, ShareFriendsBtn, "Share to Friends", Color3.fromRGB(50, 150, 50), targetPlayer)
-            end
-        end)
+   -- Connect it to the new function using the correct 'outfitData' variable!
+ShareFriendsBtn.MouseButton1Click:Connect(function()
+    if outfitData then
+        shareOutfitToFriends(outfitData, ShareFriendsBtn, "Share to Friends", Color3.fromRGB(50, 150, 50), targetPlayer)
+    else
+        -- Failsafe: Visually tells you if the data didn't load properly
+        ShareFriendsBtn.Text = "Error: No Data"
+        ShareFriendsBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+        task.wait(1.5)
+        ShareFriendsBtn.Text = "Share to Friends"
+        ShareFriendsBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
+    end
+end)
 
 -- LOGIC CONNECTIONS
         -- ==========================================
