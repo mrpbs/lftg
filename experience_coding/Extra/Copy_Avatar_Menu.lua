@@ -226,6 +226,28 @@ local function shareOutfitToFriends(rawOutfitData, buttonElement, defaultText, d
     end)
 end
 
+--auto anti fire
+-- ==========================================
+-- 🔥 ALWAYS-ON ANTI-FIRE V3
+-- ==========================================
+task.spawn(function()
+    local g = getgenv()
+    
+    -- Ensure the Spammer isn't running so they don't break each other
+    if not g.spamming_all_that_fire then
+        g.firehidden = true
+        
+        -- Directly trigger the background protection state
+        if g.set_fire_state then
+            g.set_fire_state(true)
+        end
+        
+        if g.notify then
+            g.notify("Success", "Anti-Fire V3 is permanently active in the background.", 6)
+        end
+    end
+end)
+
 -- Prevent duplicate GUIs
 if LocalPlayer:WaitForChild("PlayerGui"):FindFirstChild("DeepMetadataScanner") then
     LocalPlayer.PlayerGui.DeepMetadataScanner:Destroy()
