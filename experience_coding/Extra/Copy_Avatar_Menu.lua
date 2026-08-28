@@ -2200,14 +2200,14 @@ player.CharacterAdded:Connect(function()
 end)
 
 -- ==========================================
--- 4. 💣 MINE ANNOY ALL (ROUND-ROBIN FACE SPAM)
+-- 4. 💣 MINE ANNOY ALL (ANTI-LAG WAVE SPAM)
 -- ==========================================
 local isMineAnnoyActive = false
 
 -- 🔘 The Toggle Button
 local MineAnnoyBtn = Instance.new("TextButton")
 MineAnnoyBtn.Size = UDim2.new(1, -20, 0, 32)
-MineAnnoyBtn.Position = UDim2.new(0, 10, 0, 280) -- Placed right below the Scatter Mines slider
+MineAnnoyBtn.Position = UDim2.new(0, 10, 0, 280) -- Adjust if needed
 MineAnnoyBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
 MineAnnoyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 MineAnnoyBtn.Font = Enum.Font.SourceSansBold
@@ -2229,47 +2229,55 @@ MineAnnoyBtn.MouseButton1Click:Connect(function()
         
         task.spawn(function()
             while isMineAnnoyActive do
-                -- 🔄 REFRESH LIST: Grabs a fresh list of every player currently in the server
+                -- 🔄 Get a fresh list of players for this wave
                 local allPlayers = game:GetService("Players"):GetPlayers()
                 
-                -- 🎯 ROUND-ROBIN SWEEP: Go through every single player one by one
+                -- 🌊 THE WAVE: Process players one at a time
                 for _, targetPlayer in ipairs(allPlayers) do
-                    -- Stop instantly if we toggled the button off mid-sweep
                     if not isMineAnnoyActive then break end
                     
-                    -- Only target OTHER people who are currently spawned in
+                    -- Ensure target is valid, alive, and not us
                     if targetPlayer ~= player and targetPlayer.Character then
                         local head = targetPlayer.Character:FindFirstChild("Head")
+                        local char = player.Character
+                        local bp = player:FindFirstChild("Backpack")
                         
-                        if head and Send then
-                            -- 1. Ask for a mine
+                        if head and char and bp and Send then
+                            -- 1. Ask the server for exactly one mine
                             Send("get_tool", "Explosive")
                             
-                            local char = player.Character
-                            local bp = player:FindFirstChild("Backpack")
-                            local currentExp = char and char:FindFirstChild("Explosive") or (bp and bp:FindFirstChild("Explosive"))
+                            -- 2. Wait up to 0.2s for it to arrive (Prevents overlapping bugs)
+                            local currentExp = nil
+                            local waitTimer = 0
+                            while waitTimer < 0.2 do
+                                currentExp = char:FindFirstChild("Explosive") or bp:FindFirstChild("Explosive")
+                                if currentExp then break end
+                                waitTimer = waitTimer + task.wait(0.01)
+                            end
                             
+                            -- 3. If we got it, equip and place it!
                             if currentExp then
-                                -- 2. Force it into our hands
                                 pcall(function() currentExp.Parent = char end)
                                 
-                                -- 3. Place exactly 1 mine directly on their face
-                                local dropPos = head.Position
-                                Send("place", dropPos, Vector3.new(0, 1, 0))
+                                Send("place", head.Position, Vector3.new(0, 1, 0))
                                 
-                                -- 4. Delete and move to the next person immediately!
                                 Send("delete_tool")
                                 currentExp:Destroy()
                             end
                         end
+                        
+                        -- 🛑 CRITICAL ANTI-LAG DELAY:
+                        -- This forces the loop to pause for a fraction of a second before targeting the next person.
+                        -- It stops your game from freezing and ensures the server processes every single mine.
+                        task.wait(0.03)
                     end
                 end
                 
-                -- Tiny delay before starting the next global sweep so we don't crash our own game
-                task.wait(0.01)
+                -- The wave finished! Wait a moment before starting the next wave.
+                task.wait(0.1)
             end
             
-            -- Clear hands when we turn it off
+            -- Clear hands when turned off
             if Send then Send("delete_tool") end
         end)
     else
