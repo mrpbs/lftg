@@ -3943,8 +3943,8 @@ end)
                 BangBtn.Text = "Stop Bang"
                 BangBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
                 
-                PlayAnim(5918726674, 0, 1)
-                
+                PlayAnim(106716700572424, 0, 1)
+                        
                 bangLoop = RunService.RenderStepped:Connect(function()
                     pcall(function()
                         local tChar = targetPlayer.Character
