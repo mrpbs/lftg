@@ -3785,15 +3785,68 @@ outfitData.WalkAnimation = getVal("WalkAnimation")
         ShareFriendsBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
     end
 end)
--- 3rd row
-
-
-        -- ==========================================
-        -- ROW 3: MOVEMENT & TROLLING (LayoutOrders 9, 10, 11)
+-- ==========================================
+        -- 🎬 CUSTOM ANIMATION HANDLERS
         -- ==========================================
         local RunService = game:GetService("RunService")
         local myPlayer = game:GetService("Players").LocalPlayer
 
+        local function PlayAnim(id, time, speed)
+            pcall(function()
+                local char = myPlayer.Character
+                if not char then return end
+                
+                local animateScript = char:FindFirstChild("Animate")
+                local hum = char:FindFirstChildOfClass("Humanoid")
+                if not hum then return end
+                
+                if animateScript then animateScript.Disabled = false end
+                
+                local animtrack = hum:GetPlayingAnimationTracks()
+                for _, track in pairs(animtrack) do
+                    track:Stop()
+                end
+                
+                if animateScript then animateScript.Disabled = true end
+                
+                local Anim = Instance.new("Animation")
+                Anim.AnimationId = "rbxassetid://" .. tostring(id)
+                local loadanim = hum:LoadAnimation(Anim)
+                loadanim:Play()
+                loadanim.TimePosition = time
+                loadanim:AdjustSpeed(speed)
+                
+                loadanim.Stopped:Connect(function()
+                    if animateScript then animateScript.Disabled = false end
+                    for _, track in pairs(hum:GetPlayingAnimationTracks()) do
+                        track:Stop()
+                    end
+                end)
+            end)
+        end
+
+        local function StopAnim()
+            pcall(function()
+                local char = myPlayer.Character
+                if not char then return end
+                
+                local animateScript = char:FindFirstChild("Animate")
+                local hum = char:FindFirstChildOfClass("Humanoid")
+                if not hum then return end
+                
+                if animateScript then animateScript.Disabled = false end
+                
+                local animtrack = hum:GetPlayingAnimationTracks()
+                for _, track in pairs(animtrack) do
+                    track:Stop()
+                end
+            end)
+        end
+
+        -- ==========================================
+        -- ROW 3: MOVEMENT & TROLLING (LayoutOrders 9, 10, 11)
+        -- ==========================================
+        
         -- 1. 🌌 TELEPORT BUTTON
         local TpBtn = Instance.new("TextButton")
         TpBtn.BackgroundColor3 = Color3.fromRGB(40, 100, 180) -- Blue
@@ -3812,10 +3865,7 @@ end)
             local tRoot = tChar and tChar:FindFirstChild("HumanoidRootPart")
             
             if myRoot and tRoot then
-                -- Teleports you 3 studs in front of them, facing them
                 myRoot.CFrame = tRoot.CFrame * CFrame.new(0, 0, -3) * CFrame.Angles(0, math.rad(180), 0)
-                
-                -- Button flash effect
                 TpBtn.BackgroundColor3 = Color3.fromRGB(100, 200, 255)
                 task.wait(0.2)
                 TpBtn.BackgroundColor3 = Color3.fromRGB(40, 100, 180)
@@ -3840,7 +3890,7 @@ end)
             isHeadSitting = not isHeadSitting
             local char = myPlayer.Character
             local root = char and char:FindFirstChild("HumanoidRootPart")
-            local hum = char and char:FindFirstChild("Humanoid")
+            local hum = char and char:FindFirstChildOfClass("Humanoid")
             
             if isHeadSitting then
                 HeadSitBtn.Text = "Un-Sit"
@@ -3855,7 +3905,6 @@ end)
                             root.Velocity = Vector3.new(0, 0, 0)
                             root.CFrame = tHead.CFrame * CFrame.new(0, 2, 0)
                         else
-                            -- Auto-disable if they leave/die
                             isHeadSitting = false
                             HeadSitBtn.Text = "Head Sit"
                             HeadSitBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
@@ -3871,7 +3920,7 @@ end)
             end
         end)
 
-        -- 3. 💥 HEAD BANG BUTTON (Using your exact Animation & CFrame)
+        -- 3. 💥 HEAD BANG BUTTON (With working Animations)
         local BangBtn = Instance.new("TextButton")
         BangBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65) 
         BangBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -3894,8 +3943,7 @@ end)
                 BangBtn.Text = "Stop Bang"
                 BangBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
                 
-                -- Calls your custom PlayAnim function
-                pcall(function() PlayAnim(5918726674, 0, 1) end)
+                PlayAnim(5918726674, 0, 1)
                 
                 bangLoop = RunService.RenderStepped:Connect(function()
                     pcall(function()
@@ -3903,7 +3951,6 @@ end)
                         local tRoot = tChar and tChar:FindFirstChild("HumanoidRootPart")
                         if root and tRoot then
                             root.Velocity = Vector3.new(0, 0, 0)
-                            -- Uses your exact CFrame math from the provided code
                             root.CFrame = tRoot.CFrame * CFrame.new(0, 0, 1.1)
                         else
                             isBanging = false
@@ -3917,12 +3964,10 @@ end)
                 BangBtn.Text = "Head Bang"
                 BangBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
                 
-                -- Calls your custom StopAnim function
-                pcall(function() StopAnim() end)
+                StopAnim()
                 if bangLoop then bangLoop:Disconnect() end
             end
         end)
-
 -- LOGIC CONNECTIONS
         -- ==========================================
    
