@@ -2091,7 +2091,7 @@ SpawnToolBtn.MouseButton1Click:Connect(function()
 end)
 
 -- ==========================================
--- ⚡ MAX-SPEED RAPID FIRE (TRUE AUTO-EQUIP)
+-- ⚡ MAX-SPEED RAPID FIRE (ORBITAL STRIKE EDITION)
 -- ==========================================
 local isFiring = false
 
@@ -2116,7 +2116,6 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed and input.UserInputType ~= Enum.UserInputType.Touch then return end
     
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        -- We removed the 'hasLauncher' check. If it's enabled and you click, it just starts!
         if noCooldownEnabled and not isFiring then
             isFiring = true
             
@@ -2124,9 +2123,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
             local bp = player:FindFirstChild("Backpack")
             local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
             
-            -- Clear any old launchers out of your hands/inventory first
             if Send then Send("delete_tool") end
-             if Send then Send("get_tool", "RocketLauncher") end
                  
             if char then
                 for _, v in ipairs(char:GetChildren()) do
@@ -2142,38 +2139,45 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
             -- MAX SPEED LOOP
             task.spawn(function()
                 while isFiring and noCooldownEnabled do
-                    -- Refresh variables inside the loop so it doesn't break if you respawn
                     local currentChar = player.Character
                     local currentBp = player:FindFirstChild("Backpack")
                     
                     if not currentChar or not currentBp then break end
                     
-                    -- 1. Ask the server for a fresh launcher automatically
-                    if Send then Send("get_tool", "RocketLauncher") end
+                    -- Capture exact mouse position at this specific frame
+                    local targetHit = mouse.Hit.Position
                     
-                    -- 2. Wait just long enough for it to appear based on ping
-                    local newLauncher = currentBp:WaitForChild("RocketLauncher", 0.15)
-                    
-                    if newLauncher then
-                        -- 3. Equip instantly
-                        newLauncher.Parent = currentChar
+                    -- 🚀 THREAD OVERLAP: Wraps the shot in its own thread so it doesn't wait for the server!
+                    task.spawn(function()
+                        if Send then Send("get_tool", "RocketLauncher") end
                         
-                        -- 4. Calculate exact aim
-                        local handle = newLauncher:FindFirstChild("Handle")
-                        local spawnPos = handle and handle.Position or (currentChar:GetPivot().Position + Vector3.new(0, 2, 0))
-                        local targetCFrame = CFrame.new(spawnPos, mouse.Hit.Position)
+                        local newLauncher = currentBp:WaitForChild("RocketLauncher", 0.15)
                         
-                        -- 5. Shoot and immediately delete!
-                        if Send then Send("shoot_rocket", newLauncher, targetCFrame) end
-                        if Send then Send("delete_tool") end
-                        newLauncher:Destroy()
-                    end
+                        if newLauncher then
+                            pcall(function()
+                                newLauncher.Parent = currentChar
+                                
+                                -- ☁️ ORBITAL STRIKE MATH
+                                -- Spawn 300 studs straight up in the sky, with a tiny random spread 
+                                -- so the rockets don't glitch inside each other
+                                local spreadX = math.random(-5, 5)
+                                local spreadZ = math.random(-5, 5)
+                                local skyPos = targetHit + Vector3.new(spreadX, 300, spreadZ) 
+                                
+                                -- Aim from the sky directly down to where the mouse clicked
+                                local targetCFrame = CFrame.new(skyPos, targetHit)
+                                
+                                if Send then Send("shoot_rocket", newLauncher, targetCFrame) end
+                                if Send then Send("delete_tool") end
+                                newLauncher:Destroy()
+                            end)
+                        end
+                    end)
                     
-                    -- Using the absolute minimum yield time to prevent crashing
-                    task.wait() 
+                    -- Micro-delay: shoots significantly faster than the old loop
+                    task.wait(0.015) 
                 end
                 
-                -- When you let go of the mouse, restock your inventory safely
                 if Send and noCooldownEnabled then 
                     Send("get_tool", "RocketLauncher") 
                 end
@@ -2187,6 +2191,7 @@ UserInputService.InputEnded:Connect(function(input)
         isFiring = false
     end
 end)
+
 -- ==========================================
 -- 💥 TRUE SHOTGUN LOGIC (NETWORK DESYNC)
 -- ==========================================
