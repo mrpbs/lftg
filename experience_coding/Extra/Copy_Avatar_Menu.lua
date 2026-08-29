@@ -17,7 +17,125 @@ getgenv().Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
 getgenv().Get = getgenv().Get or (getgenv().g and getgenv().g.Get)
 
 
+-- ============================================================
+-- 🔥 AUTO‑ENABLE ANTI‑FIRE (Destroys all fire effects)
+-- ============================================================
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
 
+local AntiFire = {
+    enabled = false,
+    queue = {},
+    queueDirty = false,
+    descConn = nil,
+    heartbeatConn = nil,
+}
+
+local FIRE_CLASSES = {
+    Fire = true,
+    Smoke = true,
+    Sparkles = true,
+    ParticleEmitter = true,
+    Beam = true,
+}
+
+local function isFireObject(obj)
+    return FIRE_CLASSES[obj.ClassName] ~= nil
+end
+
+local function destroyFireObject(obj)
+    pcall(function()
+        if obj.ClassName ~= "Beam" then
+            obj.Enabled = false
+        end
+        obj:Destroy()
+    end)
+end
+
+local function destroyFireModel(model)
+    for _, child in ipairs(model:GetDescendants()) do
+        if isFireObject(child) then
+            destroyFireObject(child)
+        end
+    end
+    pcall(function() model:Destroy() end)
+end
+
+local function handleObject(obj)
+    if not obj or not obj.Parent then return end
+    if obj.ClassName == "Model" and obj.Name == "Fire" then
+        destroyFireModel(obj)
+    elseif isFireObject(obj) then
+        destroyFireObject(obj)
+    end
+end
+
+local function purgeAllFire()
+    for _, obj in ipairs(Workspace:GetDescendants()) do
+        if obj.ClassName == "Model" and obj.Name == "Fire" then
+            destroyFireModel(obj)
+        elseif isFireObject(obj) then
+            destroyFireObject(obj)
+        end
+    end
+end
+
+local function flushQueue()
+    if not AntiFire.queueDirty then return end
+    AntiFire.queueDirty = false
+    local snapshot = AntiFire.queue
+    AntiFire.queue = {}
+    for _, obj in ipairs(snapshot) do
+        handleObject(obj)
+    end
+end
+
+function AntiFire.toggle(state)
+    state = state == true
+    if state == AntiFire.enabled then return end
+    AntiFire.enabled = state
+
+    if state then
+        purgeAllFire()
+        if AntiFire.descConn then AntiFire.descConn:Disconnect() end
+        if AntiFire.heartbeatConn then AntiFire.heartbeatConn:Disconnect() end
+
+        AntiFire.descConn = Workspace.DescendantAdded:Connect(function(obj)
+            if not AntiFire.enabled then return end
+            AntiFire.queue[#AntiFire.queue + 1] = obj
+            AntiFire.queueDirty = true
+        end)
+
+        AntiFire.heartbeatConn = RunService.Heartbeat:Connect(function()
+            if not AntiFire.enabled then return end
+            flushQueue()
+        end)
+
+        print("✅ Anti‑Fire ENABLED (auto‑started)")
+    else
+        if AntiFire.descConn then
+            AntiFire.descConn:Disconnect()
+            AntiFire.descConn = nil
+        end
+        if AntiFire.heartbeatConn then
+            AntiFire.heartbeatConn:Disconnect()
+            AntiFire.heartbeatConn = nil
+        end
+        AntiFire.queue = {}
+        AntiFire.queueDirty = false
+        print("❌ Anti‑Fire DISABLED")
+    end
+end
+
+-- ===== AUTO‑ENABLE ON LOAD =====
+AntiFire.toggle(true)
+
+-- Expose a global toggle so you can turn it off later (e.g. from console)
+getgenv().AntiFire = AntiFire
+getgenv().ToggleAntiFire = function(state)
+    AntiFire.toggle(state)
+end
+-- ============================================================
 
 -- Life Together RP Payload Formatter
 local function buildBatchPayload(data)
@@ -226,27 +344,6 @@ local function shareOutfitToFriends(rawOutfitData, buttonElement, defaultText, d
     end)
 end
 
---auto anti fire
--- ==========================================
--- 🔥 ALWAYS-ON ANTI-FIRE V3
--- ==========================================
-task.spawn(function()
-    local g = getgenv()
-    
-    -- Ensure the Spammer isn't running so they don't break each other
-    if not g.spamming_all_that_fire then
-        g.firehidden = true
-        
-        -- Directly trigger the background protection state
-        if g.set_fire_state then
-            g.set_fire_state(true)
-        end
-        
-        if g.notify then
-            g.notify("Success", "Anti-Fire V3 is permanently active in the background.", 6)
-        end
-    end
-end)
 
 -- Prevent duplicate GUIs
 if LocalPlayer:WaitForChild("PlayerGui"):FindFirstChild("DeepMetadataScanner") then
