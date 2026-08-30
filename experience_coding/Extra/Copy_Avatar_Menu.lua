@@ -2160,7 +2160,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
                             -- ☁️ ORBITAL STRIKE MATH: 300 studs straight up, with a random spread
                             local spreadX = math.random(-20, 20)
                             local spreadZ = math.random(-20, 20)
-                            local skyPos = targetHit + Vector3.new(spreadX, 300, spreadZ) 
+                            local skyPos = targetHit + Vector3.new(spreadX, 50, spreadZ) 
                             
                             -- Aim from the sky directly down to where the mouse clicked
                             local targetCFrame = CFrame.new(skyPos, targetHit)
@@ -2190,7 +2190,7 @@ UserInputService.InputEnded:Connect(function(input)
     end
 end)
 -- ==========================================
--- 💥 TRUE SHOTGUN LOGIC (NETWORK DESYNC)
+-- 💥 TRUE SHOTGUN (INSTANT DETONATION BURST)
 -- ==========================================
 local isShotgunActive = false
 local isFiring = false
@@ -2238,6 +2238,9 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
                     
                     if not currentChar or not currentBp then break end
                     
+                    -- Capture exact click location
+                    local targetHit = mouse.Hit.Position
+                    
                     -- 🔥 THE OVERLAP TRICK: Wraps the shot in its OWN background thread.
                     task.spawn(function()
                         if Send then Send("get_tool", "RocketLauncher") end
@@ -2247,16 +2250,18 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
                         if newLauncher then
                             pcall(function()
                                 newLauncher.Parent = currentChar
-                                local baseOrigin = mouse.Origin
                                 
-                                -- Spam the shoot remote 3 times for THIS specific gun to trigger the desync glitch
-                                for i = 1, 7 do
-                                    -- Add a tiny spread so the burst looks cool
-                                    local spreadX = math.random(-10, 10) / 100
-                                    local spreadY = math.random(-10, 10) / 100
-                                    local spreadCFrame = baseOrigin * CFrame.Angles(spreadX, spreadY, 0)
+                                -- 💥 BIGGER BURST: Spam 15 rockets instantly at the cursor
+                                for i = 1, 15 do
+                                    -- Add a tiny cluster spread around the cursor so the explosions stack massive damage
+                                    local spreadX = math.random(-20, 20) / 10
+                                    local spreadZ = math.random(-20, 20) / 10
                                     
-                                    if Send then Send("shoot_rocket", newLauncher, spreadCFrame) end
+                                    -- Spawn exactly at the mouse click with the tiny spread, and point straight down to instantly detonate
+                                    local spawnPos = targetHit + Vector3.new(spreadX, 0, spreadZ)
+                                    local targetCFrame = CFrame.new(spawnPos, spawnPos - Vector3.new(0, 1, 0))
+                                    
+                                    if Send then Send("shoot_rocket", newLauncher, targetCFrame) end
                                 end
                                 
                                 if Send then Send("delete_tool") end
