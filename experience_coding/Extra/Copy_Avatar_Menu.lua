@@ -4190,7 +4190,7 @@ end)
             end
         end)
 
-            -- 5. 🪑 JAIL BUTTON (DYNAMIC SPHERICAL CAGE + INFINITE RANGE)
+         -- 5. 🪑 JAIL BUTTON (STANDARD SIZE & 50-STUD RANGE LIMIT)
         local JailBtn = Instance.new("TextButton")
         if g.activeJailTarget == targetPlayer then
             JailBtn.Text = "Un-Jail"
@@ -4213,71 +4213,31 @@ end)
             
             local placed = workspace:FindFirstChild("PlacedModels") or workspace:FindFirstChild("ModelsPlaced")
             if placed then
-                local myChar = myPlayer.Character
-                local myRoot = myChar and myChar:FindFirstChild("HumanoidRootPart")
-                local originalCFrame = myRoot and myRoot.CFrame
-                local needsTeleport = false
-                local chairsToPick = {}
-
-                -- Scan for your placed chairs
                 for _, model in ipairs(placed:GetChildren()) do
                     if model.Name == "CampingChair" then
                         local ownerId = model:GetAttribute("owner_id")
                         if tostring(ownerId) == tostring(myPlayer.UserId) then
-                            table.insert(chairsToPick, model)
-                            -- If you are more than 40 studs away, the server will block the pickup request
-                            if myRoot then
-                                local pos = model.PrimaryPart and model.PrimaryPart.Position or model:GetPivot().Position
-                                if (myRoot.Position - pos).Magnitude > 40 then
-                                    needsTeleport = true
-                                end
-                            end
+                            local cd = model:FindFirstChildWhichIsA("ClickDetector", true) or Instance.new("ClickDetector")
+                            Send("interaction", cd, "Pick Up")
                         end
-                    end
-                end
-
-                if #chairsToPick > 0 then
-                    -- If out of range, teleport instantly to the cage and freeze so you don't fall
-                    if needsTeleport and myRoot then
-                        myRoot.Anchored = true
-                        myRoot.CFrame = CFrame.new(chairsToPick[1]:GetPivot().Position)
-                        task.wait(0.15) -- Let the server register our new position
-                    end
-
-                    for _, model in ipairs(chairsToPick) do
-                        local cd = model:FindFirstChildWhichIsA("ClickDetector", true) or Instance.new("ClickDetector")
-                        Send("interaction", cd, "Pick Up")
-                    end
-
-                    -- Teleport back to where you were seamlessly
-                    if needsTeleport and myRoot and originalCFrame then
-                        task.wait(0.1)
-                        myRoot.CFrame = originalCFrame
-                        myRoot.Anchored = false
                     end
                 end
             end
         end
 
-        local function spawnJail(tChar)
+        local function spawnJail(tRoot)
             local Get = g.Get or (g.g and g.g.Get)
             local RS = game:GetService("ReplicatedStorage")
             local chairModel = RS:FindFirstChild("LargePlaceables") and RS.LargePlaceables:FindFirstChild("CampingChair")
             
-            if not Get or not chairModel or not tChar then return end
+            if not Get or not chairModel or not tRoot then return end
             
-            local cframe, size = tChar:GetBoundingBox()
-            local center = cframe.Position
-            
-            -- DYNAMIC SIZING: Calculates the tightest possible radius based on their exact body size
-            local radius = math.max(size.X, size.Z) * 0.75 + (size.Y * 0.15)
-            radius = math.clamp(radius, 2.5, 15) -- Keep it within sane limits for massive/tiny avatars
-            
-            g.jailRadius = radius -- Save this for the escape check
-            g.jailCenter = center
-            
+            local center = tRoot.Position + Vector3.new(0, 1, 0)
+            local radius = 4 -- Fixed radius perfect for standard Roblox humanoids
             local n = 20
             local phi = math.pi * (3 - math.sqrt(5)) 
+            
+            g.jailCenter = tRoot.Position
             
             for i = 0, n - 1 do
                 local y = 1 - (i / (n - 1)) * 2 
@@ -4310,22 +4270,34 @@ end)
                 
                 task.spawn(function()
                     clearJail() 
-                    task.wait(0.3) -- Gives it time to teleport back if we were far away
+                    task.wait(0.15)
                     
                     while g.activeJailTarget == targetPlayer do
                         local tChar = targetPlayer.Character
                         local tRoot = tChar and tChar:FindFirstChild("HumanoidRootPart")
-                        if not tRoot then break end
+                        local myChar = myPlayer.Character
+                        local myRoot = myChar and myChar:FindFirstChild("HumanoidRootPart")
                         
-                        local currentRadius = g.jailRadius or 3.8
+                        if not tRoot or not myRoot then break end
                         
-                        -- SMART TRAP: Uses their dynamic radius + 1 stud margin of error to check escapes
-                        if not g.jailCenter or (tRoot.Position - g.jailCenter).Magnitude > (currentRadius + 1) then
-                            clearJail()
-                            task.wait(0.3) -- Wait for cleanup and potential teleport to finish
+                        -- Only operate if target is within 50 studs of you
+                        if (myRoot.Position - tRoot.Position).Magnitude <= 50 then
                             
-                            if g.activeJailTarget == targetPlayer and tRoot then
-                                spawnJail(tChar)
+                            -- SMART TRAP: Fixed 4-stud escape threshold
+                            if not g.jailCenter or (tRoot.Position - g.jailCenter).Magnitude > 4.5 then
+                                clearJail()
+                                task.wait(0.15) 
+                                
+                                if g.activeJailTarget == targetPlayer and tRoot then
+                                    spawnJail(tRoot)
+                                end
+                            end
+                            
+                        else
+                            -- Out of range: clear the jail so it doesn't get stuck far away
+                            if g.jailCenter then
+                                clearJail()
+                                g.jailCenter = nil -- Resets it so it will respawn instantly when they walk back in range
                             end
                         end
                         
