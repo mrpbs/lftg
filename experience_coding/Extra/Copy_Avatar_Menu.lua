@@ -4190,7 +4190,7 @@ end)
             end
         end)
 
-         -- 5. 🪑 JAIL BUTTON (STANDARD SIZE & 50-STUD RANGE LIMIT)
+         -- 5. 🪑 JAIL BUTTON (SQUARE CAGE & DISTANCE FIX)
         local JailBtn = Instance.new("TextButton")
         if g.activeJailTarget == targetPlayer then
             JailBtn.Text = "Un-Jail"
@@ -4232,24 +4232,29 @@ end)
             
             if not Get or not chairModel or not tRoot then return end
             
-            local center = tRoot.Position + Vector3.new(0, 1, 0)
-            local radius = 4 -- Fixed radius perfect for standard Roblox humanoids
-            local n = 20
-            local phi = math.pi * (3 - math.sqrt(5)) 
+            local center = tRoot.Position
+            g.jailCenter = center
             
-            g.jailCenter = tRoot.Position
+            -- SQUARE BOX MATH: Exactly 20 chairs mapped to a 3D grid
+            local boxOffsets = {
+                -- Lower Walls (y = -1.5)
+                Vector3.new(-3, -1.5, -3), Vector3.new(0, -1.5, -3), Vector3.new(3, -1.5, -3),
+                Vector3.new(-3, -1.5, 0),                            Vector3.new(3, -1.5, 0),
+                Vector3.new(-3, -1.5, 3),  Vector3.new(0, -1.5, 3),  Vector3.new(3, -1.5, 3),
+                
+                -- Upper Walls (y = 1.5)
+                Vector3.new(-3, 1.5, -3), Vector3.new(0, 1.5, -3), Vector3.new(3, 1.5, -3),
+                Vector3.new(-3, 1.5, 0),                           Vector3.new(3, 1.5, 0),
+                Vector3.new(-3, 1.5, 3),  Vector3.new(0, 1.5, 3),  Vector3.new(3, 1.5, 3),
+                
+                -- Ceiling / Roof (y = 4.5)
+                Vector3.new(-1.5, 4.5, -1.5), Vector3.new(1.5, 4.5, -1.5),
+                Vector3.new(-1.5, 4.5, 1.5),  Vector3.new(1.5, 4.5, 1.5)
+            }
             
-            for i = 0, n - 1 do
-                local y = 1 - (i / (n - 1)) * 2 
-                local radiusAtY = math.sqrt(1 - y * y)
-                local theta = phi * i
-                
-                local x = math.cos(theta) * radiusAtY
-                local z = math.sin(theta) * radiusAtY
-                
-                local offset = Vector3.new(x, y, z) * radius
+            for _, offset in ipairs(boxOffsets) do
                 local pos = center + offset
-                local targetCFrame = CFrame.new(pos, center) 
+                local targetCFrame = CFrame.new(pos, center) -- Faces chairs inward
                 
                 task.spawn(function()
                     Get("large_place", chairModel, targetCFrame)
@@ -4280,24 +4285,27 @@ end)
                         
                         if not tRoot or not myRoot then break end
                         
-                        -- Only operate if target is within 50 studs of you
+                        -- Range Check: Only process if within 50 studs
                         if (myRoot.Position - tRoot.Position).Magnitude <= 50 then
                             
-                            -- SMART TRAP: Fixed 4-stud escape threshold
+                            -- Escaped the box? (More than 4.5 studs away from the center)
                             if not g.jailCenter or (tRoot.Position - g.jailCenter).Magnitude > 4.5 then
                                 clearJail()
                                 task.wait(0.15) 
                                 
-                                if g.activeJailTarget == targetPlayer and tRoot then
+                                -- 🛑 CRITICAL RACE-CONDITION FIX 🛑
+                                -- Re-check distance AFTER the 0.15s wait to make sure you didn't teleport away while it was cleaning up!
+                                local myRootNow = myChar:FindFirstChild("HumanoidRootPart")
+                                if g.activeJailTarget == targetPlayer and tRoot and myRootNow and (myRootNow.Position - tRoot.Position).Magnitude <= 50 then
                                     spawnJail(tRoot)
                                 end
                             end
                             
                         else
-                            -- Out of range: clear the jail so it doesn't get stuck far away
+                            -- If you move or teleport away, silently drop the cage
                             if g.jailCenter then
                                 clearJail()
-                                g.jailCenter = nil -- Resets it so it will respawn instantly when they walk back in range
+                                g.jailCenter = nil 
                             end
                         end
                         
