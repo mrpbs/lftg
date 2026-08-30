@@ -4189,13 +4189,7 @@ end)
                 end)
             end
         end)
-            -- ==========================================
-        -- JAIL SETTINGS (LayoutOrders 13 & 14)
-        -- ==========================================
-        g.jailShapeMode = g.jailShapeMode or 1
-        local jailModes = {"Shape: Ball", "Shape: Square", "Shape: Circle"}
-
-        -- 5. 🪑 JAIL BUTTON (MULTI-SHAPE & STABLE ESCAPE CHECK)
+            -- 5. 🪑 JAIL BUTTON (TIGHT BALL CAGE - NO ESCAPE)
         local JailBtn = Instance.new("TextButton")
         if g.activeJailTarget == targetPlayer then
             JailBtn.Text = "Un-Jail"
@@ -4210,32 +4204,6 @@ end)
         JailBtn.BorderSizePixel = 0
         JailBtn.LayoutOrder = 13
         JailBtn.Parent = actionLayout 
-
-        -- 6. 📐 JAIL SHAPE TOGGLE
-        local JailModeBtn = Instance.new("TextButton")
-        JailModeBtn.Text = jailModes[g.jailShapeMode]
-        JailModeBtn.BackgroundColor3 = Color3.fromRGB(150, 100, 50) -- Orange/Brown tint
-        JailModeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-        JailModeBtn.Font = Enum.Font.SourceSansBold
-        JailModeBtn.TextSize = 11
-        JailModeBtn.BorderSizePixel = 0
-        JailModeBtn.LayoutOrder = 14
-        JailModeBtn.Parent = actionLayout 
-
-        JailModeBtn.MouseButton1Click:Connect(function()
-            g.jailShapeMode = g.jailShapeMode + 1
-            if g.jailShapeMode > 3 then g.jailShapeMode = 1 end
-            JailModeBtn.Text = jailModes[g.jailShapeMode]
-            
-            -- If jail is currently active, instantly rebuild it with the new shape!
-            if g.activeJailTarget == targetPlayer then
-                local tChar = targetPlayer.Character
-                local tRoot = tChar and tChar:FindFirstChild("HumanoidRootPart")
-                if tRoot then
-                    g.jailCenter = nil -- Forces an immediate rebuild in the loop
-                end
-            end
-        end)
 
         -- Helper functions for the Jail logic
         local function clearJail()
@@ -4267,58 +4235,22 @@ end)
             g.jailCenter = center
             local targetCFrames = {}
             
-            if g.jailShapeMode == 1 then
-                -- MODE 1: BALL (Perfect Fibonacci Sphere - No Escapes)
-                local ballCenter = center + Vector3.new(0, 1, 0)
-                local n = 20
-                local phi = math.pi * (3 - math.sqrt(5)) 
+            -- PERFECT TIGHT BALL (Fibonacci Sphere)
+            local ballCenter = center + Vector3.new(0, 1, 0)
+            local n = 20
+            local phi = math.pi * (3 - math.sqrt(5)) 
+            
+            for i = 0, n - 1 do
+                local y = 1 - (i / (n - 1)) * 2 
+                local radiusAtY = math.sqrt(1 - y * y)
+                local theta = phi * i
                 
-                for i = 0, n - 1 do
-                    local y = 1 - (i / (n - 1)) * 2 
-                    local radiusAtY = math.sqrt(1 - y * y)
-                    local theta = phi * i
-                    
-                    local x = math.cos(theta) * radiusAtY
-                    local z = math.sin(theta) * radiusAtY
-                    
-                    local offset = Vector3.new(x, y, z) * 3.8
-                    table.insert(targetCFrames, CFrame.new(ballCenter + offset, ballCenter))
-                end
+                local x = math.cos(theta) * radiusAtY
+                local z = math.sin(theta) * radiusAtY
                 
-            elseif g.jailShapeMode == 2 then
-                -- MODE 2: SQUARE (Hollow 3x3 Grid Box)
-                local boxOffsets = {
-                    Vector3.new(-3.5, -1.5, -3.5), Vector3.new(0, -1.5, -3.5), Vector3.new(3.5, -1.5, -3.5),
-                    Vector3.new(-3.5, -1.5, 0),                                Vector3.new(3.5, -1.5, 0),
-                    Vector3.new(-3.5, -1.5, 3.5),  Vector3.new(0, -1.5, 3.5),  Vector3.new(3.5, -1.5, 3.5),
-                    
-                    Vector3.new(-3.5, 2, -3.5), Vector3.new(0, 2, -3.5), Vector3.new(3.5, 2, -3.5),
-                    Vector3.new(-3.5, 2, 0),                             Vector3.new(3.5, 2, 0),
-                    Vector3.new(-3.5, 2, 3.5),  Vector3.new(0, 2, 3.5),  Vector3.new(3.5, 2, 3.5),
-                    
-                    Vector3.new(-1.5, 5.5, -1.5), Vector3.new(1.5, 5.5, -1.5),
-                    Vector3.new(-1.5, 5.5, 1.5),  Vector3.new(1.5, 5.5, 1.5)
-                }
-                for _, offset in ipairs(boxOffsets) do
-                    table.insert(targetCFrames, CFrame.new(center + offset, center))
-                end
-                
-            elseif g.jailShapeMode == 3 then
-                -- MODE 3: CIRCLE (Perfect Double Cylinder)
-                local radius = 3.5
-                for i = 1, 8 do
-                    local angle1 = (i / 8) * math.pi * 2
-                    local pos1 = center + Vector3.new(math.cos(angle1) * radius, -1.5, math.sin(angle1) * radius)
-                    table.insert(targetCFrames, CFrame.new(pos1, center)) 
-                    
-                    local angle2 = angle1 + (math.pi / 8) 
-                    local pos2 = center + Vector3.new(math.cos(angle2) * radius, 1.5, math.sin(angle2) * radius)
-                    table.insert(targetCFrames, CFrame.new(pos2, center))
-                end
-                table.insert(targetCFrames, CFrame.new(center + Vector3.new(-1.2, 4.5, 0), center))
-                table.insert(targetCFrames, CFrame.new(center + Vector3.new(1.2, 4.5, 0), center))
-                table.insert(targetCFrames, CFrame.new(center + Vector3.new(0, -3.5, -1.2), center))
-                table.insert(targetCFrames, CFrame.new(center + Vector3.new(0, -3.5, 1.2), center))
+                -- 3.6 stud radius leaves absolutely NO space to jump or walk
+                local offset = Vector3.new(x, y, z) * 3.6
+                table.insert(targetCFrames, CFrame.new(ballCenter + offset, ballCenter))
             end
             
             -- Instant concurrent spawn
@@ -4358,9 +4290,9 @@ end)
                         -- Target must be within 50 studs of you to maintain the jail
                         if (myRoot.Position - tRoot.Position).Magnitude <= 50 then
                             
-                            -- ESCAPE CHECK: Massive 8.5 stud threshold.
-                            -- It will absolutely NOT rebuild the cage while they are bouncing around inside!
-                            if not g.jailCenter or (tRoot.Position - g.jailCenter).Magnitude > 8.5 then
+                            -- MASSIVE ESCAPE CHECK (12 STUDS)
+                            -- It will NEVER refresh the cage while they are bouncing around inside!
+                            if not g.jailCenter or (tRoot.Position - g.jailCenter).Magnitude > 12 then
                                 clearJail()
                                 task.wait(0.15) 
                                 
