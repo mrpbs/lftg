@@ -4189,8 +4189,7 @@ end)
                 end)
             end
         end)
-
-          -- 5. 🪑 JAIL BUTTON (HOLLOW RUBIK'S CAGE - ESCAPE PROOF)
+        -- 5. 🪑 JAIL BUTTON (PERFECT DOUBLE-CIRCLE CYLINDER CAGE)
         local JailBtn = Instance.new("TextButton")
         if g.activeJailTarget == targetPlayer then
             JailBtn.Text = "Un-Jail"
@@ -4235,28 +4234,32 @@ end)
             local center = tRoot.Position
             g.jailCenter = center
             
-            -- HOLLOW CAGE MATH: Leaves the center column entirely empty so physics won't fling them
-            local boxOffsets = {
-                -- LOWER RING (Y = -1.5) - 8 Chairs forming the bottom walls
-                Vector3.new(-3.5, -1.5, -3.5), Vector3.new(0, -1.5, -3.5), Vector3.new(3.5, -1.5, -3.5),
-                Vector3.new(-3.5, -1.5, 0),                                Vector3.new(3.5, -1.5, 0),
-                Vector3.new(-3.5, -1.5, 3.5),  Vector3.new(0, -1.5, 3.5),  Vector3.new(3.5, -1.5, 3.5),
+            local targetCFrames = {}
+            local radius = 3.5 -- Perfect size for a Roblox character
+            
+            -- BUILD THE 2 CIRCULAR ROWS (16 Chairs total)
+            for i = 1, 8 do
+                -- Lower Circle (Y = -1.5)
+                local angle1 = (i / 8) * math.pi * 2
+                local pos1 = center + Vector3.new(math.cos(angle1) * radius, -1.5, math.sin(angle1) * radius)
+                table.insert(targetCFrames, CFrame.new(pos1, center)) 
                 
-                -- UPPER RING (Y = 2) - 8 Chairs forming the upper walls (2-chairs high space)
-                Vector3.new(-3.5, 2, -3.5), Vector3.new(0, 2, -3.5), Vector3.new(3.5, 2, -3.5),
-                Vector3.new(-3.5, 2, 0),                             Vector3.new(3.5, 2, 0),
-                Vector3.new(-3.5, 2, 3.5),  Vector3.new(0, 2, 3.5),  Vector3.new(3.5, 2, 3.5),
-                
-                -- ROOF (Y = 5.5) - 4 Chairs plugging the top hole (Total: exactly 20 chairs)
-                Vector3.new(-1.5, 5.5, -1.5), Vector3.new(1.5, 5.5, -1.5),
-                Vector3.new(-1.5, 5.5, 1.5),  Vector3.new(1.5, 5.5, 1.5)
-            }
+                -- Upper Circle (Y = 1.5) - Offset slightly to interlock perfectly with the bottom ring
+                local angle2 = angle1 + (math.pi / 8) 
+                local pos2 = center + Vector3.new(math.cos(angle2) * radius, 1.5, math.sin(angle2) * radius)
+                table.insert(targetCFrames, CFrame.new(pos2, center))
+            end
+            
+            -- ROOF BLOCKERS (2 Chairs)
+            table.insert(targetCFrames, CFrame.new(center + Vector3.new(-1.5, 4.5, 0), center))
+            table.insert(targetCFrames, CFrame.new(center + Vector3.new(1.5, 4.5, 0), center))
+            
+            -- FLOOR BLOCKERS (2 Chairs under their feet)
+            table.insert(targetCFrames, CFrame.new(center + Vector3.new(0, -3.5, -1.5), center))
+            table.insert(targetCFrames, CFrame.new(center + Vector3.new(0, -3.5, 1.5), center))
             
             -- Instant concurrent spawn
-            for _, offset in ipairs(boxOffsets) do
-                local pos = center + offset
-                local targetCFrame = CFrame.new(pos, center) -- Faces all chairs inward
-                
+            for _, targetCFrame in ipairs(targetCFrames) do
                 task.spawn(function()
                     Get("large_place", chairModel, targetCFrame)
                 end)
@@ -4278,7 +4281,6 @@ end)
                     clearJail() 
                     task.wait(0.15)
                     
-                    -- Spawn the cage immediately on activation
                     local initialRoot = targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart")
                     if initialRoot then spawnJail(initialRoot) end
                     
@@ -4290,12 +4292,10 @@ end)
                         
                         if not tRoot or not myRoot then break end
                         
-                        -- Range Check (Must be within 50 studs to interact)
                         if (myRoot.Position - tRoot.Position).Magnitude <= 50 then
                             
-                            -- ESCAPE CHECK: Raised to 7.5 studs. 
-                            -- Walking inside the cage won't trigger a rebuild. Only fully glitching out will!
-                            if not g.jailCenter or (tRoot.Position - g.jailCenter).Magnitude > 7.5 then
+                            -- ESCAPE CHECK: If they move more than 6.5 studs from the center, the trap springs again
+                            if not g.jailCenter or (tRoot.Position - g.jailCenter).Magnitude > 6.5 then
                                 clearJail()
                                 task.wait(0.15) 
                                 
@@ -4306,7 +4306,6 @@ end)
                             end
                             
                         else
-                            -- Drop the cage if you teleport away
                             if g.jailCenter then
                                 clearJail()
                                 g.jailCenter = nil 
@@ -4318,7 +4317,8 @@ end)
                 end)
             end
         end)
-    
+
+      
       -- LOGIC CONNECTIONS
         -- ==========================================
    
