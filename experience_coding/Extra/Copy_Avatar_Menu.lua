@@ -4190,7 +4190,7 @@ end)
             end
         end)
 
-           -- 5. 🪑 JAIL BUTTON (SPHERICAL CHAIR CAGE)
+            -- 5. 🪑 JAIL BUTTON (INSTANT SPHERICAL CAGE)
         local JailBtn = Instance.new("TextButton")
         if g.activeJailTarget == targetPlayer then
             JailBtn.Text = "Un-Jail"
@@ -4232,29 +4232,27 @@ end)
             
             if not Get or not chairModel then return end
             
-            -- Shift center up slightly so the sphere covers their head and feet perfectly
             local center = tRoot.Position + Vector3.new(0, 1, 0)
             local n = 20
-            local phi = math.pi * (3 - math.sqrt(5)) -- Golden angle for perfect spherical distribution
+            local phi = math.pi * (3 - math.sqrt(5)) 
             
-            -- Spawns exactly 20 chairs in a 3D Fibonacci sphere to form an inescapable ball
+            -- INSTANT SPAWN: No delays. Fires all 20 remotes in a single tick.
             for i = 0, n - 1 do
-                local y = 1 - (i / (n - 1)) * 2 -- Maps from top (1) to bottom (-1)
+                local y = 1 - (i / (n - 1)) * 2 
                 local radiusAtY = math.sqrt(1 - y * y)
                 local theta = phi * i
                 
                 local x = math.cos(theta) * radiusAtY
                 local z = math.sin(theta) * radiusAtY
                 
-                -- 3.8 stud radius creates a tight, interlocking shell
                 local offset = Vector3.new(x, y, z) * 3.8
                 local pos = center + offset
-                local cframe = CFrame.new(pos, center) -- Forces all chairs to face inwards, creating a solid roof/floor
+                local cframe = CFrame.new(pos, center) 
                 
+                -- Wrapping the remote in task.spawn forces it to bypass standard yielding
                 task.spawn(function()
                     Get("large_place", chairModel, cframe)
                 end)
-                task.wait(0.02) 
             end
         end
 
@@ -4271,18 +4269,17 @@ end)
                 
                 task.spawn(function()
                     clearJail() 
-                    task.wait(0.3)
+                    task.wait(0.15) -- Reduced wait time so the trap triggers faster
                     
                     while g.activeJailTarget == targetPlayer do
                         local tChar = targetPlayer.Character
                         local tRoot = tChar and tChar:FindFirstChild("HumanoidRootPart")
                         if not tRoot then break end
                         
-                        -- SMART TRAP: Tightened the escape threshold to 4.5 studs. 
-                        -- If they glitch out of the ball, it instantly picks up and recasts it.
+                        -- SMART TRAP: Instantly recoils and traps them if they glitch out
                         if not g.jailCenter or (tRoot.Position - g.jailCenter).Magnitude > 4.5 then
                             clearJail()
-                            task.wait(0.3)
+                            task.wait(0.15) -- Fast cleanup
                             
                             if g.activeJailTarget == targetPlayer and tRoot then
                                 g.jailCenter = tRoot.Position
@@ -4290,12 +4287,12 @@ end)
                             end
                         end
                         
-                        task.wait(0.3) 
+                        task.wait(0.1) -- Rapidly checks for escape attempts 10 times a second
                     end
                 end)
             end
         end)
- 
+
       
       -- LOGIC CONNECTIONS
         -- ==========================================
