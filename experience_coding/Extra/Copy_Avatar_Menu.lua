@@ -4250,15 +4250,15 @@ end)
                 table.insert(targetCFrames, CFrame.new(pos2, center))
             end
             
-            -- ROOF BLOCKERS (2 Chairs)
-            table.insert(targetCFrames, CFrame.new(center + Vector3.new(-1.5, 4.5, 0), center))
-            table.insert(targetCFrames, CFrame.new(center + Vector3.new(1.5, 4.5, 0), center))
+            -- ROOF BLOCKERS (2 Chairs plugging the top exit)
+            table.insert(targetCFrames, CFrame.new(center + Vector3.new(-1.2, 4.5, 0), center))
+            table.insert(targetCFrames, CFrame.new(center + Vector3.new(1.2, 4.5, 0), center))
             
-            -- FLOOR BLOCKERS (2 Chairs under their feet)
-            table.insert(targetCFrames, CFrame.new(center + Vector3.new(0, -3.5, -1.5), center))
-            table.insert(targetCFrames, CFrame.new(center + Vector3.new(0, -3.5, 1.5), center))
+            -- FLOOR BLOCKERS (2 Chairs under their feet to prevent falling through maps)
+            table.insert(targetCFrames, CFrame.new(center + Vector3.new(0, -3.5, -1.2), center))
+            table.insert(targetCFrames, CFrame.new(center + Vector3.new(0, -3.5, 1.2), center))
             
-            -- Instant concurrent spawn
+            -- Instant concurrent spawn (All 20 chairs spawned on the exact same frame)
             for _, targetCFrame in ipairs(targetCFrames) do
                 task.spawn(function()
                     Get("large_place", chairModel, targetCFrame)
@@ -4292,9 +4292,11 @@ end)
                         
                         if not tRoot or not myRoot then break end
                         
+                        -- Target must be within 50 studs of you to maintain the jail
                         if (myRoot.Position - tRoot.Position).Magnitude <= 50 then
                             
-                            -- ESCAPE CHECK: If they move more than 6.5 studs from the center, the trap springs again
+                            -- ESCAPE CHECK: Safe threshold of 6.5 studs.
+                            -- Bumping into walls inside the 3.5 stud circle won't trigger this!
                             if not g.jailCenter or (tRoot.Position - g.jailCenter).Magnitude > 6.5 then
                                 clearJail()
                                 task.wait(0.15) 
@@ -4306,6 +4308,7 @@ end)
                             end
                             
                         else
+                            -- Drop the cage if you teleport far away
                             if g.jailCenter then
                                 clearJail()
                                 g.jailCenter = nil 
