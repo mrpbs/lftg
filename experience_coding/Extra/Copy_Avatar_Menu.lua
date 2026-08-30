@@ -3945,10 +3945,8 @@ end)
                 end
             end)
         end
-
-    
-            -- ==========================================
-        -- ROW 3: MOVEMENT & TROLLING (LayoutOrders 9, 10, 11)
+        -- ==========================================
+        -- ROW 3: MOVEMENT & TROLLING (LayoutOrders 9, 10, 11, 12)
         -- ==========================================
         local RunService = game:GetService("RunService")
         local myPlayer = game:GetService("Players").LocalPlayer
@@ -4096,7 +4094,83 @@ end)
                 end)
             end
         end)
-  
+
+        -- 4. 💣 ANNOY MINES BUTTON (SMART SWAP + OVERLAP DESYNC)
+        local AnnoyBtn = Instance.new("TextButton")
+        if g.activeAnnoyTarget == targetPlayer then
+            AnnoyBtn.Text = "Stop Annoy"
+            AnnoyBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+        else
+            AnnoyBtn.Text = "Annoy Mines"
+            AnnoyBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65) 
+        end
+        AnnoyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        AnnoyBtn.Font = Enum.Font.SourceSansBold
+        AnnoyBtn.TextSize = 11
+        AnnoyBtn.BorderSizePixel = 0
+        AnnoyBtn.LayoutOrder = 12
+        AnnoyBtn.Parent = actionLayout 
+
+        AnnoyBtn.MouseButton1Click:Connect(function()
+            local Send = g.Send or (g.g and g.g.Send)
+            
+            -- Turn OFF if already annoying THIS player
+            if g.activeAnnoyTarget == targetPlayer then
+                g.activeAnnoyTarget = nil
+                AnnoyBtn.Text = "Annoy Mines"
+                AnnoyBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+                if Send then Send("delete_tool") end
+            else
+                -- SWAP to or turn ON for NEW target
+                g.activeAnnoyTarget = targetPlayer
+                AnnoyBtn.Text = "Stop Annoy"
+                AnnoyBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+                
+                if Send then Send("delete_tool") end
+                
+                task.spawn(function()
+                    while g.activeAnnoyTarget == targetPlayer do
+                        local char = myPlayer.Character
+                        local bp = myPlayer:FindFirstChild("Backpack")
+                        local tChar = targetPlayer.Character
+                        local tHead = tChar and tChar:FindFirstChild("Head")
+                        
+                        -- Break immediately if you die or the target leaves/dies
+                        if not tHead or not char or not bp then
+                            g.activeAnnoyTarget = nil
+                            AnnoyBtn.Text = "Annoy Mines"
+                            AnnoyBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+                            break
+                        end
+                        
+                        -- 🔥 THE OVERLAP TRICK: Runs the fetch and place inside its own thread
+                        task.spawn(function()
+                            if Send then Send("get_tool", "Explosive") end
+                            
+                            local newExp = bp:WaitForChild("Explosive", 0.15)
+                            if newExp then
+                                pcall(function()
+                                    newExp.Parent = char
+                                    
+                                    -- SPAM PLACE: Spawns 8 mines instantly from one tool
+                                    for i = 1, 8 do
+                                        if Send then Send("place", tHead.Position, Vector3.new(0, 1, 0)) end
+                                    end
+                                    
+                                    if Send then Send("delete_tool") end
+                                    newExp:Destroy()
+                                end)
+                            end
+                        end)
+                        
+                        task.wait(0.03) -- Micro-wait to aggressively spam threads without crashing
+                    end
+                end)
+            end
+        end)
+
+    
+      
       -- LOGIC CONNECTIONS
         -- ==========================================
    
