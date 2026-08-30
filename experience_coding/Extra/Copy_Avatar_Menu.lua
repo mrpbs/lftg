@@ -3327,7 +3327,7 @@ local function createDetailedAssetCard(categoryName, assetId, rawPropertySource)
         end
     end)
 end
--- ========== AUTO-RL TARGETING SYSTEM (ULTRA-SECURE & CRASH-PROOF) ==========
+-- ========== AUTO-RL TARGETING SYSTEM (INSTANT HEADSHOT EDITION) ==========
 local autoRLTarget = nil
 local isAutoFiring = false
 
@@ -3410,18 +3410,17 @@ task.spawn(function()
                     end
                     
                     if newLauncher then
-                        -- PROTECTED EQUIP: Prevents the Thread Crash if you die while equipping
+                        -- PROTECTED EQUIP
                         local equipSuccess = pcall(function()
                             newLauncher.Parent = currentChar
                         end)
                         
                         if equipSuccess then
-                            local handle = newLauncher:FindFirstChild("Handle")
-                            local spawnPos = handle and handle.Position or (currentChar:GetPivot().Position + Vector3.new(0, 2, 0))
-                            
-                            -- PROTECTED AIM
+                            -- PROTECTED AIM (INSTANT HEADSHOT CALCULATION)
                             local aimSuccess, targetCFrame = pcall(function()
-                                return CFrame.new(spawnPos, autoRLTarget.Character.HumanoidRootPart.Position)
+                                local targetPart = autoRLTarget.Character:FindFirstChild("Head") or autoRLTarget.Character.HumanoidRootPart
+                                -- Spawns the rocket PERFECTLY inside their head, aiming straight down to instantly detonate
+                                return CFrame.new(targetPart.Position, targetPart.Position - Vector3.new(0, 1, 0))
                             end)
                             
                             if aimSuccess and targetCFrame then
