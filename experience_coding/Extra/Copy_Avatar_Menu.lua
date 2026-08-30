@@ -2091,7 +2091,7 @@ SpawnToolBtn.MouseButton1Click:Connect(function()
 end)
 
 -- ==========================================
--- ⚡ MAX-SPEED RAPID FIRE (ORBITAL STRIKE)
+-- ⚡ MAX-SPEED RAPID FIRE (ORBITAL STRIKE - TARGET RL ENGINE)
 -- ==========================================
 local isFiring = false
 
@@ -2124,20 +2124,21 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
             local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
             
             -- Clear old tools
-            if Send then Send("delete_tool") end
-                 
-            if char then
-                for _, v in ipairs(char:GetChildren()) do
-                    if v:IsA("Tool") and v.Name == "RocketLauncher" then v:Destroy() end
+            pcall(function()
+                if Send then Send("delete_tool") end
+                if char then
+                    for _, v in ipairs(char:GetChildren()) do
+                        if v:IsA("Tool") and v.Name == "RocketLauncher" then v:Destroy() end
+                    end
                 end
-            end
-            if bp then
-                for _, v in ipairs(bp:GetChildren()) do
-                    if v.Name == "RocketLauncher" then v:Destroy() end
+                if bp then
+                    for _, v in ipairs(bp:GetChildren()) do
+                        if v.Name == "RocketLauncher" then v:Destroy() end
+                    end
                 end
-            end
+            end)
             
-            -- MAX SPEED LOOP (Synchronous like before!)
+            -- MAX SPEED LOOP (Using Target RL Engine)
             task.spawn(function()
                 while isFiring and noCooldownEnabled do
                     local currentChar = player.Character
@@ -2145,34 +2146,54 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
                     
                     if not currentChar or not currentBp then break end
                     
-                    -- 1. Ask the server for ONE launcher (Prevents rate-limiting)
-                    if Send then Send("get_tool", "RocketLauncher") end
+                    -- FAST CHECK: Look for existing launcher first
+                    local newLauncher = currentChar:FindFirstChild("RocketLauncher") or currentBp:FindFirstChild("RocketLauncher")
                     
-                    -- 2. Wait for it normally (Like before)
-                    local newLauncher = currentBp:WaitForChild("RocketLauncher", 0.15)
-                    
-                    if newLauncher then
-                        newLauncher.Parent = currentChar
-                        local targetHit = mouse.Hit.Position
+                    if not newLauncher then
+                        if Send then Send("get_tool", "RocketLauncher") end
                         
-                        -- 3. FASTER BURST FIRE: Shoot 4 rockets from the sky using the SAME tool!
-                        for i = 1, 4 do
-                            -- ☁️ ORBITAL STRIKE MATH: 300 studs straight up, with a random spread
-                            local spreadX = math.random(-20, 20)
-                            local spreadZ = math.random(-20, 20)
-                            local skyPos = targetHit + Vector3.new(spreadX, 50, spreadZ) 
-                            
-                            -- Aim from the sky directly down to where the mouse clicked
-                            local targetCFrame = CFrame.new(skyPos, targetHit)
-                            
-                            if Send then Send("shoot_rocket", newLauncher, targetCFrame) end
+                        -- FAST WAIT: Custom loop instead of WaitForChild
+                        local timer = 0
+                        while timer < 0.2 do
+                            newLauncher = currentChar:FindFirstChild("RocketLauncher") or currentBp:FindFirstChild("RocketLauncher")
+                            if newLauncher then break end
+                            timer = timer + task.wait(0.01)
                         end
-                        
-                        if Send then Send("delete_tool") end
-                        newLauncher:Destroy()
                     end
                     
-                    task.wait() 
+                    if newLauncher then
+                        -- PROTECTED EQUIP
+                        local equipSuccess = pcall(function()
+                            newLauncher.Parent = currentChar
+                        end)
+                        
+                        if equipSuccess then
+                            local targetHit = mouse.Hit.Position
+                            
+                            -- BURST FIRE
+                            pcall(function()
+                                for i = 1, 4 do
+                                    local spreadX = math.random(-20, 20)
+                                    local spreadZ = math.random(-20, 20)
+                                    local skyPos = targetHit + Vector3.new(spreadX, 50, spreadZ) 
+                                    local targetCFrame = CFrame.new(skyPos, targetHit)
+                                    
+                                    if Send then Send("shoot_rocket", newLauncher, targetCFrame) end
+                                end
+                            end)
+                        end
+                        
+                        -- PROTECTED DELETE
+                        pcall(function()
+                            if Send then Send("delete_tool") end
+                            newLauncher:Destroy()
+                        end)
+                    else
+                        -- Server lag buffer
+                        task.wait(0.05)
+                    end
+                    
+                    task.wait(0.01) 
                 end
                 
                 -- Restock when you let go
@@ -2251,8 +2272,8 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
                             pcall(function()
                                 newLauncher.Parent = currentChar
                                 
-                                -- 💥 BIGGER BURST: Spam 15 rockets instantly at the cursor
-                                for i = 1, 15 do
+                                -- 💥 BIGGER BURST: Spam 7 rockets instantly at the cursor
+                                for i = 1, 8 do
                                     -- Add a tiny cluster spread around the cursor so the explosions stack massive damage
                                     local spreadX = math.random(-20, 20) / 10
                                     local spreadZ = math.random(-20, 20) / 10
