@@ -3946,10 +3946,14 @@ end)
             end)
         end
 
-        -- ==========================================
+    
+            -- ==========================================
         -- ROW 3: MOVEMENT & TROLLING (LayoutOrders 9, 10, 11)
         -- ==========================================
-        
+        local RunService = game:GetService("RunService")
+        local myPlayer = game:GetService("Players").LocalPlayer
+        local g = getgenv()
+
         -- 1. 🌌 TELEPORT BUTTON
         local TpBtn = Instance.new("TextButton")
         TpBtn.BackgroundColor3 = Color3.fromRGB(40, 100, 180) -- Blue
@@ -3975,103 +3979,125 @@ end)
             end
         end)
 
-        -- 2. 🪑 HEAD SIT BUTTON
+        -- 2. 🪑 HEAD SIT BUTTON (SMART SWAP)
         local HeadSitBtn = Instance.new("TextButton")
-        HeadSitBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65) 
+        if g.activeSitTarget == targetPlayer then
+            HeadSitBtn.Text = "Un-Sit"
+            HeadSitBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+        else
+            HeadSitBtn.Text = "Head Sit"
+            HeadSitBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65) 
+        end
         HeadSitBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
         HeadSitBtn.Font = Enum.Font.SourceSansBold
         HeadSitBtn.TextSize = 11
-        HeadSitBtn.Text = "Head Sit"
         HeadSitBtn.BorderSizePixel = 0
         HeadSitBtn.LayoutOrder = 10
         HeadSitBtn.Parent = actionLayout 
 
-        local isHeadSitting = false
-        local headSitLoop = nil
-
         HeadSitBtn.MouseButton1Click:Connect(function()
-            isHeadSitting = not isHeadSitting
             local char = myPlayer.Character
             local root = char and char:FindFirstChild("HumanoidRootPart")
             local hum = char and char:FindFirstChildOfClass("Humanoid")
             
-            if isHeadSitting then
+            -- If already sitting on THIS player, turn it OFF
+            if g.activeSitTarget == targetPlayer then
+                g.activeSitTarget = nil
+                if g.activeSitLoop then g.activeSitLoop:Disconnect(); g.activeSitLoop = nil end
+                
+                HeadSitBtn.Text = "Head Sit"
+                HeadSitBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+                if hum then hum.Sit = false end
+            else
+                -- SWAP to or turn ON for NEW target
+                g.activeSitTarget = targetPlayer
+                if g.activeSitLoop then g.activeSitLoop:Disconnect(); g.activeSitLoop = nil end
+                
                 HeadSitBtn.Text = "Un-Sit"
                 HeadSitBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
                 if hum then hum.Sit = true end
                 
-                headSitLoop = RunService.RenderStepped:Connect(function()
+                g.activeSitLoop = RunService.RenderStepped:Connect(function()
                     pcall(function()
-                        local tChar = targetPlayer.Character
+                        local tChar = g.activeSitTarget and g.activeSitTarget.Character
                         local tHead = tChar and tChar:FindFirstChild("Head")
+                        
                         if root and tHead then
                             root.Velocity = Vector3.new(0, 0, 0)
                             root.CFrame = tHead.CFrame * CFrame.new(0, 2, 0)
                         else
-                            isHeadSitting = false
+                            -- Auto-disable if they leave/die
+                            g.activeSitTarget = nil
+                            if g.activeSitLoop then g.activeSitLoop:Disconnect(); g.activeSitLoop = nil end
                             HeadSitBtn.Text = "Head Sit"
                             HeadSitBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
-                            if headSitLoop then headSitLoop:Disconnect() end
+                            if hum then hum.Sit = false end
                         end
                     end)
                 end)
-            else
-                HeadSitBtn.Text = "Head Sit"
-                HeadSitBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
-                if hum then hum.Sit = false end
-                if headSitLoop then headSitLoop:Disconnect() end
             end
         end)
 
-        -- 3. 💥 HEAD BANG BUTTON (With working Animations)
+        -- 3. 💥 HEAD BANG BUTTON (SMART SWAP)
         local BangBtn = Instance.new("TextButton")
-        BangBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65) 
+        if g.activeBangTarget == targetPlayer then
+            BangBtn.Text = "Stop Bang"
+            BangBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+        else
+            BangBtn.Text = "Head Bang"
+            BangBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65) 
+        end
         BangBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
         BangBtn.Font = Enum.Font.SourceSansBold
         BangBtn.TextSize = 11
-        BangBtn.Text = "Head Bang"
         BangBtn.BorderSizePixel = 0
         BangBtn.LayoutOrder = 11
         BangBtn.Parent = actionLayout 
 
-        local isBanging = false
-        local bangLoop = nil
-
         BangBtn.MouseButton1Click:Connect(function()
-            isBanging = not isBanging
             local char = myPlayer.Character
             local root = char and char:FindFirstChild("HumanoidRootPart")
             
-            if isBanging then
+            -- If already banging THIS player, turn it OFF
+            if g.activeBangTarget == targetPlayer then
+                g.activeBangTarget = nil
+                if g.activeBangLoop then g.activeBangLoop:Disconnect(); g.activeBangLoop = nil end
+                
+                BangBtn.Text = "Head Bang"
+                BangBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+                StopAnim()
+            else
+                -- SWAP to or turn ON for NEW target
+                g.activeBangTarget = targetPlayer
+                if g.activeBangLoop then g.activeBangLoop:Disconnect(); g.activeBangLoop = nil end
+                
                 BangBtn.Text = "Stop Bang"
                 BangBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
                 
                 PlayAnim(125462520730682, 0, 1)
                         
-                bangLoop = RunService.RenderStepped:Connect(function()
+                g.activeBangLoop = RunService.RenderStepped:Connect(function()
                     pcall(function()
-                        local tChar = targetPlayer.Character
+                        local tChar = g.activeBangTarget and g.activeBangTarget.Character
                         local tRoot = tChar and tChar:FindFirstChild("HumanoidRootPart")
+                        
                         if root and tRoot then
                             root.Velocity = Vector3.new(0, 0, 0)
                             root.CFrame = tRoot.CFrame * CFrame.new(0, 0, 1.1)
                         else
-                            isBanging = false
+                            -- Auto-disable if they leave/die
+                            g.activeBangTarget = nil
+                            if g.activeBangLoop then g.activeBangLoop:Disconnect(); g.activeBangLoop = nil end
                             BangBtn.Text = "Head Bang"
                             BangBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
-                            if bangLoop then bangLoop:Disconnect() end
+                            StopAnim()
                         end
                     end)
                 end)
-            else
-                BangBtn.Text = "Head Bang"
-                BangBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
-                
-                StopAnim()
-                if bangLoop then bangLoop:Disconnect() end
             end
         end)
--- LOGIC CONNECTIONS
+  
+      -- LOGIC CONNECTIONS
         -- ==========================================
    
          targetRlBtn.MouseButton1Click:Connect(function()
