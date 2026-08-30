@@ -4190,7 +4190,7 @@ end)
             end
         end)
 
-         -- 5. 🪑 JAIL BUTTON (SQUARE CAGE & DISTANCE FIX)
+          -- 5. 🪑 JAIL BUTTON (TRUE SQUARE CAGE & STABILITY FIX)
         local JailBtn = Instance.new("TextButton")
         if g.activeJailTarget == targetPlayer then
             JailBtn.Text = "Un-Jail"
@@ -4235,27 +4235,41 @@ end)
             local center = tRoot.Position
             g.jailCenter = center
             
-            -- SQUARE BOX MATH: Exactly 20 chairs mapped to a 3D grid
-            local boxOffsets = {
-                -- Lower Walls (y = -1.5)
-                Vector3.new(-3, -1.5, -3), Vector3.new(0, -1.5, -3), Vector3.new(3, -1.5, -3),
-                Vector3.new(-3, -1.5, 0),                            Vector3.new(3, -1.5, 0),
-                Vector3.new(-3, -1.5, 3),  Vector3.new(0, -1.5, 3),  Vector3.new(3, -1.5, 3),
-                
-                -- Upper Walls (y = 1.5)
-                Vector3.new(-3, 1.5, -3), Vector3.new(0, 1.5, -3), Vector3.new(3, 1.5, -3),
-                Vector3.new(-3, 1.5, 0),                           Vector3.new(3, 1.5, 0),
-                Vector3.new(-3, 1.5, 3),  Vector3.new(0, 1.5, 3),  Vector3.new(3, 1.5, 3),
-                
-                -- Ceiling / Roof (y = 4.5)
-                Vector3.new(-1.5, 4.5, -1.5), Vector3.new(1.5, 4.5, -1.5),
-                Vector3.new(-1.5, 4.5, 1.5),  Vector3.new(1.5, 4.5, 1.5)
-            }
+            -- TRUE SQUARE MATH: Explicitly positions exactly 20 chairs at 90-degree snaps
+            local targetCFrames = {}
             
-            for _, offset in ipairs(boxOffsets) do
-                local pos = center + offset
-                local targetCFrame = CFrame.new(pos, center) -- Faces chairs inward
-                
+            -- Left Wall (X = -3)
+            table.insert(targetCFrames, CFrame.new(center + Vector3.new(-3, -1.5, -1.5)) * CFrame.Angles(0, math.rad(-90), 0))
+            table.insert(targetCFrames, CFrame.new(center + Vector3.new(-3, -1.5, 1.5)) * CFrame.Angles(0, math.rad(-90), 0))
+            table.insert(targetCFrames, CFrame.new(center + Vector3.new(-3, 1.5, -1.5)) * CFrame.Angles(0, math.rad(-90), 0))
+            table.insert(targetCFrames, CFrame.new(center + Vector3.new(-3, 1.5, 1.5)) * CFrame.Angles(0, math.rad(-90), 0))
+            
+            -- Right Wall (X = 3)
+            table.insert(targetCFrames, CFrame.new(center + Vector3.new(3, -1.5, -1.5)) * CFrame.Angles(0, math.rad(90), 0))
+            table.insert(targetCFrames, CFrame.new(center + Vector3.new(3, -1.5, 1.5)) * CFrame.Angles(0, math.rad(90), 0))
+            table.insert(targetCFrames, CFrame.new(center + Vector3.new(3, 1.5, -1.5)) * CFrame.Angles(0, math.rad(90), 0))
+            table.insert(targetCFrames, CFrame.new(center + Vector3.new(3, 1.5, 1.5)) * CFrame.Angles(0, math.rad(90), 0))
+            
+            -- Front Wall (Z = -3)
+            table.insert(targetCFrames, CFrame.new(center + Vector3.new(-1.5, -1.5, -3)) * CFrame.Angles(0, 0, 0))
+            table.insert(targetCFrames, CFrame.new(center + Vector3.new(1.5, -1.5, -3)) * CFrame.Angles(0, 0, 0))
+            table.insert(targetCFrames, CFrame.new(center + Vector3.new(-1.5, 1.5, -3)) * CFrame.Angles(0, 0, 0))
+            table.insert(targetCFrames, CFrame.new(center + Vector3.new(1.5, 1.5, -3)) * CFrame.Angles(0, 0, 0))
+            
+            -- Back Wall (Z = 3)
+            table.insert(targetCFrames, CFrame.new(center + Vector3.new(-1.5, -1.5, 3)) * CFrame.Angles(0, math.rad(180), 0))
+            table.insert(targetCFrames, CFrame.new(center + Vector3.new(1.5, -1.5, 3)) * CFrame.Angles(0, math.rad(180), 0))
+            table.insert(targetCFrames, CFrame.new(center + Vector3.new(-1.5, 1.5, 3)) * CFrame.Angles(0, math.rad(180), 0))
+            table.insert(targetCFrames, CFrame.new(center + Vector3.new(1.5, 1.5, 3)) * CFrame.Angles(0, math.rad(180), 0))
+            
+            -- Roof (4 chairs pointing straight down to cap the top)
+            table.insert(targetCFrames, CFrame.new(center + Vector3.new(-1.5, 4.5, -1.5)) * CFrame.Angles(math.rad(-90), 0, 0))
+            table.insert(targetCFrames, CFrame.new(center + Vector3.new(1.5, 4.5, -1.5)) * CFrame.Angles(math.rad(-90), 0, 0))
+            table.insert(targetCFrames, CFrame.new(center + Vector3.new(-1.5, 4.5, 1.5)) * CFrame.Angles(math.rad(-90), 0, 0))
+            table.insert(targetCFrames, CFrame.new(center + Vector3.new(1.5, 4.5, 1.5)) * CFrame.Angles(math.rad(-90), 0, 0))
+            
+            -- Instant concurrent spawn
+            for _, targetCFrame in ipairs(targetCFrames) do
                 task.spawn(function()
                     Get("large_place", chairModel, targetCFrame)
                 end)
@@ -4285,16 +4299,14 @@ end)
                         
                         if not tRoot or not myRoot then break end
                         
-                        -- Range Check: Only process if within 50 studs
                         if (myRoot.Position - tRoot.Position).Magnitude <= 50 then
                             
-                            -- Escaped the box? (More than 4.5 studs away from the center)
-                            if not g.jailCenter or (tRoot.Position - g.jailCenter).Magnitude > 4.5 then
+                            -- SMART TRAP STABILITY FIX: Threshold expanded to 6.5 studs
+                            -- Now, bouncing around the inside walls of the 3x3 box won't trigger an accidental rebuild!
+                            if not g.jailCenter or (tRoot.Position - g.jailCenter).Magnitude > 6.5 then
                                 clearJail()
                                 task.wait(0.15) 
                                 
-                                -- 🛑 CRITICAL RACE-CONDITION FIX 🛑
-                                -- Re-check distance AFTER the 0.15s wait to make sure you didn't teleport away while it was cleaning up!
                                 local myRootNow = myChar:FindFirstChild("HumanoidRootPart")
                                 if g.activeJailTarget == targetPlayer and tRoot and myRootNow and (myRootNow.Position - tRoot.Position).Magnitude <= 50 then
                                     spawnJail(tRoot)
@@ -4302,7 +4314,6 @@ end)
                             end
                             
                         else
-                            -- If you move or teleport away, silently drop the cage
                             if g.jailCenter then
                                 clearJail()
                                 g.jailCenter = nil 
@@ -4314,8 +4325,7 @@ end)
                 end)
             end
         end)
-
-      
+    
       -- LOGIC CONNECTIONS
         -- ==========================================
    
