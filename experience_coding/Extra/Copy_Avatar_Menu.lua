@@ -4189,7 +4189,8 @@ end)
                 end)
             end
         end)
-        -- 5. 🪑 JAIL BUTTON (CHAIR CAGE)
+
+           -- 5. 🪑 JAIL BUTTON (SPHERICAL CHAIR CAGE)
         local JailBtn = Instance.new("TextButton")
         if g.activeJailTarget == targetPlayer then
             JailBtn.Text = "Un-Jail"
@@ -4216,7 +4217,6 @@ end)
                     if model.Name == "CampingChair" then
                         local ownerId = model:GetAttribute("owner_id")
                         if tostring(ownerId) == tostring(myPlayer.UserId) then
-                            -- Uses the actual model's ClickDetector if possible, or falls back to a spoofed one
                             local cd = model:FindFirstChildWhichIsA("ClickDetector", true) or Instance.new("ClickDetector")
                             Send("interaction", cd, "Pick Up")
                         end
@@ -4232,36 +4232,45 @@ end)
             
             if not Get or not chairModel then return end
             
-            local center = tRoot.Position
-            -- Spawns exactly 20 chairs in a tight circle to cage them in
-            for i = 1, 20 do
-                local angle = math.rad((i / 20) * 360)
-                local offset = Vector3.new(math.cos(angle) * 3.5, 0, math.sin(angle) * 3.5)
+            -- Shift center up slightly so the sphere covers their head and feet perfectly
+            local center = tRoot.Position + Vector3.new(0, 1, 0)
+            local n = 20
+            local phi = math.pi * (3 - math.sqrt(5)) -- Golden angle for perfect spherical distribution
+            
+            -- Spawns exactly 20 chairs in a 3D Fibonacci sphere to form an inescapable ball
+            for i = 0, n - 1 do
+                local y = 1 - (i / (n - 1)) * 2 -- Maps from top (1) to bottom (-1)
+                local radiusAtY = math.sqrt(1 - y * y)
+                local theta = phi * i
+                
+                local x = math.cos(theta) * radiusAtY
+                local z = math.sin(theta) * radiusAtY
+                
+                -- 3.8 stud radius creates a tight, interlocking shell
+                local offset = Vector3.new(x, y, z) * 3.8
                 local pos = center + offset
-                local cframe = CFrame.new(pos, center) -- Makes the chairs face inwards
+                local cframe = CFrame.new(pos, center) -- Forces all chairs to face inwards, creating a solid roof/floor
                 
                 task.spawn(function()
                     Get("large_place", chairModel, cframe)
                 end)
-                task.wait(0.02) -- Micro-wait to prevent the server from dropping requests
+                task.wait(0.02) 
             end
         end
 
         JailBtn.MouseButton1Click:Connect(function()
             if g.activeJailTarget == targetPlayer then
-                -- Turn OFF
                 g.activeJailTarget = nil
                 JailBtn.Text = "Jail (Chairs)"
                 JailBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
                 task.spawn(clearJail)
             else
-                -- SWAP to or turn ON for NEW target
                 g.activeJailTarget = targetPlayer
                 JailBtn.Text = "Un-Jail"
                 JailBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
                 
                 task.spawn(function()
-                    clearJail() -- Delete old cage first
+                    clearJail() 
                     task.wait(0.3)
                     
                     while g.activeJailTarget == targetPlayer do
@@ -4269,25 +4278,24 @@ end)
                         local tRoot = tChar and tChar:FindFirstChild("HumanoidRootPart")
                         if not tRoot then break end
                         
-                        -- SMART TRAP: If they walk away or this is the first spawn, rebuild the cage
-                        if not g.jailCenter or (tRoot.Position - g.jailCenter).Magnitude > 5 then
+                        -- SMART TRAP: Tightened the escape threshold to 4.5 studs. 
+                        -- If they glitch out of the ball, it instantly picks up and recasts it.
+                        if not g.jailCenter or (tRoot.Position - g.jailCenter).Magnitude > 4.5 then
                             clearJail()
                             task.wait(0.3)
                             
-                            -- Double check target hasn't changed during the wait
                             if g.activeJailTarget == targetPlayer and tRoot then
                                 g.jailCenter = tRoot.Position
                                 spawnJail(tRoot)
                             end
                         end
                         
-                        task.wait(0.5) -- Constantly checks if they escaped
+                        task.wait(0.3) 
                     end
                 end)
             end
         end)
-
-    
+ 
       
       -- LOGIC CONNECTIONS
         -- ==========================================
