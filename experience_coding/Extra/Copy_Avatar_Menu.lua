@@ -3127,7 +3127,7 @@ MassFlingBtn.MouseButton1Click:Connect(function()
     end
 end)
 
-        -- ==========================================
+            -- ==========================================
         -- ⛺ DRAW & PLACE (TENT CANVAS SYSTEM)
         -- ==========================================
         local UserInputService = game:GetService("UserInputService")
@@ -3135,25 +3135,26 @@ end)
         local myPlayer = game:GetService("Players").LocalPlayer
         local g = getgenv()
 
-        -- 1. THE TOGGLE BUTTON
+        -- 1. THE TOGGLE BUTTON (Fixed Size & Parent)
         local DrawModeBtn = Instance.new("TextButton")
+        DrawModeBtn.Size = UDim2.new(1, -5, 0, 40) 
         DrawModeBtn.Text = "🎨 Draw Mode: OFF"
-        DrawModeBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65) 
+        DrawModeBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50) 
         DrawModeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
         DrawModeBtn.Font = Enum.Font.SourceSansBold
-        DrawModeBtn.TextSize = 11
+        DrawModeBtn.TextSize = 16 
         DrawModeBtn.BorderSizePixel = 0
         DrawModeBtn.LayoutOrder = 20
-        -- CHANGE this to whatever layout your tools tab uses (e.g., toolsLayout)
-        DrawModeBtn.Parent = actionLayout 
+        DrawModeBtn.Parent = ToolsScroll -- FIXED PARENT!
+        Instance.new("UICorner", DrawModeBtn).CornerRadius = UDim.new(0, 8)
 
-        -- 2. THE CANVAS CONTAINER (Holds the board and the clear button)
+        -- 2. THE CANVAS CONTAINER (Fixed Parent)
         local CanvasContainer = Instance.new("Frame")
-        CanvasContainer.Size = UDim2.new(1, 0, 0, 200)
+        CanvasContainer.Size = UDim2.new(1, -5, 0, 205)
         CanvasContainer.BackgroundTransparency = 1
         CanvasContainer.LayoutOrder = 21
         CanvasContainer.Visible = false
-        CanvasContainer.Parent = actionLayout 
+        CanvasContainer.Parent = ToolsScroll -- FIXED PARENT!
 
         local CanvasBoard = Instance.new("Frame")
         CanvasBoard.Size = UDim2.new(1, 0, 0, 160)
@@ -3173,17 +3174,18 @@ end)
         CanvasLabel.TextSize = 14
         CanvasLabel.Parent = CanvasBoard
 
-        -- 3. THE CLEAR BUTTON
+        -- 3. THE CLEAR BUTTON (Beautified)
         local ClearDrawBtn = Instance.new("TextButton")
-        ClearDrawBtn.Size = UDim2.new(1, 0, 0, 30)
-        ClearDrawBtn.Position = UDim2.new(0, 0, 0, 170)
+        ClearDrawBtn.Size = UDim2.new(1, 0, 0, 35)
+        ClearDrawBtn.Position = UDim2.new(0, 0, 0, 165)
         ClearDrawBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
         ClearDrawBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
         ClearDrawBtn.Font = Enum.Font.SourceSansBold
-        ClearDrawBtn.TextSize = 11
+        ClearDrawBtn.TextSize = 14
         ClearDrawBtn.Text = "🗑️ Wipe Canvas (Remove Tents)"
         ClearDrawBtn.BorderSizePixel = 0
         ClearDrawBtn.Parent = CanvasContainer
+        Instance.new("UICorner", ClearDrawBtn).CornerRadius = UDim.new(0, 6)
 
         -- ==========================================
         -- LOGIC: DRAWING & PLACING
@@ -3199,7 +3201,7 @@ end)
                 DrawModeBtn.BackgroundColor3 = Color3.fromRGB(150, 100, 200) -- Purple active state
             else
                 DrawModeBtn.Text = "🎨 Draw Mode: OFF"
-                DrawModeBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+                DrawModeBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
                 isDrawing = false
             end
         end)
@@ -3214,26 +3216,20 @@ end)
             
             if not hrp or not Get or not tentModel then return end
 
-            -- Get relative position inside the canvas (0 to 1)
             local absPos = CanvasBoard.AbsolutePosition
             local absSize = CanvasBoard.AbsoluteSize
             
-            -- Normalizes coordinates from -1 to 1 (Center of canvas is 0,0)
             local normX = ((x - absPos.X) / absSize.X) * 2 - 1
             local normY = ((y - absPos.Y) / absSize.Y) * 2 - 1
             
-            -- SCALE: How far the edges of the canvas reach in the game (50 studs)
             local canvasWorldRange = 50 
             
-            -- Maps the 2D canvas drawing to the 3D world around your character
-            -- Note: UI 'Y' corresponds to World 'Z' (forward/backward)
             local spawnPos = Vector3.new(
                 hrp.Position.X + (normX * canvasWorldRange),
-                hrp.Position.Y, -- Keeps them on the same floor level as you
+                hrp.Position.Y, 
                 hrp.Position.Z + (normY * canvasWorldRange)
             )
             
-            -- Create a little green dot on the UI so you can see your drawing!
             local dot = Instance.new("Frame")
             dot.Size = UDim2.new(0, 6, 0, 6)
             dot.Position = UDim2.new(0, (x - absPos.X) - 3, 0, (y - absPos.Y) - 3)
@@ -3242,19 +3238,16 @@ end)
             dot.Parent = CanvasBoard
             table.insert(paintDots, dot)
             
-            -- Send remote to place the Tent
             task.spawn(function()
                 Get("large_place", tentModel, CFrame.new(spawnPos, hrp.Position)) 
             end)
         end
 
-        -- Handles the drag logic
         local function processDrawInput(input)
             if not isDrawing then return end
             
             local currentPoint = Vector2.new(input.Position.X, input.Position.Y)
             
-            -- Only place a tent if the mouse moved far enough from the last one (prevents crashing from overlapping)
             if not lastDrawPoint or (currentPoint - lastDrawPoint).Magnitude > 15 then
                 lastDrawPoint = currentPoint
                 PlaceTentAtCanvasPoint(currentPoint.X, currentPoint.Y)
@@ -3265,7 +3258,7 @@ end)
             if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                 isDrawing = true
                 lastDrawPoint = nil
-                processDrawInput(input) -- Place the very first dot on click
+                processDrawInput(input) 
             end
         end)
 
@@ -3289,20 +3282,17 @@ end)
             local Send = g.Send or (g.g and g.g.Send)
             if not Send then return end
             
-            -- 1. Clear the UI dots
             for _, dot in ipairs(paintDots) do
                 dot:Destroy()
             end
             paintDots = {}
             
-            -- 2. Pick up all placed tents
             local placed = workspace:FindFirstChild("PlacedModels") or workspace:FindFirstChild("ModelsPlaced")
             if placed then
                 for _, model in ipairs(placed:GetChildren()) do
                     if model.Name == "Tent" then
                         local ownerId = model:GetAttribute("owner_id")
                         if tostring(ownerId) == tostring(myPlayer.UserId) then
-                            -- Wraps in task.spawn so it deletes them all instantly instead of 1 by 1
                             task.spawn(function()
                                 local cd = model:FindFirstChildWhichIsA("ClickDetector", true) or Instance.new("ClickDetector")
                                 Send("interaction", cd, "Pick Up")
