@@ -3127,9 +3127,8 @@ MassFlingBtn.MouseButton1Click:Connect(function()
     end
 end)
 
-
 -- ============================================================
--- ⛺ GIANT TENT MAN (Ground Tracker - 50 Stud Limit Safe)
+-- ⛺ TENT MAN STICK FIGURE (Ground Tracker – Max 21 Tents)
 -- ============================================================
 local isTentManActive = false
 local tentManLoop = nil
@@ -3149,23 +3148,22 @@ TentManBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
 TentManBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 TentManBtn.Font = Enum.Font.SourceSansBold
 TentManBtn.TextSize = 16
-TentManBtn.Text = "⛺ Giant Tent Man: OFF"
+TentManBtn.Text = "⛺ Stick Man: OFF"
 TentManBtn.BorderSizePixel = 0
 TentManBtn.Parent = TentManFrame
 Instance.new("UICorner", TentManBtn).CornerRadius = UDim.new(0, 8)
 
--- Helper: Clean up all your placed tents
+-- Helper: Clear all tents owned by you
 local function clearMyTents()
     local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
     if not Send then return end
-    
     local placed = workspace:FindFirstChild("PlacedModels") or workspace:FindFirstChild("ModelsPlaced")
     if placed then
         for _, model in ipairs(placed:GetChildren()) do
             if model.Name == "Tent" then
                 local ownerId = model:GetAttribute("owner_id")
-                if tostring(ownerId) == tostring(game:GetService("Players").LocalPlayer.UserId) then
-                    task.spawn(function()
+                if tostring(ownerId) == tostring(game.Players.LocalPlayer.UserId) then
+                    spawn(function()
                         local cd = model:FindFirstChildWhichIsA("ClickDetector", true) or Instance.new("ClickDetector")
                         Send("interaction", cd, "Pick Up")
                     end)
@@ -3175,83 +3173,112 @@ local function clearMyTents()
     end
 end
 
--- Helper: Safely grab R15 or R6 limbs
-local function getLimb(char, r15Name, r6Name)
-    return char:FindFirstChild(r15Name) or char:FindFirstChild(r6Name)
+-- Helper: Get a limb CFrame (supports R15 & R6)
+local function getLimbCFrame(char, r15Name, r6Name)
+    local part = char:FindFirstChild(r15Name) or char:FindFirstChild(r6Name)
+    if part then return part.CFrame end
+    return nil
 end
 
 TentManBtn.MouseButton1Click:Connect(function()
     isTentManActive = not isTentManActive
-    local myPlayer = game:GetService("Players").LocalPlayer
+    local player = game.Players.LocalPlayer
     local Get = getgenv().Get or (getgenv().g and getgenv().g.Get)
-    
+
     if isTentManActive then
-        TentManBtn.Text = "⛺ Giant Tent Man: ON"
-        TentManBtn.BackgroundColor3 = Color3.fromRGB(200, 100, 50) -- Orange Theme
-        
-        tentManLoop = task.spawn(function()
+        TentManBtn.Text = "⛺ Stick Man: ON"
+        TentManBtn.BackgroundColor3 = Color3.fromRGB(200, 100, 50) -- Orange
+
+        tentManLoop = spawn(function()
             while isTentManActive do
-                local char = myPlayer.Character
+                local char = player.Character
                 local root = char and char:FindFirstChild("HumanoidRootPart")
                 local RS = game:GetService("ReplicatedStorage")
                 local tentModel = RS:FindFirstChild("LargePlaceables") and RS.LargePlaceables:FindFirstChild("Tent")
-                
-                if root and tentModel and Get then
-                    -- 1. Wipe the previous frame's tents
-                    clearMyTents()
-                    
-                    -- Wait a tiny bit for the server to process the deletion
-                    task.wait(0.1)
-                    
-                    -- 2. Grab the 6 core body parts
-                    local limbs = {
-                        getLimb(char, "Head", "Head"),
-                        getLimb(char, "UpperTorso", "Torso") or getLimb(char, "LowerTorso", "Torso"),
-                        getLimb(char, "LeftUpperArm", "Left Arm"),
-                        getLimb(char, "RightUpperArm", "Right Arm"),
-                        getLimb(char, "LeftUpperLeg", "Left Leg"),
-                        getLimb(char, "RightUpperLeg", "Right Leg")
-                    }
-                    
-                    -- 3. Perfectly calculated ground placement math
-                    -- Scale of 6 makes him ~30 studs tall so he fits safely inside the 50-stud interaction range
-                    local SCALE_MULTIPLIER = 6 
-                    
-                    -- Puts him 25 studs in front of you, and lifts him up just enough so his giant feet rest perfectly on the ground
-                    local heightOffset = (2 * SCALE_MULTIPLIER) - 2 
-                    local baseGroundCF = root.CFrame * CFrame.new(0, heightOffset, -25) 
-                    
-                    -- 4. Calculate offsets and spawn the new tents
-                    for _, limb in ipairs(limbs) do
-                        if limb then
-                            -- Find exactly where this limb is relative to your root part
-                            local relativeCF = root.CFrame:ToObjectSpace(limb.CFrame)
-                            
-                            -- Multiply the distance so it creates a giant stickman
-                            local scaledPos = relativeCF.Position * SCALE_MULTIPLIER
-                            
-                            -- Combine the ground position, the scaled offset, and the exact rotation of your limb
-                            local targetCF = baseGroundCF * CFrame.new(scaledPos) * relativeCF.Rotation
-                            
-                            -- Spawn the tent for this limb
-                            task.spawn(function()
-                                Get("large_place", tentModel, targetCF)
-                            end)
-                        end
+                if not root or not tentModel or not Get then
+                    task.wait(0.4)
+                    continue
+                end
+
+                -- 1. Clear previous tents
+                clearMyTents()
+                task.wait(0.05) -- let server process deletion
+
+                -- 2. Define which limbs to track (R15 + fallback to R6)
+                local limbs = {
+                    { name = "Head",      r15 = "Head",        r6 = "Head" },
+                    { name = "Neck",      r15 = "UpperTorso",  r6 = "Torso" }, -- approximate
+                    { name = "LeftShoulder", r15 = "LeftUpperArm", r6 = "Left Arm" },
+                    { name = "LeftElbow",   r15 = "LeftLowerArm", r6 = nil },
+                    { name = "LeftWrist",   r15 = "LeftHand",     r6 = nil },
+                    { name = "RightShoulder", r15 = "RightUpperArm", r6 = "Right Arm" },
+                    { name = "RightElbow",  r15 = "RightLowerArm", r6 = nil },
+                    { name = "RightWrist",  r15 = "RightHand",     r6 = nil },
+                    { name = "Hip",         r15 = "LowerTorso",   r6 = "Torso" },
+                    { name = "LeftKnee",    r15 = "LeftLowerLeg", r6 = "Left Leg" },
+                    { name = "LeftAnkle",   r15 = "LeftFoot",     r6 = nil },
+                    { name = "RightKnee",   r15 = "RightLowerLeg", r6 = "Right Leg" },
+                    { name = "RightAnkle",  r15 = "RightFoot",    r6 = nil },
+                }
+
+                -- 3. Gather CFrames of each limb relative to the root
+                local jointCFs = {}
+                local rootCF = root.CFrame
+                for _, limb in ipairs(limbs) do
+                    local partCF = getLimbCFrame(char, limb.r15, limb.r6)
+                    if partCF then
+                        -- relative position & rotation in root's space
+                        local relativeCF = rootCF:ToObjectSpace(partCF)
+                        table.insert(jointCFs, relativeCF)
                     end
                 end
-                
-                -- Update every 0.4 seconds (Fast enough to track movement, slow enough to not crash the server)
-                task.wait(0.4) 
+
+                -- If we have less than 3 joints, fallback to a simple stick figure
+                if #jointCFs < 3 then
+                    -- simple: head, torso, arms, legs using root offset
+                    jointCFs = {
+                        CFrame.new(0, 2.5, 0),  -- head
+                        CFrame.new(0, 1.5, 0),  -- torso
+                        CFrame.new(-1.2, 1.5, 0), -- left arm
+                        CFrame.new(1.2, 1.5, 0),  -- right arm
+                        CFrame.new(-0.7, -0.5, 0), -- left leg
+                        CFrame.new(0.7, -0.5, 0),  -- right leg
+                    }
+                end
+
+                -- 4. Determine ground Y (feet level)
+                local feetY = root.Position.Y - 2  -- rough estimate; you can raycast for accuracy
+                -- Place the stick figure 5 studs in front of you
+                local forward = rootCF.LookVector * 5
+                local basePos = Vector3.new(root.Position.X + forward.X, feetY, root.Position.Z + forward.Z)
+
+                -- 5. Scale factor – make him roughly human-sized (1:1) but you can tweak
+                local scale = 1.2  -- slightly taller than player
+
+                -- 6. Spawn tents at each joint, max 21 total
+                local tentCount = 0
+                for _, relCF in ipairs(jointCFs) do
+                    if tentCount >= 21 then break end
+                    -- Scale the position part
+                    local scaledPos = relCF.Position * scale
+                    -- Build absolute CFrame: base position + scaled offset, with the limb's rotation
+                    local targetCF = CFrame.new(basePos + scaledPos) * relCF.Rotation
+                    spawn(function()
+                        Get("large_place", tentModel, targetCF)
+                    end)
+                    tentCount = tentCount + 1
+                end
+
+                -- 7. Update every 0.4 seconds (fast enough to follow movement)
+                task.wait(0.4)
             end
-            
-            -- Clean up when turned off
+
+            -- Clean up when toggled off
             clearMyTents()
         end)
     else
-        TentManBtn.Text = "⛺ Giant Tent Man: OFF"
+        TentManBtn.Text = "⛺ Stick Man: OFF"
         TentManBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-        
         if tentManLoop then
             task.cancel(tentManLoop)
             tentManLoop = nil
@@ -3260,11 +3287,11 @@ TentManBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- Safety clear if you die/reset while it's active
-game:GetService("Players").LocalPlayer.CharacterAdded:Connect(function()
+-- Safety: auto-clean if you die
+player.CharacterAdded:Connect(function()
     if isTentManActive then
         isTentManActive = false
-        TentManBtn.Text = "⛺ Giant Tent Man: OFF"
+        TentManBtn.Text = "⛺ Stick Man: OFF"
         TentManBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
         if tentManLoop then task.cancel(tentManLoop); tentManLoop = nil end
         clearMyTents()
