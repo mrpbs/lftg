@@ -3127,176 +3127,7 @@ MassFlingBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- ============================================================
--- ⛺ TENT MAN STICK FIGURE (Wide Gaps + Move-Triggered Refresh)
--- ============================================================
-local isTentManActive = false
-local tentManLoop = nil
-local lastRootCF = nil
-
--- 1. Main Container
-local TentManFrame = Instance.new("Frame")
-TentManFrame.Size = UDim2.new(1, -5, 0, 40)
-TentManFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 38)
-TentManFrame.BorderSizePixel = 0
-TentManFrame.ClipsDescendants = true
-TentManFrame.Parent = ToolsScroll
-
--- 2. The Toggle Button
-local TentManBtn = Instance.new("TextButton")
-TentManBtn.Size = UDim2.new(1, 0, 0, 40)
-TentManBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-TentManBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-TentManBtn.Font = Enum.Font.SourceSansBold
-TentManBtn.TextSize = 16
-TentManBtn.Text = "⛺ Stick Man: OFF"
-TentManBtn.BorderSizePixel = 0
-TentManBtn.Parent = TentManFrame
-Instance.new("UICorner", TentManBtn).CornerRadius = UDim.new(0, 8)
-
--- Helper: Clear all tents owned by you
-local function clearMyTents()
-    local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
-    if not Send then return end
-    local placed = workspace:FindFirstChild("PlacedModels") or workspace:FindFirstChild("ModelsPlaced")
-    if placed then
-        for _, model in ipairs(placed:GetChildren()) do
-            if model.Name == "Tent" then
-                local ownerId = model:GetAttribute("owner_id")
-                if tostring(ownerId) == tostring(game.Players.LocalPlayer.UserId) then
-                    spawn(function()
-                        local cd = model:FindFirstChildWhichIsA("ClickDetector", true) or Instance.new("ClickDetector")
-                        Send("interaction", cd, "Pick Up")
-                    end)
-                end
-            end
-        end
-    end
-end
-
-TentManBtn.MouseButton1Click:Connect(function()
-    isTentManActive = not isTentManActive
-    local player = game.Players.LocalPlayer
-    local Get = getgenv().Get or (getgenv().g and getgenv().g.Get)
-
-    if isTentManActive then
-        TentManBtn.Text = "⛺ Stick Man: ON"
-        TentManBtn.BackgroundColor3 = Color3.fromRGB(200, 100, 50)
-        lastRootCF = nil  -- reset tracker
-
-        tentManLoop = spawn(function()
-            while isTentManActive do
-                local char = player.Character
-                local root = char and char:FindFirstChild("HumanoidRootPart")
-                local RS = game:GetService("ReplicatedStorage")
-                local tentModel = RS:FindFirstChild("LargePlaceables") and RS.LargePlaceables:FindFirstChild("Tent")
-                if not root or not tentModel or not Get then
-                    task.wait(0.5)
-                    continue
-                end
-
-                -- Check if we have moved significantly
-                local currentCF = root.CFrame
-                local shouldRefresh = false
-                if lastRootCF then
-                    local posDiff = (currentCF.Position - lastRootCF.Position).Magnitude
-                    local angleDiff = math.acos(math.clamp(currentCF.LookVector:Dot(lastRootCF.LookVector), -1, 1))
-                    if posDiff > 2 or angleDiff > math.rad(15) then
-                        shouldRefresh = true
-                    end
-                else
-                    shouldRefresh = true  -- first run
-                end
-
-                if shouldRefresh then
-                    -- 1. Clear previous tents
-                    clearMyTents()
-                    task.wait(0.08)
-
-                    -- 2. Stick figure offsets – now with double the spacing!
-                    local stickOffsets = {
-                        -- Head (3 tents, spread 2.4 studs)
-                        Vector3.new(-2.4, 8.0, 0),
-                        Vector3.new( 0.0, 8.0, 0),
-                        Vector3.new( 2.4, 8.0, 0),
-                        -- Shoulders (3 tents, spread 3.2)
-                        Vector3.new(-3.2, 6.0, 0),
-                        Vector3.new( 0.0, 6.0, 0),
-                        Vector3.new( 3.2, 6.0, 0),
-                        -- Neck/spine top
-                        Vector3.new( 0.0, 4.5, 0),
-                        -- Arms (7 tents from -6 to +6, gap 2)
-                        Vector3.new(-6.0, 3.5, 0),
-                        Vector3.new(-4.0, 3.5, 0),
-                        Vector3.new(-2.0, 3.5, 0),
-                        Vector3.new( 0.0, 3.5, 0),
-                        Vector3.new( 2.0, 3.5, 0),
-                        Vector3.new( 4.0, 3.5, 0),
-                        Vector3.new( 6.0, 3.5, 0),
-                        -- Spine (2 vertical, gap 2)
-                        Vector3.new( 0.0, 2.0, 0),
-                        Vector3.new( 0.0, 0.0, 0),
-                        -- Legs (2, spread 3)
-                        Vector3.new(-1.5, -1.5, 0),
-                        Vector3.new( 1.5, -1.5, 0),
-                    }
-
-                    -- 3. Place the figure 8 studs in front of you
-                    local forward = currentCF.LookVector
-                    local distance = 8
-                    local groundY = root.Position.Y - 2  -- adjust if needed
-                    local basePos = Vector3.new(root.Position.X + forward.X * distance, groundY, root.Position.Z + forward.Z * distance)
-
-                    -- 4. Face the player (rotate 180°)
-                    local angle = math.atan2(forward.X, forward.Z) + math.pi
-                    local rotation = CFrame.Angles(0, angle, 0)
-
-                    -- 5. Spawn a tent at each offset
-                    for _, offset in ipairs(stickOffsets) do
-                        local rotatedOffset = rotation * offset
-                        local targetPos = basePos + rotatedOffset
-                        local targetCF = CFrame.new(targetPos)
-                        spawn(function()
-                            Get("large_place", tentModel, targetCF)
-                        end)
-                        task.wait(0.02)
-                    end
-
-                    -- 6. Update last known position
-                    lastRootCF = currentCF
-                end
-
-                -- Check every 0.3 seconds (smooth enough, but only refreshes on movement)
-                task.wait(0.3)
-            end
-
-            -- Clean up when toggled off
-            clearMyTents()
-        end)
-    else
-        TentManBtn.Text = "⛺ Stick Man: OFF"
-        TentManBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-        if tentManLoop then
-            task.cancel(tentManLoop)
-            tentManLoop = nil
-        end
-        clearMyTents()
-        lastRootCF = nil
-    end
-end)
-
--- Safety: auto-clean if you die
-player.CharacterAdded:Connect(function()
-    if isTentManActive then
-        isTentManActive = false
-        TentManBtn.Text = "⛺ Stick Man: OFF"
-        TentManBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-        if tentManLoop then task.cancel(tentManLoop); tentManLoop = nil end
-        clearMyTents()
-        lastRootCF = nil
-    end
-end)
-
+-- 
 
 -- Resize Handle (Bottom Right Corner)
 local ResizeHandle = Instance.new("TextButton")
@@ -4363,7 +4194,7 @@ end)
             JailBtn.Text = "Un-Jail"
             JailBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
         else
-            JailBtn.Text = "Jail (Chairs)"
+            JailBtn.Text = "Jail (Tent)"
             JailBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65) 
         end
         JailBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -4432,7 +4263,7 @@ end)
         JailBtn.MouseButton1Click:Connect(function()
             if g.activeJailTarget == targetPlayer then
                 g.activeJailTarget = nil
-                JailBtn.Text = "Jail (Chairs)"
+                JailBtn.Text = "Jail (Tent)"
                 JailBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
                 task.spawn(clearJail)
             else
