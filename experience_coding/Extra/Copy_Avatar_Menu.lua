@@ -3127,7 +3127,7 @@ MassFlingBtn.MouseButton1Click:Connect(function()
     end
 end)
 
-            -- ==========================================
+  -- ==========================================
         -- ⛺ DRAW & PLACE (TENT CANVAS SYSTEM)
         -- ==========================================
         local UserInputService = game:GetService("UserInputService")
@@ -3135,36 +3135,35 @@ end)
         local myPlayer = game:GetService("Players").LocalPlayer
         local g = getgenv()
 
-        -- 1. THE TOGGLE BUTTON (Fixed Size & Parent)
+        -- 1. THE TOGGLE BUTTON (Wired to ToolsScroll)
         local DrawModeBtn = Instance.new("TextButton")
-        DrawModeBtn.Size = UDim2.new(1, -5, 0, 40) 
+        DrawModeBtn.Size = UDim2.new(1, -5, 0, 40)
         DrawModeBtn.Text = "🎨 Draw Mode: OFF"
         DrawModeBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50) 
         DrawModeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
         DrawModeBtn.Font = Enum.Font.SourceSansBold
-        DrawModeBtn.TextSize = 16 
+        DrawModeBtn.TextSize = 16
         DrawModeBtn.BorderSizePixel = 0
         DrawModeBtn.LayoutOrder = 20
-        DrawModeBtn.Parent = ToolsScroll -- FIXED PARENT!
+        DrawModeBtn.Parent = ToolsScroll 
         Instance.new("UICorner", DrawModeBtn).CornerRadius = UDim.new(0, 8)
 
-        -- 2. THE CANVAS CONTAINER (Fixed Parent)
+        -- 2. THE CANVAS CONTAINER
         local CanvasContainer = Instance.new("Frame")
         CanvasContainer.Size = UDim2.new(1, -5, 0, 205)
         CanvasContainer.BackgroundTransparency = 1
         CanvasContainer.LayoutOrder = 21
         CanvasContainer.Visible = false
-        CanvasContainer.Parent = ToolsScroll -- FIXED PARENT!
+        CanvasContainer.Parent = ToolsScroll 
 
         local CanvasBoard = Instance.new("Frame")
         CanvasBoard.Size = UDim2.new(1, 0, 0, 160)
-        CanvasBoard.BackgroundColor3 = Color3.fromRGB(20, 20, 25) -- Dark canvas
+        CanvasBoard.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
         CanvasBoard.BorderColor3 = Color3.fromRGB(80, 80, 100)
         CanvasBoard.BorderSizePixel = 2
         CanvasBoard.ClipsDescendants = true
         CanvasBoard.Parent = CanvasContainer
 
-        -- A visual label in the center of the canvas
         local CanvasLabel = Instance.new("TextLabel")
         CanvasLabel.Size = UDim2.new(1, 0, 1, 0)
         CanvasLabel.BackgroundTransparency = 1
@@ -3174,7 +3173,7 @@ end)
         CanvasLabel.TextSize = 14
         CanvasLabel.Parent = CanvasBoard
 
-        -- 3. THE CLEAR BUTTON (Beautified)
+        -- 3. THE CLEAR BUTTON
         local ClearDrawBtn = Instance.new("TextButton")
         ClearDrawBtn.Size = UDim2.new(1, 0, 0, 35)
         ClearDrawBtn.Position = UDim2.new(0, 0, 0, 165)
@@ -3187,18 +3186,15 @@ end)
         ClearDrawBtn.Parent = CanvasContainer
         Instance.new("UICorner", ClearDrawBtn).CornerRadius = UDim.new(0, 6)
 
-        -- ==========================================
-        -- LOGIC: DRAWING & PLACING
-        -- ==========================================
         local isDrawing = false
         local lastDrawPoint = nil
-        local paintDots = {} -- Stores the UI dots so we can clear them
+        local paintDots = {}
 
         DrawModeBtn.MouseButton1Click:Connect(function()
             CanvasContainer.Visible = not CanvasContainer.Visible
             if CanvasContainer.Visible then
                 DrawModeBtn.Text = "🎨 Draw Mode: ON"
-                DrawModeBtn.BackgroundColor3 = Color3.fromRGB(150, 100, 200) -- Purple active state
+                DrawModeBtn.BackgroundColor3 = Color3.fromRGB(150, 100, 200)
             else
                 DrawModeBtn.Text = "🎨 Draw Mode: OFF"
                 DrawModeBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
@@ -3206,7 +3202,6 @@ end)
             end
         end)
 
-        -- Helper to spawn the tent based on Canvas coordinates
         local function PlaceTentAtCanvasPoint(x, y)
             local char = myPlayer.Character
             local hrp = char and char:FindFirstChild("HumanoidRootPart")
@@ -3275,16 +3270,11 @@ end)
             end
         end)
 
-        -- ==========================================
-        -- LOGIC: WIPE CANVAS (CLEAR TENTS)
-        -- ==========================================
         ClearDrawBtn.MouseButton1Click:Connect(function()
             local Send = g.Send or (g.g and g.g.Send)
             if not Send then return end
             
-            for _, dot in ipairs(paintDots) do
-                dot:Destroy()
-            end
+            for _, dot in ipairs(paintDots) do dot:Destroy() end
             paintDots = {}
             
             local placed = workspace:FindFirstChild("PlacedModels") or workspace:FindFirstChild("ModelsPlaced")
@@ -3302,7 +3292,7 @@ end)
                 end
             end
         end)
-
+  
 
 
 -- Resize Handle (Bottom Right Corner)
