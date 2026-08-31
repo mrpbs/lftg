@@ -2509,7 +2509,79 @@ game:GetService("Players").LocalPlayer.CharacterAdded:Connect(function()
         MineAnnoyBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
     end
 end)
+-- ==========================================
+-- ⛺ DISCO TENTS (RAINBOW COLOR CHANGER)
+-- ==========================================
+local isDiscoTents = false
 
+local DiscoTentsBtn = Instance.new("TextButton")
+DiscoTentsBtn.Size = UDim2.new(1, -20, 0, 32)
+DiscoTentsBtn.Position = UDim2.new(0, 10, 0, 320) 
+DiscoTentsBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+DiscoTentsBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+DiscoTentsBtn.Font = Enum.Font.SourceSansBold
+DiscoTentsBtn.TextSize = 14
+DiscoTentsBtn.Text = "⛺ Disco Tents (Rainbow): OFF"
+DiscoTentsBtn.BorderSizePixel = 0
+DiscoTentsBtn.Parent = ToolContainer 
+Instance.new("UICorner", DiscoTentsBtn).CornerRadius = UDim.new(0, 6)
+
+DiscoTentsBtn.MouseButton1Click:Connect(function()
+    isDiscoTents = not isDiscoTents
+    local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
+    
+    if isDiscoTents then
+        DiscoTentsBtn.Text = "⛺ Disco Tents (Rainbow): ON"
+        DiscoTentsBtn.BackgroundColor3 = Color3.fromRGB(255, 100, 150) -- Hot Pink
+        
+        task.spawn(function()
+            while isDiscoTents do
+                -- Generate a completely random color
+                local rColor = Color3.new(math.random(), math.random(), math.random())
+                
+                if Send then
+                    -- 1. Fire the remote you provided to add it to history
+                    pcall(function() Send("add_to_color_history", rColor) end)
+                    
+                    -- 2. Actively scan and color any tents already placed on the ground
+                    local placed = workspace:FindFirstChild("PlacedModels") or workspace:FindFirstChild("ModelsPlaced")
+                    if placed then
+                        for _, model in ipairs(placed:GetChildren()) do
+                            if model.Name == "Tent" then
+                                local ownerId = model:GetAttribute("owner_id")
+                                if tostring(ownerId) == tostring(game:GetService("Players").LocalPlayer.UserId) then
+                                    task.spawn(function()
+                                        -- Force the placed tent to change color
+                                        pcall(function() Send("color_placeable", model, rColor) end)
+                                        
+                                        -- Fallback interaction just in case the game uses the ClickDetector
+                                        local cd = model:FindFirstChildWhichIsA("ClickDetector", true)
+                                        if cd then pcall(function() Send("interaction", cd, "Color", rColor) end) end
+                                    end)
+                                end
+                            end
+                        end
+                    end
+                end
+                
+                -- Flashes a new color every 0.3 seconds!
+                task.wait(0.3) 
+            end
+        end)
+    else
+        DiscoTentsBtn.Text = "⛺ Disco Tents (Rainbow): OFF"
+        DiscoTentsBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+    end
+end)
+
+-- Safety clear if you die
+game:GetService("Players").LocalPlayer.CharacterAdded:Connect(function()
+    if isDiscoTents then
+        isDiscoTents = false
+        DiscoTentsBtn.Text = "⛺ Disco Tents (Rainbow): OFF"
+        DiscoTentsBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+    end
+end
 -- ==========================================
 -- SMART HOLD CONNECTION
 -- ==========================================
@@ -2517,7 +2589,7 @@ applySmartHold(
     ToolMainBtn,    
     ToolContainer,  
     40,             
-    320,            -- Increased height to 200px to perfectly fit the new Explosive button
+    365,            -- Increased height to 200px to perfectly fit the new Explosive button
     0.5,              
     function()
         if ToolInput.Text ~= "" then
