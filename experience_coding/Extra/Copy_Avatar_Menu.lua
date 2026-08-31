@@ -2581,7 +2581,7 @@ game:GetService("Players").LocalPlayer.CharacterAdded:Connect(function()
         DiscoTentsBtn.Text = "⛺ Disco Tents (Rainbow): OFF"
         DiscoTentsBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
     end
-end
+end)
 -- ==========================================
 -- SMART HOLD CONNECTION
 -- ==========================================
