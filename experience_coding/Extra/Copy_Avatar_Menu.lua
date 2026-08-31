@@ -3128,7 +3128,7 @@ MassFlingBtn.MouseButton1Click:Connect(function()
 end)
 
 -- ============================================================
--- ⛺ TENT MAN STICK FIGURE (Ground Tracker – Max 21 Tents)
+-- ⛺ TENT MAN STICK FIGURE (Wide Spacing – Follows 7 Studs Ahead)
 -- ============================================================
 local isTentManActive = false
 local tentManLoop = nil
@@ -3173,13 +3173,6 @@ local function clearMyTents()
     end
 end
 
--- Helper: Get a limb CFrame (supports R15 & R6)
-local function getLimbCFrame(char, r15Name, r6Name)
-    local part = char:FindFirstChild(r15Name) or char:FindFirstChild(r6Name)
-    if part then return part.CFrame end
-    return nil
-end
-
 TentManBtn.MouseButton1Click:Connect(function()
     isTentManActive = not isTentManActive
     local player = game.Players.LocalPlayer
@@ -3187,7 +3180,7 @@ TentManBtn.MouseButton1Click:Connect(function()
 
     if isTentManActive then
         TentManBtn.Text = "⛺ Stick Man: ON"
-        TentManBtn.BackgroundColor3 = Color3.fromRGB(200, 100, 50) -- Orange
+        TentManBtn.BackgroundColor3 = Color3.fromRGB(200, 100, 50)
 
         tentManLoop = spawn(function()
             while isTentManActive do
@@ -3196,81 +3189,67 @@ TentManBtn.MouseButton1Click:Connect(function()
                 local RS = game:GetService("ReplicatedStorage")
                 local tentModel = RS:FindFirstChild("LargePlaceables") and RS.LargePlaceables:FindFirstChild("Tent")
                 if not root or not tentModel or not Get then
-                    task.wait(0.4)
+                    task.wait(0.5)
                     continue
                 end
 
                 -- 1. Clear previous tents
                 clearMyTents()
-                task.wait(0.05) -- let server process deletion
+                task.wait(0.08)  -- give server time to delete
 
-                -- 2. Define which limbs to track (R15 + fallback to R6)
-                local limbs = {
-                    { name = "Head",      r15 = "Head",        r6 = "Head" },
-                    { name = "Neck",      r15 = "UpperTorso",  r6 = "Torso" }, -- approximate
-                    { name = "LeftShoulder", r15 = "LeftUpperArm", r6 = "Left Arm" },
-                    { name = "LeftElbow",   r15 = "LeftLowerArm", r6 = nil },
-                    { name = "LeftWrist",   r15 = "LeftHand",     r6 = nil },
-                    { name = "RightShoulder", r15 = "RightUpperArm", r6 = "Right Arm" },
-                    { name = "RightElbow",  r15 = "RightLowerArm", r6 = nil },
-                    { name = "RightWrist",  r15 = "RightHand",     r6 = nil },
-                    { name = "Hip",         r15 = "LowerTorso",   r6 = "Torso" },
-                    { name = "LeftKnee",    r15 = "LeftLowerLeg", r6 = "Left Leg" },
-                    { name = "LeftAnkle",   r15 = "LeftFoot",     r6 = nil },
-                    { name = "RightKnee",   r15 = "RightLowerLeg", r6 = "Right Leg" },
-                    { name = "RightAnkle",  r15 = "RightFoot",    r6 = nil },
+                -- 2. Define the stick figure shape with more gap (multiplied coordinates)
+                --    Center is at the feet, between legs.
+                local stickOffsets = {
+                    -- Head (3 tents horizontally, spread wider)
+                    Vector3.new(-1.2, 6.0, 0),
+                    Vector3.new( 0.0, 6.0, 0),
+                    Vector3.new( 1.2, 6.0, 0),
+                    -- Shoulders (3 tents, just below head)
+                    Vector3.new(-1.6, 4.5, 0),
+                    Vector3.new( 0.0, 4.5, 0),
+                    Vector3.new( 1.6, 4.5, 0),
+                    -- Neck/spine top (1 tent)
+                    Vector3.new( 0.0, 3.5, 0),
+                    -- Arms (7 tents horizontal, spread from -4 to +4)
+                    Vector3.new(-4.0, 2.8, 0),
+                    Vector3.new(-2.8, 2.8, 0),
+                    Vector3.new(-1.6, 2.8, 0),
+                    Vector3.new( 0.0, 2.8, 0),
+                    Vector3.new( 1.6, 2.8, 0),
+                    Vector3.new( 2.8, 2.8, 0),
+                    Vector3.new( 4.0, 2.8, 0),
+                    -- Spine (2 vertical tents, with more gap)
+                    Vector3.new( 0.0, 1.8, 0),
+                    Vector3.new( 0.0, 0.6, 0),
+                    -- Legs (2 tents at bottom, spread wider)
+                    Vector3.new(-1.2, -0.6, 0),
+                    Vector3.new( 1.2, -0.6, 0),
                 }
+                -- Total: 18 tents (still under the 21 limit)
 
-                -- 3. Gather CFrames of each limb relative to the root
-                local jointCFs = {}
-                local rootCF = root.CFrame
-                for _, limb in ipairs(limbs) do
-                    local partCF = getLimbCFrame(char, limb.r15, limb.r6)
-                    if partCF then
-                        -- relative position & rotation in root's space
-                        local relativeCF = rootCF:ToObjectSpace(partCF)
-                        table.insert(jointCFs, relativeCF)
-                    end
-                end
+                -- 3. Place the figure 7 studs in front of you (prevents overlap when running)
+                local forward = root.CFrame.LookVector
+                local distance = 7
+                local groundY = root.Position.Y - 2  -- approximate ground level; adjust if needed
+                local basePos = Vector3.new(root.Position.X + forward.X * distance, groundY, root.Position.Z + forward.Z * distance)
 
-                -- If we have less than 3 joints, fallback to a simple stick figure
-                if #jointCFs < 3 then
-                    -- simple: head, torso, arms, legs using root offset
-                    jointCFs = {
-                        CFrame.new(0, 2.5, 0),  -- head
-                        CFrame.new(0, 1.5, 0),  -- torso
-                        CFrame.new(-1.2, 1.5, 0), -- left arm
-                        CFrame.new(1.2, 1.5, 0),  -- right arm
-                        CFrame.new(-0.7, -0.5, 0), -- left leg
-                        CFrame.new(0.7, -0.5, 0),  -- right leg
-                    }
-                end
+                -- 4. Face the player (rotate 180°)
+                local angle = math.atan2(forward.X, forward.Z) + math.pi
+                local rotation = CFrame.Angles(0, angle, 0)
 
-                -- 4. Determine ground Y (feet level)
-                local feetY = root.Position.Y - 2  -- rough estimate; you can raycast for accuracy
-                -- Place the stick figure 5 studs in front of you
-                local forward = rootCF.LookVector * 5
-                local basePos = Vector3.new(root.Position.X + forward.X, feetY, root.Position.Z + forward.Z)
-
-                -- 5. Scale factor – make him roughly human-sized (1:1) but you can tweak
-                local scale = 1.2  -- slightly taller than player
-
-                -- 6. Spawn tents at each joint, max 21 total
-                local tentCount = 0
-                for _, relCF in ipairs(jointCFs) do
-                    if tentCount >= 21 then break end
-                    -- Scale the position part
-                    local scaledPos = relCF.Position * scale
-                    -- Build absolute CFrame: base position + scaled offset, with the limb's rotation
-                    local targetCF = CFrame.new(basePos + scaledPos) * relCF.Rotation
+                -- 5. Spawn a tent at each offset
+                for _, offset in ipairs(stickOffsets) do
+                    local rotatedOffset = rotation * offset
+                    local targetPos = basePos + rotatedOffset
+                    local targetCF = CFrame.new(targetPos)
                     spawn(function()
                         Get("large_place", tentModel, targetCF)
                     end)
-                    tentCount = tentCount + 1
+                    task.wait(0.02)  -- delay to avoid rate limiting
                 end
 
-                -- 7. Update every 0.4 seconds (fast enough to follow movement)
-                task.wait(0.4)
+                -- 6. Update every 0.5 seconds (slightly slower to reduce re-spawn spam)
+                task.wait(0.5)
             end
 
             -- Clean up when toggled off
