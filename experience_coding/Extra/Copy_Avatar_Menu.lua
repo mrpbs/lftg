@@ -3127,8 +3127,9 @@ MassFlingBtn.MouseButton1Click:Connect(function()
     end
 end)
 
+
 -- ============================================================
--- ⛺ GIANT TENT MAN (Real-Time Body Tracker)
+-- ⛺ GIANT TENT MAN (Ground Tracker - 50 Stud Limit Safe)
 -- ============================================================
 local isTentManActive = false
 local tentManLoop = nil
@@ -3212,9 +3213,13 @@ TentManBtn.MouseButton1Click:Connect(function()
                         getLimb(char, "RightUpperLeg", "Right Leg")
                     }
                     
-                    -- 3. Base Position: 40 studs directly above you
-                    local baseSkyCF = root.CFrame * CFrame.new(0, 40, 0)
-                    local SCALE_MULTIPLIER = 12 -- Makes the stickman massive!
+                    -- 3. Perfectly calculated ground placement math
+                    -- Scale of 6 makes him ~30 studs tall so he fits safely inside the 50-stud interaction range
+                    local SCALE_MULTIPLIER = 6 
+                    
+                    -- Puts him 25 studs in front of you, and lifts him up just enough so his giant feet rest perfectly on the ground
+                    local heightOffset = (2 * SCALE_MULTIPLIER) - 2 
+                    local baseGroundCF = root.CFrame * CFrame.new(0, heightOffset, -25) 
                     
                     -- 4. Calculate offsets and spawn the new tents
                     for _, limb in ipairs(limbs) do
@@ -3225,8 +3230,8 @@ TentManBtn.MouseButton1Click:Connect(function()
                             -- Multiply the distance so it creates a giant stickman
                             local scaledPos = relativeCF.Position * SCALE_MULTIPLIER
                             
-                            -- Combine the sky position, the scaled offset, and the exact rotation of your limb
-                            local targetCF = baseSkyCF * CFrame.new(scaledPos) * relativeCF.Rotation
+                            -- Combine the ground position, the scaled offset, and the exact rotation of your limb
+                            local targetCF = baseGroundCF * CFrame.new(scaledPos) * relativeCF.Rotation
                             
                             -- Spawn the tent for this limb
                             task.spawn(function()
@@ -3265,7 +3270,6 @@ game:GetService("Players").LocalPlayer.CharacterAdded:Connect(function()
         clearMyTents()
     end
 end)
-
 
 
 -- Resize Handle (Bottom Right Corner)
