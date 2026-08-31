@@ -3128,10 +3128,11 @@ MassFlingBtn.MouseButton1Click:Connect(function()
 end)
 
 -- ============================================================
--- ⛺ TENT MAN STICK FIGURE (Wide Spacing – Follows 7 Studs Ahead)
+-- ⛺ TENT MAN STICK FIGURE (Wide Gaps + Move-Triggered Refresh)
 -- ============================================================
 local isTentManActive = false
 local tentManLoop = nil
+local lastRootCF = nil
 
 -- 1. Main Container
 local TentManFrame = Instance.new("Frame")
@@ -3181,6 +3182,7 @@ TentManBtn.MouseButton1Click:Connect(function()
     if isTentManActive then
         TentManBtn.Text = "⛺ Stick Man: ON"
         TentManBtn.BackgroundColor3 = Color3.fromRGB(200, 100, 50)
+        lastRootCF = nil  -- reset tracker
 
         tentManLoop = spawn(function()
             while isTentManActive do
@@ -3193,63 +3195,79 @@ TentManBtn.MouseButton1Click:Connect(function()
                     continue
                 end
 
-                -- 1. Clear previous tents
-                clearMyTents()
-                task.wait(0.08)  -- give server time to delete
-
-                -- 2. Define the stick figure shape with more gap (multiplied coordinates)
-                --    Center is at the feet, between legs.
-                local stickOffsets = {
-                    -- Head (3 tents horizontally, spread wider)
-                    Vector3.new(-1.2, 6.0, 0),
-                    Vector3.new( 0.0, 6.0, 0),
-                    Vector3.new( 1.2, 6.0, 0),
-                    -- Shoulders (3 tents, just below head)
-                    Vector3.new(-1.6, 4.5, 0),
-                    Vector3.new( 0.0, 4.5, 0),
-                    Vector3.new( 1.6, 4.5, 0),
-                    -- Neck/spine top (1 tent)
-                    Vector3.new( 0.0, 3.5, 0),
-                    -- Arms (7 tents horizontal, spread from -4 to +4)
-                    Vector3.new(-4.0, 2.8, 0),
-                    Vector3.new(-2.8, 2.8, 0),
-                    Vector3.new(-1.6, 2.8, 0),
-                    Vector3.new( 0.0, 2.8, 0),
-                    Vector3.new( 1.6, 2.8, 0),
-                    Vector3.new( 2.8, 2.8, 0),
-                    Vector3.new( 4.0, 2.8, 0),
-                    -- Spine (2 vertical tents, with more gap)
-                    Vector3.new( 0.0, 1.8, 0),
-                    Vector3.new( 0.0, 0.6, 0),
-                    -- Legs (2 tents at bottom, spread wider)
-                    Vector3.new(-1.2, -0.6, 0),
-                    Vector3.new( 1.2, -0.6, 0),
-                }
-                -- Total: 18 tents (still under the 21 limit)
-
-                -- 3. Place the figure 7 studs in front of you (prevents overlap when running)
-                local forward = root.CFrame.LookVector
-                local distance = 7
-                local groundY = root.Position.Y - 2  -- approximate ground level; adjust if needed
-                local basePos = Vector3.new(root.Position.X + forward.X * distance, groundY, root.Position.Z + forward.Z * distance)
-
-                -- 4. Face the player (rotate 180°)
-                local angle = math.atan2(forward.X, forward.Z) + math.pi
-                local rotation = CFrame.Angles(0, angle, 0)
-
-                -- 5. Spawn a tent at each offset
-                for _, offset in ipairs(stickOffsets) do
-                    local rotatedOffset = rotation * offset
-                    local targetPos = basePos + rotatedOffset
-                    local targetCF = CFrame.new(targetPos)
-                    spawn(function()
-                        Get("large_place", tentModel, targetCF)
-                    end)
-                    task.wait(0.02)  -- delay to avoid rate limiting
+                -- Check if we have moved significantly
+                local currentCF = root.CFrame
+                local shouldRefresh = false
+                if lastRootCF then
+                    local posDiff = (currentCF.Position - lastRootCF.Position).Magnitude
+                    local angleDiff = math.acos(math.clamp(currentCF.LookVector:Dot(lastRootCF.LookVector), -1, 1))
+                    if posDiff > 2 or angleDiff > math.rad(15) then
+                        shouldRefresh = true
+                    end
+                else
+                    shouldRefresh = true  -- first run
                 end
 
-                -- 6. Update every 0.5 seconds (slightly slower to reduce re-spawn spam)
-                task.wait(0.5)
+                if shouldRefresh then
+                    -- 1. Clear previous tents
+                    clearMyTents()
+                    task.wait(0.08)
+
+                    -- 2. Stick figure offsets – now with double the spacing!
+                    local stickOffsets = {
+                        -- Head (3 tents, spread 2.4 studs)
+                        Vector3.new(-2.4, 8.0, 0),
+                        Vector3.new( 0.0, 8.0, 0),
+                        Vector3.new( 2.4, 8.0, 0),
+                        -- Shoulders (3 tents, spread 3.2)
+                        Vector3.new(-3.2, 6.0, 0),
+                        Vector3.new( 0.0, 6.0, 0),
+                        Vector3.new( 3.2, 6.0, 0),
+                        -- Neck/spine top
+                        Vector3.new( 0.0, 4.5, 0),
+                        -- Arms (7 tents from -6 to +6, gap 2)
+                        Vector3.new(-6.0, 3.5, 0),
+                        Vector3.new(-4.0, 3.5, 0),
+                        Vector3.new(-2.0, 3.5, 0),
+                        Vector3.new( 0.0, 3.5, 0),
+                        Vector3.new( 2.0, 3.5, 0),
+                        Vector3.new( 4.0, 3.5, 0),
+                        Vector3.new( 6.0, 3.5, 0),
+                        -- Spine (2 vertical, gap 2)
+                        Vector3.new( 0.0, 2.0, 0),
+                        Vector3.new( 0.0, 0.0, 0),
+                        -- Legs (2, spread 3)
+                        Vector3.new(-1.5, -1.5, 0),
+                        Vector3.new( 1.5, -1.5, 0),
+                    }
+
+                    -- 3. Place the figure 8 studs in front of you
+                    local forward = currentCF.LookVector
+                    local distance = 8
+                    local groundY = root.Position.Y - 2  -- adjust if needed
+                    local basePos = Vector3.new(root.Position.X + forward.X * distance, groundY, root.Position.Z + forward.Z * distance)
+
+                    -- 4. Face the player (rotate 180°)
+                    local angle = math.atan2(forward.X, forward.Z) + math.pi
+                    local rotation = CFrame.Angles(0, angle, 0)
+
+                    -- 5. Spawn a tent at each offset
+                    for _, offset in ipairs(stickOffsets) do
+                        local rotatedOffset = rotation * offset
+                        local targetPos = basePos + rotatedOffset
+                        local targetCF = CFrame.new(targetPos)
+                        spawn(function()
+                            Get("large_place", tentModel, targetCF)
+                        end)
+                        task.wait(0.02)
+                    end
+
+                    -- 6. Update last known position
+                    lastRootCF = currentCF
+                end
+
+                -- Check every 0.3 seconds (smooth enough, but only refreshes on movement)
+                task.wait(0.3)
             end
 
             -- Clean up when toggled off
@@ -3263,6 +3281,7 @@ TentManBtn.MouseButton1Click:Connect(function()
             tentManLoop = nil
         end
         clearMyTents()
+        lastRootCF = nil
     end
 end)
 
@@ -3274,6 +3293,7 @@ player.CharacterAdded:Connect(function()
         TentManBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
         if tentManLoop then task.cancel(tentManLoop); tentManLoop = nil end
         clearMyTents()
+        lastRootCF = nil
     end
 end)
 
