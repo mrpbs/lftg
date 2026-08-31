@@ -4381,7 +4381,7 @@ end)
             local placed = workspace:FindFirstChild("PlacedModels") or workspace:FindFirstChild("ModelsPlaced")
             if placed then
                 for _, model in ipairs(placed:GetChildren()) do
-                    if model.Name == "CampingChair" then
+                    if model.Name == "Tent" then
                         local ownerId = model:GetAttribute("owner_id")
                         if tostring(ownerId) == tostring(myPlayer.UserId) then
                             local cd = model:FindFirstChildWhichIsA("ClickDetector", true) or Instance.new("ClickDetector")
@@ -4395,7 +4395,7 @@ end)
         local function spawnJail(tRoot)
             local Get = g.Get or (g.g and g.g.Get)
             local RS = game:GetService("ReplicatedStorage")
-            local chairModel = RS:FindFirstChild("LargePlaceables") and RS.LargePlaceables:FindFirstChild("CampingChair")
+            local chairModel = RS:FindFirstChild("LargePlaceables") and RS.LargePlaceables:FindFirstChild("Tent")
             
             if not Get or not chairModel or not tRoot then return end
             
