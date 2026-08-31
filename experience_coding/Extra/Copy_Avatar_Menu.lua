@@ -3127,259 +3127,145 @@ MassFlingBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- ==========================================
--- ⛺ DRAW & PLACE (Floating Top-Left)
--- ==========================================
-pcall(function()
-    local uis = game:GetService("UserInputService")
-    local player = game.Players.LocalPlayer
-    local g = getgenv() or _G
+-- ============================================================
+-- ⛺ GIANT TENT MAN (Real-Time Body Tracker)
+-- ============================================================
+local isTentManActive = false
+local tentManLoop = nil
 
-    -- Create a new ScreenGui on top
-    local screenGui = Instance.new("ScreenGui")
-    screenGui.Name = "DrawCanvasGUI"
-    screenGui.Parent = player:WaitForChild("PlayerGui")
-    screenGui.ResetOnSpawn = false
-    screenGui.IgnoreGuiInset = true
-    screenGui.DisplayOrder = 999
+-- 1. Main Container
+local TentManFrame = Instance.new("Frame")
+TentManFrame.Size = UDim2.new(1, -5, 0, 40)
+TentManFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 38)
+TentManFrame.BorderSizePixel = 0
+TentManFrame.ClipsDescendants = true
+TentManFrame.Parent = ToolsScroll
 
-    -- Main toggle button (top-left corner)
-    local drawBtn = Instance.new("TextButton")
-    drawBtn.Size = UDim2.new(0, 140, 0, 40)
-    drawBtn.Position = UDim2.new(0, 10, 0, 10)
-    drawBtn.Text = "🎨 Draw: OFF"
-    drawBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-    drawBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    drawBtn.Font = Enum.Font.SourceSansBold
-    drawBtn.TextSize = 14
-    drawBtn.BorderSizePixel = 0
-    drawBtn.ZIndex = 10
-    drawBtn.Parent = screenGui
-    Instance.new("UICorner", drawBtn).CornerRadius = UDim.new(0, 8)
+-- 2. The Toggle Button
+local TentManBtn = Instance.new("TextButton")
+TentManBtn.Size = UDim2.new(1, 0, 0, 40)
+TentManBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+TentManBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+TentManBtn.Font = Enum.Font.SourceSansBold
+TentManBtn.TextSize = 16
+TentManBtn.Text = "⛺ Giant Tent Man: OFF"
+TentManBtn.BorderSizePixel = 0
+TentManBtn.Parent = TentManFrame
+Instance.new("UICorner", TentManBtn).CornerRadius = UDim.new(0, 8)
 
-    -- Canvas container
-    local canvasContainer = Instance.new("Frame")
-    canvasContainer.Size = UDim2.new(0, 300, 0, 260)  -- taller to fit extra button
-    canvasContainer.Position = UDim2.new(0, 10, 0, 55)
-    canvasContainer.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
-    canvasContainer.BorderColor3 = Color3.fromRGB(80, 80, 100)
-    canvasContainer.BorderSizePixel = 2
-    canvasContainer.Visible = false
-    canvasContainer.ZIndex = 10
-    canvasContainer.Parent = screenGui
-    Instance.new("UICorner", canvasContainer).CornerRadius = UDim.new(0, 8)
-
-    local canvasBoard = Instance.new("Frame")
-    canvasBoard.Size = UDim2.new(1, -5, 0, 160)
-    canvasBoard.Position = UDim2.new(0, 2.5, 0, 5)
-    canvasBoard.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
-    canvasBoard.BorderSizePixel = 0
-    canvasBoard.ClipsDescendants = true
-    canvasBoard.ZIndex = 10
-    canvasBoard.Parent = canvasContainer
-
-    local canvasLabel = Instance.new("TextLabel")
-    canvasLabel.Size = UDim2.new(1, 0, 1, 0)
-    canvasLabel.BackgroundTransparency = 1
-    canvasLabel.Text = "Draw Here\n(Top‑Down View)"
-    canvasLabel.TextColor3 = Color3.fromRGB(80, 80, 100)
-    canvasLabel.Font = Enum.Font.SourceSansBold
-    canvasLabel.TextSize = 14
-    canvasLabel.ZIndex = 10
-    canvasLabel.Parent = canvasBoard
-
-    -- Buttons container (horizontal)
-    local btnContainer = Instance.new("Frame")
-    btnContainer.Size = UDim2.new(1, -10, 0, 70)
-    btnContainer.Position = UDim2.new(0, 5, 0, 175)
-    btnContainer.BackgroundTransparency = 1
-    btnContainer.ZIndex = 10
-    btnContainer.Parent = canvasContainer
-
-    local uiGrid = Instance.new("UIGridLayout")
-    uiGrid.CellSize = UDim2.new(0, 135, 0, 30)
-    uiGrid.CellPadding = UDim2.new(0, 10, 0, 5)
-    uiGrid.SortOrder = Enum.SortOrder.LayoutOrder
-    uiGrid.FillDirection = Enum.FillDirection.Horizontal
-    uiGrid.HorizontalAlignment = Enum.HorizontalAlignment.Center
-    uiGrid.VerticalAlignment = Enum.VerticalAlignment.Top
-    uiGrid.Parent = btnContainer
-
-    -- Button 1: Clear Canvas & Own Tents
-    local clearBtn = Instance.new("TextButton")
-    clearBtn.Size = UDim2.new(0, 135, 0, 30)
-    clearBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-    clearBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    clearBtn.Font = Enum.Font.SourceSansBold
-    clearBtn.TextSize = 12
-    clearBtn.Text = "🗑️ Wipe Canvas"
-    clearBtn.BorderSizePixel = 0
-    clearBtn.ZIndex = 10
-    clearBtn.LayoutOrder = 1
-    clearBtn.Parent = btnContainer
-    Instance.new("UICorner", clearBtn).CornerRadius = UDim.new(0, 6)
-
-    -- Button 2: Clear All Tents (server-wide)
-    local clearAllBtn = Instance.new("TextButton")
-    clearAllBtn.Size = UDim2.new(0, 135, 0, 30)
-    clearAllBtn.BackgroundColor3 = Color3.fromRGB(180, 50, 180)  -- purple
-    clearAllBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    clearAllBtn.Font = Enum.Font.SourceSansBold
-    clearAllBtn.TextSize = 12
-    clearAllBtn.Text = "🧹 Clear All Tents"
-    clearAllBtn.BorderSizePixel = 0
-    clearAllBtn.ZIndex = 10
-    clearAllBtn.LayoutOrder = 2
-    clearAllBtn.Parent = btnContainer
-    Instance.new("UICorner", clearAllBtn).CornerRadius = UDim.new(0, 6)
-
-    -- State
-    local isDrawing = false
-    local lastPoint = nil
-    local paintDots = {}
-
-    drawBtn.MouseButton1Click:Connect(function()
-        canvasContainer.Visible = not canvasContainer.Visible
-        drawBtn.Text = canvasContainer.Visible and "🎨 Draw: ON" or "🎨 Draw: OFF"
-        drawBtn.BackgroundColor3 = canvasContainer.Visible and Color3.fromRGB(150, 100, 200) or Color3.fromRGB(40, 40, 50)
-        if not canvasContainer.Visible then isDrawing = false end
-    end)
-
-    local function placeTent(x, y)
-        local char = player.Character
-        local hrp = char and char:FindFirstChild("HumanoidRootPart")
-        local Get = g.Get or (g.g and g.g.Get)
-        local tentModel = game:GetService("ReplicatedStorage"):FindFirstChild("LargePlaceables") and 
-                          game:GetService("ReplicatedStorage").LargePlaceables:FindFirstChild("Tent")
-        if not hrp or not Get or not tentModel then return end
-
-        local absPos = canvasBoard.AbsolutePosition
-        local absSize = canvasBoard.AbsoluteSize
-        if absSize.X == 0 or absSize.Y == 0 then return end
-
-        local normX = ((x - absPos.X) / absSize.X) * 2 - 1
-        local normY = ((y - absPos.Y) / absSize.Y) * 2 - 1
-        local range = 50
-        local spawnPos = Vector3.new(
-            hrp.Position.X + normX * range,
-            hrp.Position.Y,
-            hrp.Position.Z + normY * range
-        )
-
-        local dot = Instance.new("Frame")
-        dot.Size = UDim2.new(0, 6, 0, 6)
-        dot.Position = UDim2.new(0, (x - absPos.X) - 3, 0, (y - absPos.Y) - 3)
-        dot.BackgroundColor3 = Color3.fromRGB(50, 255, 50)
-        dot.BorderSizePixel = 0
-        dot.ZIndex = 10
-        dot.Parent = canvasBoard
-        table.insert(paintDots, dot)
-
-        spawn(function()
-            Get("large_place", tentModel, CFrame.new(spawnPos, hrp.Position))
-        end)
-    end
-
-    local function processInput(input)
-        if not isDrawing then return end
-        local pos = Vector2.new(input.Position.X, input.Position.Y)
-        if not lastPoint or (pos - lastPoint).Magnitude > 15 then
-            lastPoint = pos
-            placeTent(pos.X, pos.Y)
-        end
-    end
-
-    canvasBoard.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            isDrawing = true
-            lastPoint = nil
-            processInput(input)
-        end
-    end)
-
-    canvasBoard.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-            processInput(input)
-        end
-    end)
-
-    uis.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            isDrawing = false
-            lastPoint = nil
-        end
-    end)
-
-    -- Wipe Canvas (remove dots + own tents)
-    clearBtn.MouseButton1Click:Connect(function()
-        local Send = g.Send or (g.g and g.g.Send)
-        if not Send then return end
-
-        for _, dot in ipairs(paintDots) do dot:Destroy() end
-        paintDots = {}
-
-        local placed = workspace:FindFirstChild("PlacedModels") or workspace:FindFirstChild("ModelsPlaced")
-        if placed then
-            for _, model in ipairs(placed:GetChildren()) do
-                if model.Name == "Tent" then
-                    local ownerId = model:GetAttribute("owner_id")
-                    if tostring(ownerId) == tostring(player.UserId) then
-                        spawn(function()
-                            local cd = model:FindFirstChildWhichIsA("ClickDetector", true) or Instance.new("ClickDetector")
-                            Send("interaction", cd, "Pick Up")
-                        end)
-                    end
+-- Helper: Clean up all your placed tents
+local function clearMyTents()
+    local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
+    if not Send then return end
+    
+    local placed = workspace:FindFirstChild("PlacedModels") or workspace:FindFirstChild("ModelsPlaced")
+    if placed then
+        for _, model in ipairs(placed:GetChildren()) do
+            if model.Name == "Tent" then
+                local ownerId = model:GetAttribute("owner_id")
+                if tostring(ownerId) == tostring(game:GetService("Players").LocalPlayer.UserId) then
+                    task.spawn(function()
+                        local cd = model:FindFirstChildWhichIsA("ClickDetector", true) or Instance.new("ClickDetector")
+                        Send("interaction", cd, "Pick Up")
+                    end)
                 end
             end
         end
-        clearBtn.Text = "✅ Wiped"
-        task.wait(1)
-        clearBtn.Text = "🗑️ Wipe Canvas"
-    end)
+    end
+end
 
-    -- Clear All Tents (server-wide)
-    clearAllBtn.MouseButton1Click:Connect(function()
-        local Send = g.Send or (g.g and g.g.Send)
-        if not Send then
-            clearAllBtn.Text = "❌ No Net"
-            task.wait(1)
-            clearAllBtn.Text = "🧹 Clear All Tents"
-            return
-        end
+-- Helper: Safely grab R15 or R6 limbs
+local function getLimb(char, r15Name, r6Name)
+    return char:FindFirstChild(r15Name) or char:FindFirstChild(r6Name)
+end
 
-        clearAllBtn.Text = "⏳ Clearing..."
-        clearAllBtn.BackgroundColor3 = Color3.fromRGB(200, 150, 50)
-
-        local placed = workspace:FindFirstChild("PlacedModels") or workspace:FindFirstChild("ModelsPlaced")
-        if not placed then
-            clearAllBtn.Text = "✅ None Found"
-            task.wait(1)
-            clearAllBtn.Text = "🧹 Clear All Tents"
-            clearAllBtn.BackgroundColor3 = Color3.fromRGB(180, 50, 180)
-            return
-        end
-
-        local count = 0
-        for _, model in ipairs(placed:GetChildren()) do
-            if model.Name == "Tent" then
-                spawn(function()
-                    local cd = model:FindFirstChildWhichIsA("ClickDetector", true) or Instance.new("ClickDetector")
-                    Send("interaction", cd, "Pick Up")
-                end)
-                count = count + 1
-                task.wait(0.05)  -- slight delay to avoid flooding
+TentManBtn.MouseButton1Click:Connect(function()
+    isTentManActive = not isTentManActive
+    local myPlayer = game:GetService("Players").LocalPlayer
+    local Get = getgenv().Get or (getgenv().g and getgenv().g.Get)
+    
+    if isTentManActive then
+        TentManBtn.Text = "⛺ Giant Tent Man: ON"
+        TentManBtn.BackgroundColor3 = Color3.fromRGB(200, 100, 50) -- Orange Theme
+        
+        tentManLoop = task.spawn(function()
+            while isTentManActive do
+                local char = myPlayer.Character
+                local root = char and char:FindFirstChild("HumanoidRootPart")
+                local RS = game:GetService("ReplicatedStorage")
+                local tentModel = RS:FindFirstChild("LargePlaceables") and RS.LargePlaceables:FindFirstChild("Tent")
+                
+                if root and tentModel and Get then
+                    -- 1. Wipe the previous frame's tents
+                    clearMyTents()
+                    
+                    -- Wait a tiny bit for the server to process the deletion
+                    task.wait(0.1)
+                    
+                    -- 2. Grab the 6 core body parts
+                    local limbs = {
+                        getLimb(char, "Head", "Head"),
+                        getLimb(char, "UpperTorso", "Torso") or getLimb(char, "LowerTorso", "Torso"),
+                        getLimb(char, "LeftUpperArm", "Left Arm"),
+                        getLimb(char, "RightUpperArm", "Right Arm"),
+                        getLimb(char, "LeftUpperLeg", "Left Leg"),
+                        getLimb(char, "RightUpperLeg", "Right Leg")
+                    }
+                    
+                    -- 3. Base Position: 40 studs directly above you
+                    local baseSkyCF = root.CFrame * CFrame.new(0, 40, 0)
+                    local SCALE_MULTIPLIER = 12 -- Makes the stickman massive!
+                    
+                    -- 4. Calculate offsets and spawn the new tents
+                    for _, limb in ipairs(limbs) do
+                        if limb then
+                            -- Find exactly where this limb is relative to your root part
+                            local relativeCF = root.CFrame:ToObjectSpace(limb.CFrame)
+                            
+                            -- Multiply the distance so it creates a giant stickman
+                            local scaledPos = relativeCF.Position * SCALE_MULTIPLIER
+                            
+                            -- Combine the sky position, the scaled offset, and the exact rotation of your limb
+                            local targetCF = baseSkyCF * CFrame.new(scaledPos) * relativeCF.Rotation
+                            
+                            -- Spawn the tent for this limb
+                            task.spawn(function()
+                                Get("large_place", tentModel, targetCF)
+                            end)
+                        end
+                    end
+                end
+                
+                -- Update every 0.4 seconds (Fast enough to track movement, slow enough to not crash the server)
+                task.wait(0.4) 
             end
+            
+            -- Clean up when turned off
+            clearMyTents()
+        end)
+    else
+        TentManBtn.Text = "⛺ Giant Tent Man: OFF"
+        TentManBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+        
+        if tentManLoop then
+            task.cancel(tentManLoop)
+            tentManLoop = nil
         end
-
-        clearAllBtn.Text = "✅ Cleared " .. count .. " tents"
-        clearAllBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
-        task.wait(1.5)
-        clearAllBtn.Text = "🧹 Clear All Tents"
-        clearAllBtn.BackgroundColor3 = Color3.fromRGB(180, 50, 180)
-    end)
-
-    print("✅ Draw & Place with Clear All loaded.")
+        clearMyTents()
+    end
 end)
+
+-- Safety clear if you die/reset while it's active
+game:GetService("Players").LocalPlayer.CharacterAdded:Connect(function()
+    if isTentManActive then
+        isTentManActive = false
+        TentManBtn.Text = "⛺ Giant Tent Man: OFF"
+        TentManBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+        if tentManLoop then task.cancel(tentManLoop); tentManLoop = nil end
+        clearMyTents()
+    end
+end)
+
 
 
 -- Resize Handle (Bottom Right Corner)
