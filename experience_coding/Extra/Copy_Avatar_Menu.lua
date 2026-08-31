@@ -3127,115 +3127,103 @@ MassFlingBtn.MouseButton1Click:Connect(function()
     end
 end)
 
-
 -- ==========================================
--- ⛺ DRAW & PLACE (TENT CANVAS) – SAFE VERSION
+-- ⛺ DRAW & PLACE (Standalone Canvas)
 -- ==========================================
 pcall(function()
     local uis = game:GetService("UserInputService")
-    local myPlayer = game:GetService("Players").LocalPlayer
+    local player = game.Players.LocalPlayer
     local g = getgenv() or _G
 
-    -- Try to locate the Tools tab
-    local toolsTab = ToolsScroll
-    if not toolsTab then
-        -- Search in PlayerGui
-        local gui = myPlayer:FindFirstChild("PlayerGui")
-        if gui then
-            toolsTab = gui:FindFirstChild("ToolsScroll", true)
-        end
-    end
-    if not toolsTab then
-        warn("⚠️ ToolsScroll not found – draw UI skipped.")
-        return
-    end
+    -- Create a new GUI for the draw tools
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "DrawCanvasGUI"
+    screenGui.Parent = player:WaitForChild("PlayerGui")
 
-    -- 1. Toggle button
-    local DrawModeBtn = Instance.new("TextButton")
-    DrawModeBtn.Size = UDim2.new(1, -5, 0, 40)
-    DrawModeBtn.Text = "🎨 Draw Mode: OFF"
-    DrawModeBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-    DrawModeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    DrawModeBtn.Font = Enum.Font.SourceSansBold
-    DrawModeBtn.TextSize = 16
-    DrawModeBtn.BorderSizePixel = 0
-    DrawModeBtn.LayoutOrder = 20
-    DrawModeBtn.Parent = toolsTab
-    Instance.new("UICorner", DrawModeBtn).CornerRadius = UDim.new(0, 8)
+    -- Main button to toggle draw mode
+    local drawBtn = Instance.new("TextButton")
+    drawBtn.Size = UDim2.new(0, 120, 0, 40)
+    drawBtn.Position = UDim2.new(0, 10, 0.5, -20)
+    drawBtn.Text = "🎨 Draw: OFF"
+    drawBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+    drawBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    drawBtn.Font = Enum.Font.SourceSansBold
+    drawBtn.TextSize = 14
+    drawBtn.BorderSizePixel = 0
+    drawBtn.Parent = screenGui
+    Instance.new("UICorner", drawBtn).CornerRadius = UDim.new(0, 8)
 
-    -- 2. Canvas container
-    local CanvasContainer = Instance.new("Frame")
-    CanvasContainer.Size = UDim2.new(1, -5, 0, 205)
-    CanvasContainer.BackgroundTransparency = 1
-    CanvasContainer.LayoutOrder = 21
-    CanvasContainer.Visible = false
-    CanvasContainer.Parent = toolsTab
+    -- Canvas frame (hidden by default)
+    local canvasContainer = Instance.new("Frame")
+    canvasContainer.Size = UDim2.new(0, 300, 0, 220)
+    canvasContainer.Position = UDim2.new(0, 10, 0.5, 30)
+    canvasContainer.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+    canvasContainer.BorderColor3 = Color3.fromRGB(80, 80, 100)
+    canvasContainer.BorderSizePixel = 2
+    canvasContainer.Visible = false
+    canvasContainer.Parent = screenGui
+    Instance.new("UICorner", canvasContainer).CornerRadius = UDim.new(0, 8)
 
-    local CanvasBoard = Instance.new("Frame")
-    CanvasBoard.Size = UDim2.new(1, 0, 0, 160)
-    CanvasBoard.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
-    CanvasBoard.BorderColor3 = Color3.fromRGB(80, 80, 100)
-    CanvasBoard.BorderSizePixel = 2
-    CanvasBoard.ClipsDescendants = true
-    CanvasBoard.Parent = CanvasContainer
+    local canvasBoard = Instance.new("Frame")
+    canvasBoard.Size = UDim2.new(1, -5, 0, 160)
+    canvasBoard.Position = UDim2.new(0, 2.5, 0, 5)
+    canvasBoard.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+    canvasBoard.BorderSizePixel = 0
+    canvasBoard.ClipsDescendants = true
+    canvasBoard.Parent = canvasContainer
 
-    local CanvasLabel = Instance.new("TextLabel")
-    CanvasLabel.Size = UDim2.new(1, 0, 1, 0)
-    CanvasLabel.BackgroundTransparency = 1
-    CanvasLabel.Text = "Draw Here\n(Top‑Down View)"
-    CanvasLabel.TextColor3 = Color3.fromRGB(80, 80, 100)
-    CanvasLabel.Font = Enum.Font.SourceSansBold
-    CanvasLabel.TextSize = 14
-    CanvasLabel.Parent = CanvasBoard
+    local canvasLabel = Instance.new("TextLabel")
+    canvasLabel.Size = UDim2.new(1, 0, 1, 0)
+    canvasLabel.BackgroundTransparency = 1
+    canvasLabel.Text = "Draw Here\n(Top‑Down View)"
+    canvasLabel.TextColor3 = Color3.fromRGB(80, 80, 100)
+    canvasLabel.Font = Enum.Font.SourceSansBold
+    canvasLabel.TextSize = 14
+    canvasLabel.Parent = canvasBoard
 
-    -- 3. Clear button
-    local ClearDrawBtn = Instance.new("TextButton")
-    ClearDrawBtn.Size = UDim2.new(1, 0, 0, 35)
-    ClearDrawBtn.Position = UDim2.new(0, 0, 0, 165)
-    ClearDrawBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-    ClearDrawBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    ClearDrawBtn.Font = Enum.Font.SourceSansBold
-    ClearDrawBtn.TextSize = 14
-    ClearDrawBtn.Text = "🗑️ Wipe Canvas (Remove Tents)"
-    ClearDrawBtn.BorderSizePixel = 0
-    ClearDrawBtn.Parent = CanvasContainer
-    Instance.new("UICorner", ClearDrawBtn).CornerRadius = UDim.new(0, 6)
+    local clearBtn = Instance.new("TextButton")
+    clearBtn.Size = UDim2.new(1, -10, 0, 35)
+    clearBtn.Position = UDim2.new(0, 5, 0, 175)
+    clearBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+    clearBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    clearBtn.Font = Enum.Font.SourceSansBold
+    clearBtn.TextSize = 14
+    clearBtn.Text = "🗑️ Wipe Canvas"
+    clearBtn.BorderSizePixel = 0
+    clearBtn.Parent = canvasContainer
+    Instance.new("UICorner", clearBtn).CornerRadius = UDim.new(0, 6)
 
+    -- State
     local isDrawing = false
-    local lastDrawPoint = nil
+    local lastPoint = nil
     local paintDots = {}
 
-    DrawModeBtn.MouseButton1Click:Connect(function()
-        CanvasContainer.Visible = not CanvasContainer.Visible
-        if CanvasContainer.Visible then
-            DrawModeBtn.Text = "🎨 Draw Mode: ON"
-            DrawModeBtn.BackgroundColor3 = Color3.fromRGB(150, 100, 200)
-        else
-            DrawModeBtn.Text = "🎨 Draw Mode: OFF"
-            DrawModeBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-            isDrawing = false
-        end
+    drawBtn.MouseButton1Click:Connect(function()
+        canvasContainer.Visible = not canvasContainer.Visible
+        drawBtn.Text = canvasContainer.Visible and "🎨 Draw: ON" or "🎨 Draw: OFF"
+        drawBtn.BackgroundColor3 = canvasContainer.Visible and Color3.fromRGB(150, 100, 200) or Color3.fromRGB(40, 40, 50)
+        if not canvasContainer.Visible then isDrawing = false end
     end)
 
-    local function PlaceTentAtCanvasPoint(x, y)
-        local char = myPlayer.Character
+    local function placeTent(x, y)
+        local char = player.Character
         local hrp = char and char:FindFirstChild("HumanoidRootPart")
         local Get = g.Get or (g.g and g.g.Get)
-        local RepStorage = game:GetService("ReplicatedStorage")
-        local tentModel = RepStorage:FindFirstChild("LargePlaceables") and RepStorage.LargePlaceables:FindFirstChild("Tent")
+        local tentModel = game:GetService("ReplicatedStorage"):FindFirstChild("LargePlaceables") and 
+                          game:GetService("ReplicatedStorage").LargePlaceables:FindFirstChild("Tent")
         if not hrp or not Get or not tentModel then return end
 
-        local absPos = CanvasBoard.AbsolutePosition
-        local absSize = CanvasBoard.AbsoluteSize
-        if absSize.X == 0 or absSize.Y == 0 then return end  -- not rendered
+        local absPos = canvasBoard.AbsolutePosition
+        local absSize = canvasBoard.AbsoluteSize
+        if absSize.X == 0 or absSize.Y == 0 then return end
 
         local normX = ((x - absPos.X) / absSize.X) * 2 - 1
         local normY = ((y - absPos.Y) / absSize.Y) * 2 - 1
-        local canvasWorldRange = 50
+        local range = 50
         local spawnPos = Vector3.new(
-            hrp.Position.X + (normX * canvasWorldRange),
+            hrp.Position.X + normX * range,
             hrp.Position.Y,
-            hrp.Position.Z + (normY * canvasWorldRange)
+            hrp.Position.Z + normY * range
         )
 
         local dot = Instance.new("Frame")
@@ -3243,45 +3231,46 @@ pcall(function()
         dot.Position = UDim2.new(0, (x - absPos.X) - 3, 0, (y - absPos.Y) - 3)
         dot.BackgroundColor3 = Color3.fromRGB(50, 255, 50)
         dot.BorderSizePixel = 0
-        dot.Parent = CanvasBoard
+        dot.Parent = canvasBoard
         table.insert(paintDots, dot)
 
-        task.spawn(function()
+        -- Use spawn (works on all executors)
+        spawn(function()
             Get("large_place", tentModel, CFrame.new(spawnPos, hrp.Position))
         end)
     end
 
-    local function processDrawInput(input)
+    local function processInput(input)
         if not isDrawing then return end
-        local currentPoint = Vector2.new(input.Position.X, input.Position.Y)
-        if not lastDrawPoint or (currentPoint - lastDrawPoint).Magnitude > 15 then
-            lastDrawPoint = currentPoint
-            PlaceTentAtCanvasPoint(currentPoint.X, currentPoint.Y)
+        local pos = Vector2.new(input.Position.X, input.Position.Y)
+        if not lastPoint or (pos - lastPoint).Magnitude > 15 then
+            lastPoint = pos
+            placeTent(pos.X, pos.Y)
         end
     end
 
-    CanvasBoard.InputBegan:Connect(function(input)
+    canvasBoard.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             isDrawing = true
-            lastDrawPoint = nil
-            processDrawInput(input)
+            lastPoint = nil
+            processInput(input)
         end
     end)
 
-    CanvasBoard.InputChanged:Connect(function(input)
+    canvasBoard.InputChanged:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-            processDrawInput(input)
+            processInput(input)
         end
     end)
 
     uis.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             isDrawing = false
-            lastDrawPoint = nil
+            lastPoint = nil
         end
     end)
 
-    ClearDrawBtn.MouseButton1Click:Connect(function()
+    clearBtn.MouseButton1Click:Connect(function()
         local Send = g.Send or (g.g and g.g.Send)
         if not Send then return end
 
@@ -3293,8 +3282,8 @@ pcall(function()
             for _, model in ipairs(placed:GetChildren()) do
                 if model.Name == "Tent" then
                     local ownerId = model:GetAttribute("owner_id")
-                    if tostring(ownerId) == tostring(myPlayer.UserId) then
-                        task.spawn(function()
+                    if tostring(ownerId) == tostring(player.UserId) then
+                        spawn(function()
                             local cd = model:FindFirstChildWhichIsA("ClickDetector", true) or Instance.new("ClickDetector")
                             Send("interaction", cd, "Pick Up")
                         end)
@@ -3304,8 +3293,9 @@ pcall(function()
         end
     end)
 
-    print("✅ Draw & Place system loaded.")
+    print("✅ Draw & Place standalone loaded.")
 end)
+
 
 -- Resize Handle (Bottom Right Corner)
 local ResizeHandle = Instance.new("TextButton")
