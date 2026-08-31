@@ -2582,14 +2582,15 @@ game:GetService("Players").LocalPlayer.CharacterAdded:Connect(function()
         DiscoTentsBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
     end
 end)
+
 -- ==========================================
--- SMART HOLD CONNECTION
+-- SMART HOLD CONNECTION (UPDATED HEIGHT)
 -- ==========================================
 applySmartHold(
     ToolMainBtn,    
     ToolContainer,  
     40,             
-    365,            -- Increased height to 200px to perfectly fit the new Explosive button
+    365,            -- Increased height to perfectly fit the new Disco Tents button!
     0.5,              
     function()
         if ToolInput.Text ~= "" then
@@ -2606,6 +2607,7 @@ applySmartHold(
         end
     end
 )
+
 -- ==============================================================
 -- 🚙 SMART VEHICLE SPAWNER & TANK CARPET BOMBER (Hold for Options)
 -- ==============================================================
