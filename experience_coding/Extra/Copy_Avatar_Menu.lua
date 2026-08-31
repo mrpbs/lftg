@@ -3127,7 +3127,6 @@ MassFlingBtn.MouseButton1Click:Connect(function()
     end
 end)
 
-
 -- ==========================================
 -- ⛺ DRAW & PLACE (Floating Top-Left)
 -- ==========================================
@@ -3142,12 +3141,12 @@ pcall(function()
     screenGui.Parent = player:WaitForChild("PlayerGui")
     screenGui.ResetOnSpawn = false
     screenGui.IgnoreGuiInset = true
-    screenGui.DisplayOrder = 999  -- forces it above everything
+    screenGui.DisplayOrder = 999
 
     -- Main toggle button (top-left corner)
     local drawBtn = Instance.new("TextButton")
     drawBtn.Size = UDim2.new(0, 140, 0, 40)
-    drawBtn.Position = UDim2.new(0, 10, 0, 10)  -- top-left
+    drawBtn.Position = UDim2.new(0, 10, 0, 10)
     drawBtn.Text = "🎨 Draw: OFF"
     drawBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
     drawBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -3158,10 +3157,10 @@ pcall(function()
     drawBtn.Parent = screenGui
     Instance.new("UICorner", drawBtn).CornerRadius = UDim.new(0, 8)
 
-    -- Canvas frame (appears below the button)
+    -- Canvas container
     local canvasContainer = Instance.new("Frame")
-    canvasContainer.Size = UDim2.new(0, 300, 0, 220)
-    canvasContainer.Position = UDim2.new(0, 10, 0, 55)  -- below button
+    canvasContainer.Size = UDim2.new(0, 300, 0, 260)  -- taller to fit extra button
+    canvasContainer.Position = UDim2.new(0, 10, 0, 55)
     canvasContainer.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
     canvasContainer.BorderColor3 = Color3.fromRGB(80, 80, 100)
     canvasContainer.BorderSizePixel = 2
@@ -3189,18 +3188,50 @@ pcall(function()
     canvasLabel.ZIndex = 10
     canvasLabel.Parent = canvasBoard
 
+    -- Buttons container (horizontal)
+    local btnContainer = Instance.new("Frame")
+    btnContainer.Size = UDim2.new(1, -10, 0, 70)
+    btnContainer.Position = UDim2.new(0, 5, 0, 175)
+    btnContainer.BackgroundTransparency = 1
+    btnContainer.ZIndex = 10
+    btnContainer.Parent = canvasContainer
+
+    local uiGrid = Instance.new("UIGridLayout")
+    uiGrid.CellSize = UDim2.new(0, 135, 0, 30)
+    uiGrid.CellPadding = UDim2.new(0, 10, 0, 5)
+    uiGrid.SortOrder = Enum.SortOrder.LayoutOrder
+    uiGrid.FillDirection = Enum.FillDirection.Horizontal
+    uiGrid.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    uiGrid.VerticalAlignment = Enum.VerticalAlignment.Top
+    uiGrid.Parent = btnContainer
+
+    -- Button 1: Clear Canvas & Own Tents
     local clearBtn = Instance.new("TextButton")
-    clearBtn.Size = UDim2.new(1, -10, 0, 35)
-    clearBtn.Position = UDim2.new(0, 5, 0, 175)
+    clearBtn.Size = UDim2.new(0, 135, 0, 30)
     clearBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
     clearBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
     clearBtn.Font = Enum.Font.SourceSansBold
-    clearBtn.TextSize = 14
+    clearBtn.TextSize = 12
     clearBtn.Text = "🗑️ Wipe Canvas"
     clearBtn.BorderSizePixel = 0
     clearBtn.ZIndex = 10
-    clearBtn.Parent = canvasContainer
+    clearBtn.LayoutOrder = 1
+    clearBtn.Parent = btnContainer
     Instance.new("UICorner", clearBtn).CornerRadius = UDim.new(0, 6)
+
+    -- Button 2: Clear All Tents (server-wide)
+    local clearAllBtn = Instance.new("TextButton")
+    clearAllBtn.Size = UDim2.new(0, 135, 0, 30)
+    clearAllBtn.BackgroundColor3 = Color3.fromRGB(180, 50, 180)  -- purple
+    clearAllBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    clearAllBtn.Font = Enum.Font.SourceSansBold
+    clearAllBtn.TextSize = 12
+    clearAllBtn.Text = "🧹 Clear All Tents"
+    clearAllBtn.BorderSizePixel = 0
+    clearAllBtn.ZIndex = 10
+    clearAllBtn.LayoutOrder = 2
+    clearAllBtn.Parent = btnContainer
+    Instance.new("UICorner", clearAllBtn).CornerRadius = UDim.new(0, 6)
 
     -- State
     local isDrawing = false
@@ -3279,6 +3310,7 @@ pcall(function()
         end
     end)
 
+    -- Wipe Canvas (remove dots + own tents)
     clearBtn.MouseButton1Click:Connect(function()
         local Send = g.Send or (g.g and g.g.Send)
         if not Send then return end
@@ -3300,10 +3332,55 @@ pcall(function()
                 end
             end
         end
+        clearBtn.Text = "✅ Wiped"
+        task.wait(1)
+        clearBtn.Text = "🗑️ Wipe Canvas"
     end)
 
-    print("✅ Draw & Place visible now.")
+    -- Clear All Tents (server-wide)
+    clearAllBtn.MouseButton1Click:Connect(function()
+        local Send = g.Send or (g.g and g.g.Send)
+        if not Send then
+            clearAllBtn.Text = "❌ No Net"
+            task.wait(1)
+            clearAllBtn.Text = "🧹 Clear All Tents"
+            return
+        end
+
+        clearAllBtn.Text = "⏳ Clearing..."
+        clearAllBtn.BackgroundColor3 = Color3.fromRGB(200, 150, 50)
+
+        local placed = workspace:FindFirstChild("PlacedModels") or workspace:FindFirstChild("ModelsPlaced")
+        if not placed then
+            clearAllBtn.Text = "✅ None Found"
+            task.wait(1)
+            clearAllBtn.Text = "🧹 Clear All Tents"
+            clearAllBtn.BackgroundColor3 = Color3.fromRGB(180, 50, 180)
+            return
+        end
+
+        local count = 0
+        for _, model in ipairs(placed:GetChildren()) do
+            if model.Name == "Tent" then
+                spawn(function()
+                    local cd = model:FindFirstChildWhichIsA("ClickDetector", true) or Instance.new("ClickDetector")
+                    Send("interaction", cd, "Pick Up")
+                end)
+                count = count + 1
+                task.wait(0.05)  -- slight delay to avoid flooding
+            end
+        end
+
+        clearAllBtn.Text = "✅ Cleared " .. count .. " tents"
+        clearAllBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
+        task.wait(1.5)
+        clearAllBtn.Text = "🧹 Clear All Tents"
+        clearAllBtn.BackgroundColor3 = Color3.fromRGB(180, 50, 180)
+    end)
+
+    print("✅ Draw & Place with Clear All loaded.")
 end)
+
 
 -- Resize Handle (Bottom Right Corner)
 local ResizeHandle = Instance.new("TextButton")
