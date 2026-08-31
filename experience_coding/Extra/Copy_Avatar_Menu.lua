@@ -3127,40 +3127,46 @@ MassFlingBtn.MouseButton1Click:Connect(function()
     end
 end)
 
+
 -- ==========================================
--- ⛺ DRAW & PLACE (Standalone Canvas)
+-- ⛺ DRAW & PLACE (Floating Top-Left)
 -- ==========================================
 pcall(function()
     local uis = game:GetService("UserInputService")
     local player = game.Players.LocalPlayer
     local g = getgenv() or _G
 
-    -- Create a new GUI for the draw tools
+    -- Create a new ScreenGui on top
     local screenGui = Instance.new("ScreenGui")
     screenGui.Name = "DrawCanvasGUI"
     screenGui.Parent = player:WaitForChild("PlayerGui")
+    screenGui.ResetOnSpawn = false
+    screenGui.IgnoreGuiInset = true
+    screenGui.DisplayOrder = 999  -- forces it above everything
 
-    -- Main button to toggle draw mode
+    -- Main toggle button (top-left corner)
     local drawBtn = Instance.new("TextButton")
-    drawBtn.Size = UDim2.new(0, 120, 0, 40)
-    drawBtn.Position = UDim2.new(0, 10, 0.5, -20)
+    drawBtn.Size = UDim2.new(0, 140, 0, 40)
+    drawBtn.Position = UDim2.new(0, 10, 0, 10)  -- top-left
     drawBtn.Text = "🎨 Draw: OFF"
     drawBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
     drawBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
     drawBtn.Font = Enum.Font.SourceSansBold
     drawBtn.TextSize = 14
     drawBtn.BorderSizePixel = 0
+    drawBtn.ZIndex = 10
     drawBtn.Parent = screenGui
     Instance.new("UICorner", drawBtn).CornerRadius = UDim.new(0, 8)
 
-    -- Canvas frame (hidden by default)
+    -- Canvas frame (appears below the button)
     local canvasContainer = Instance.new("Frame")
     canvasContainer.Size = UDim2.new(0, 300, 0, 220)
-    canvasContainer.Position = UDim2.new(0, 10, 0.5, 30)
+    canvasContainer.Position = UDim2.new(0, 10, 0, 55)  -- below button
     canvasContainer.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
     canvasContainer.BorderColor3 = Color3.fromRGB(80, 80, 100)
     canvasContainer.BorderSizePixel = 2
     canvasContainer.Visible = false
+    canvasContainer.ZIndex = 10
     canvasContainer.Parent = screenGui
     Instance.new("UICorner", canvasContainer).CornerRadius = UDim.new(0, 8)
 
@@ -3170,6 +3176,7 @@ pcall(function()
     canvasBoard.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
     canvasBoard.BorderSizePixel = 0
     canvasBoard.ClipsDescendants = true
+    canvasBoard.ZIndex = 10
     canvasBoard.Parent = canvasContainer
 
     local canvasLabel = Instance.new("TextLabel")
@@ -3179,6 +3186,7 @@ pcall(function()
     canvasLabel.TextColor3 = Color3.fromRGB(80, 80, 100)
     canvasLabel.Font = Enum.Font.SourceSansBold
     canvasLabel.TextSize = 14
+    canvasLabel.ZIndex = 10
     canvasLabel.Parent = canvasBoard
 
     local clearBtn = Instance.new("TextButton")
@@ -3190,6 +3198,7 @@ pcall(function()
     clearBtn.TextSize = 14
     clearBtn.Text = "🗑️ Wipe Canvas"
     clearBtn.BorderSizePixel = 0
+    clearBtn.ZIndex = 10
     clearBtn.Parent = canvasContainer
     Instance.new("UICorner", clearBtn).CornerRadius = UDim.new(0, 6)
 
@@ -3231,10 +3240,10 @@ pcall(function()
         dot.Position = UDim2.new(0, (x - absPos.X) - 3, 0, (y - absPos.Y) - 3)
         dot.BackgroundColor3 = Color3.fromRGB(50, 255, 50)
         dot.BorderSizePixel = 0
+        dot.ZIndex = 10
         dot.Parent = canvasBoard
         table.insert(paintDots, dot)
 
-        -- Use spawn (works on all executors)
         spawn(function()
             Get("large_place", tentModel, CFrame.new(spawnPos, hrp.Position))
         end)
@@ -3293,9 +3302,8 @@ pcall(function()
         end
     end)
 
-    print("✅ Draw & Place standalone loaded.")
+    print("✅ Draw & Place visible now.")
 end)
-
 
 -- Resize Handle (Bottom Right Corner)
 local ResizeHandle = Instance.new("TextButton")
