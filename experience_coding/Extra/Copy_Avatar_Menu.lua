@@ -3148,7 +3148,7 @@ DrawModeBtn.Font = Enum.Font.SourceSansBold
 DrawModeBtn.TextSize = 16
 DrawModeBtn.BorderSizePixel = 0
 DrawModeBtn.LayoutOrder = 20
-DrawModeBtn.Parent = toolsTab 
+DrawModeBtn.Parent = ToolsScroll
 Instance.new("UICorner", DrawModeBtn).CornerRadius = UDim.new(0, 8)
 
 -- 2. THE CANVAS CONTAINER
@@ -3157,7 +3157,7 @@ CanvasContainer.Size = UDim2.new(1, -5, 0, 205)
 CanvasContainer.BackgroundTransparency = 1
 CanvasContainer.LayoutOrder = 21
 CanvasContainer.Visible = false
-CanvasContainer.Parent = toolsTab 
+CanvasContainer.Parent = ToolsScroll
 
 local CanvasBoard = Instance.new("Frame")
 CanvasBoard.Size = UDim2.new(1, 0, 0, 160)
