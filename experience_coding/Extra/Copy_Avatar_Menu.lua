@@ -2697,7 +2697,7 @@ game:GetService("Players").LocalPlayer.CharacterAdded:Connect(function()
     end
 end)
 -- ==========================================
--- ⭕ ITEM CIRCLE (INTEGRATED SMART RADIUS)
+-- ITEM CIRCLE (INTEGRATED SMART RADIUS)
 -- ==========================================
 local ic_isActive = false
 local ic_lastCenter = nil
@@ -2716,7 +2716,7 @@ ItemCircleBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
 ItemCircleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 ItemCircleBtn.Font = Enum.Font.SourceSansBold
 ItemCircleBtn.TextSize = 14
-ItemCircleBtn.Text = "⭕ Item Circle: OFF"
+ItemCircleBtn.Text = "Item Circle: OFF"
 ItemCircleBtn.BorderSizePixel = 0
 ItemCircleBtn.Parent = ToolContainer 
 Instance.new("UICorner", ItemCircleBtn).CornerRadius = UDim.new(0, 6)
@@ -2765,7 +2765,7 @@ CircleClearBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
 CircleClearBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 CircleClearBtn.Font = Enum.Font.SourceSansBold
 CircleClearBtn.TextSize = 14
-CircleClearBtn.Text = "🗑️ Clear Circle Items"
+CircleClearBtn.Text = "Clear Circle Items"
 CircleClearBtn.BorderSizePixel = 0
 CircleClearBtn.Parent = ToolContainer
 Instance.new("UICorner", CircleClearBtn).CornerRadius = UDim.new(0, 6)
@@ -2800,17 +2800,17 @@ CircleClearBtn.MouseButton1Click:Connect(function()
     CircleClearBtn.Text = "Clearing..."
     clearCircleItems()
     task.wait(1)
-    CircleClearBtn.Text = "🗑️ Clear Circle Items"
+    CircleClearBtn.Text = "Clear Circle Items"
 end)
 
 ItemCircleBtn.MouseButton1Click:Connect(function()
     ic_isActive = not ic_isActive
     if ic_isActive then
-        ItemCircleBtn.Text = "⭕ Item Circle: ON"
+        ItemCircleBtn.Text = "Item Circle: ON"
         ItemCircleBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
         ic_lastCenter = nil 
     else
-        ItemCircleBtn.Text = "⭕ Item Circle: OFF"
+        ItemCircleBtn.Text = "Item Circle: OFF"
         ItemCircleBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
         clearCircleItems()
         ic_lastCenter = nil
@@ -2820,7 +2820,7 @@ end)
 ic_player.CharacterAdded:Connect(function()
     if ic_isActive then
         ic_isActive = false
-        ItemCircleBtn.Text = "⭕ Item Circle: OFF"
+        ItemCircleBtn.Text = "Item Circle: OFF"
         ItemCircleBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
     end
 end)
@@ -2890,7 +2890,7 @@ task.spawn(function()
 end)
 
 -- ==========================================
--- SMART HOLD EXPANSION CONNECTION
+-- SMART HOLD EXPANSION CONNECTION (UPDATED & SAFE)
 -- ==========================================
 applySmartHold(
     ToolMainBtn,    
@@ -2899,17 +2899,17 @@ applySmartHold(
     590,            
     0.5,              
     function()
-        if ToolInput.Text ~= "" then
-            for _, conn in ipairs(getconnections(SpawnToolBtn.MouseButton1Click)) do
-                conn.Function()
-            end
+        -- Safe fallback that works perfectly on Delta/Mobile without getconnections()
+        if ToolInput and ToolInput.Text ~= "" then
+            local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
+            if Send then pcall(function() Send("get_tool", ToolInput.Text) end) end
         end
     end,
     function(isExpanded)
         if isExpanded then
-            ToolMainBtn.Text = "🛠️ Premium Tool Spawner [▲ Options]"
+            ToolMainBtn.Text = "Premium Tool Spawner [▲]"
         else
-            ToolMainBtn.Text = "🛠️ Premium Tool Spawner (Hold for Options)"
+            ToolMainBtn.Text = "Premium Tool Spawner (Hold)"
         end
     end
 )
