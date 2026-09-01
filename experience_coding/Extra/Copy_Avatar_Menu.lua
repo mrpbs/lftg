@@ -2696,31 +2696,6 @@ game:GetService("Players").LocalPlayer.CharacterAdded:Connect(function()
         TentTraitBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
     end
 end)
-
--- ==========================================
--- SMART HOLD CONNECTION (UPDATED HEIGHT)
--- ==========================================
-applySmartHold(
-    ToolMainBtn,    
-    ToolContainer,  
-    40,             
-    405,            -- Expands to perfectly fit the new Tent Trait button
-    0.5,              
-    function()
-        if ToolInput.Text ~= "" then
-            for _, conn in ipairs(getconnections(SpawnToolBtn.MouseButton1Click)) do
-                conn.Function()
-            end
-        end
-    end,
-    function(isExpanded)
-        if isExpanded then
-            ToolMainBtn.Text = "🛠️ Premium Tool Spawner [▲ Options]"
-        else
-            ToolMainBtn.Text = "🛠️ Premium Tool Spawner (Hold for Options)"
-        end
-    end
-)
 -- ==========================================
 -- ⭕ ITEM CIRCLE (SMART RADIUS & TRACKING)
 -- ==========================================
@@ -2935,6 +2910,31 @@ applySmartHold(
             ItemCircleBtn.Text = isCircleActive and "⭕ Item Circle: ON [▲ Options]" or "⭕ Item Circle: OFF [▲ Options]"
         else
             ItemCircleBtn.Text = isCircleActive and "⭕ Item Circle: ON (Hold for Options)" or "⭕ Item Circle: OFF (Hold for Options)"
+        end
+    end
+)
+
+-- ==========================================
+-- SMART HOLD CONNECTION (UPDATED HEIGHT)
+-- ==========================================
+applySmartHold(
+    ToolMainBtn,    
+    ToolContainer,  
+    40,             
+    405,            -- Expands to perfectly fit the new Tent Trait button
+    0.5,              
+    function()
+        if ToolInput.Text ~= "" then
+            for _, conn in ipairs(getconnections(SpawnToolBtn.MouseButton1Click)) do
+                conn.Function()
+            end
+        end
+    end,
+    function(isExpanded)
+        if isExpanded then
+            ToolMainBtn.Text = "🛠️ Premium Tool Spawner [▲ Options]"
+        else
+            ToolMainBtn.Text = "🛠️ Premium Tool Spawner (Hold for Options)"
         end
     end
 )
