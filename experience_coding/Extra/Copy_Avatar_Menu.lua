@@ -2708,7 +2708,7 @@ local radiusChangeTick = 0
 local myPlayer = game:GetService("Players").LocalPlayer
 local g = getgenv()
 
--- 1. The Toggle Button (Pushed down to 400 to sit below Tent Trait)
+-- 1. The Toggle Button
 local ItemCircleBtn = Instance.new("TextButton")
 ItemCircleBtn.Size = UDim2.new(1, -20, 0, 32)
 ItemCircleBtn.Position = UDim2.new(0, 10, 0, 400) 
@@ -2739,7 +2739,7 @@ Instance.new("UICorner", CircleItemName).CornerRadius = UDim.new(0, 6)
 local CircleItemLimit = Instance.new("TextBox")
 CircleItemLimit.Size = UDim2.new(0.4, -15, 0, 30)
 CircleItemLimit.Position = UDim2.new(0.6, 5, 0, 440)
-CircleItemLimit.PlaceholderText = "Max (Limit 21)"
+CircleItemLimit.PlaceholderText = "Max (Limit 20)"
 CircleItemLimit.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
 CircleItemLimit.TextColor3 = Color3.fromRGB(255, 255, 255)
 CircleItemLimit.Font = Enum.Font.SourceSansBold
@@ -2817,7 +2817,7 @@ ItemCircleBtn.MouseButton1Click:Connect(function()
     end
 end)
 
-game:GetService("Players").LocalPlayer.CharacterAdded:Connect(function()
+myPlayer.CharacterAdded:Connect(function()
     if isCircleActive then
         isCircleActive = false
         ItemCircleBtn.Text = "⭕ Item Circle: OFF"
@@ -2896,7 +2896,7 @@ applySmartHold(
     ToolMainBtn,    
     ToolContainer,  
     40,             
-    585,            -- Massively expanded to fit the entire Item Circle UI suite
+    585,            -- Expands completely to fit the new UI!
     0.5,              
     function()
         if ToolInput.Text ~= "" then
