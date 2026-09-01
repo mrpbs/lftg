@@ -2701,7 +2701,7 @@ end)
 -- ==========================================
 do
     local IC = {
-        On = false, Last = nil, tRad = 15, cRad = 15, tick = 0,
+        On = false, Last = nil, tRad = 15, cRad = 15, tick = 0, lastSpawned = "",
         Btn = Instance.new("TextButton", ToolContainer),
         NameBox = Instance.new("TextBox", ToolContainer),
         LimBox = Instance.new("TextBox", ToolContainer),
@@ -2765,7 +2765,9 @@ do
         local placed = workspace:FindFirstChild("PlacedModels") or workspace:FindFirstChild("ModelsPlaced")
         if placed then
             for _, m in ipairs(placed:GetChildren()) do
-                if string.lower(m.Name:gsub("%s+", "")) == tItem or tItem == "" then
+                local mName = string.lower(m.Name:gsub("%s+", ""))
+                -- Delete if it matches the current text box OR the last item spawned by the circle
+                if mName == tItem or mName == IC.lastSpawned or tItem == "" then
                     if tostring(m:GetAttribute("owner_id")) == tostring(IC.Player.UserId) then
                         task.spawn(function()
                             local cd = m:FindFirstChildWhichIsA("ClickDetector", true) or Instance.new("ClickDetector")
@@ -2793,10 +2795,14 @@ do
         else
             IC.Btn.Text = "⭕ Item Circle: OFF"
             IC.Btn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
-            wipeC()
+            -- wipeC() removed from here! Items will stay placed when turned off.
             IC.Last = nil
         end
     end)
+    
+    -- Forces the circle to rebuild the exact moment you finish typing a new item name
+    IC.NameBox.FocusLost:Connect(function() IC.Last = nil end)
+    IC.LimBox.FocusLost:Connect(function() IC.Last = nil end)
 
     IC.Player.CharacterAdded:Connect(function()
         if IC.On then
@@ -2826,11 +2832,28 @@ do
                     if rebuild then
                         wipeC()
                         task.wait(0.3)
+                        
                         local iName = IC.NameBox.Text
                         local lim = math.clamp(tonumber(IC.LimBox.Text) or 15, 1, 21) 
+                        
                         if iName ~= "" then
+                            -- Save what we are spawning so we can clear it properly later
+                            IC.lastSpawned = string.lower(iName:gsub("%s+", ""))
+                            
                             local RS = game:GetService("ReplicatedStorage")
-                            local lModel = RS:FindFirstChild("LargePlaceables") and RS.LargePlaceables:FindFirstChild(iName)
+                            local lModel = nil
+                            local lpFolder = RS:FindFirstChild("LargePlaceables")
+                            
+                            -- Smart Fuzzy Search (Fixes the "CampingChair" vs "Camping Chair" bug)
+                            if lpFolder then
+                                for _, v in ipairs(lpFolder:GetChildren()) do
+                                    if string.lower(v.Name:gsub("%s+", "")) == IC.lastSpawned then
+                                        lModel = v
+                                        break
+                                    end
+                                end
+                            end
+                            
                             local Get = getgenv().Get or (getgenv().g and getgenv().g.Get)
                             local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
                             
@@ -2839,6 +2862,7 @@ do
                                 local x = math.cos(angle) * IC.cRad
                                 local z = math.sin(angle) * IC.cRad
                                 local spawnPos = IC.Last + Vector3.new(x, 0, z)
+                                
                                 task.spawn(function()
                                     if lModel and Get then
                                         pcall(function() Get("large_place", lModel, CFrame.new(spawnPos, IC.Last)) end)
