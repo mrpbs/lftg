@@ -2739,7 +2739,7 @@ Instance.new("UICorner", CircleItemName).CornerRadius = UDim.new(0, 6)
 local CircleItemLimit = Instance.new("TextBox")
 CircleItemLimit.Size = UDim2.new(0.4, -15, 0, 30)
 CircleItemLimit.Position = UDim2.new(0.6, 5, 0, 440)
-CircleItemLimit.PlaceholderText = "Max (Limit 20)"
+CircleItemLimit.PlaceholderText = "Max (Limit 21)"
 CircleItemLimit.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
 CircleItemLimit.TextColor3 = Color3.fromRGB(255, 255, 255)
 CircleItemLimit.Font = Enum.Font.SourceSansBold
@@ -2850,7 +2850,7 @@ task.spawn(function()
                     
                     local itemName = CircleItemName.Text
                     local limit = tonumber(CircleItemLimit.Text) or 15
-                    limit = math.clamp(limit, 1, 20) 
+                    limit = math.clamp(limit, 1, 21) 
                     
                     if itemName ~= "" then
                         local RS = game:GetService("ReplicatedStorage")
@@ -2899,10 +2899,10 @@ applySmartHold(
     590,            
     0.5,              
     function()
-        if ToolInput.Text ~= "" then
-            for _, conn in ipairs(getconnections(SpawnToolBtn.MouseButton1Click)) do
-                conn.Function()
-            end
+        -- SAFELY spawns the tool without using executor-crashing functions
+        if ToolInput and ToolInput.Text ~= "" then
+            local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
+            if Send then pcall(function() Send("get_tool", ToolInput.Text) end) end
         end
     end,
     function(isExpanded)
