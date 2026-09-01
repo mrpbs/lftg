@@ -2510,81 +2510,116 @@ game:GetService("Players").LocalPlayer.CharacterAdded:Connect(function()
     end
 end)
 -- ==========================================
--- ⛺ DISCO TENTS (RAINBOW COLOR CHANGER)
+-- ⛺ TENT TRAIT (SMART TRAIL & AUTO-CLEANUP)
 -- ==========================================
-local isDiscoTents = false
+local isTentTraitActive = false
+local lastTentPos = nil
 
-local DiscoTentsBtn = Instance.new("TextButton")
-DiscoTentsBtn.Size = UDim2.new(1, -20, 0, 32)
-DiscoTentsBtn.Position = UDim2.new(0, 10, 0, 320) 
-DiscoTentsBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
-DiscoTentsBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-DiscoTentsBtn.Font = Enum.Font.SourceSansBold
-DiscoTentsBtn.TextSize = 14
-DiscoTentsBtn.Text = "⛺ Disco Tents (Rainbow): OFF"
-DiscoTentsBtn.BorderSizePixel = 0
-DiscoTentsBtn.Parent = ToolContainer 
-Instance.new("UICorner", DiscoTentsBtn).CornerRadius = UDim.new(0, 6)
+local TentTraitBtn = Instance.new("TextButton")
+TentTraitBtn.Size = UDim2.new(1, -20, 0, 32)
+TentTraitBtn.Position = UDim2.new(0, 10, 0, 360) -- Placed directly below Disco Tents
+TentTraitBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+TentTraitBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+TentTraitBtn.Font = Enum.Font.SourceSansBold
+TentTraitBtn.TextSize = 14
+TentTraitBtn.Text = "⛺ Tent Trait (Trail): OFF"
+TentTraitBtn.BorderSizePixel = 0
+TentTraitBtn.Parent = ToolContainer 
+Instance.new("UICorner", TentTraitBtn).CornerRadius = UDim.new(0, 6)
 
-DiscoTentsBtn.MouseButton1Click:Connect(function()
-    isDiscoTents = not isDiscoTents
+TentTraitBtn.MouseButton1Click:Connect(function()
+    isTentTraitActive = not isTentTraitActive
+    local Get = getgenv().Get or (getgenv().g and getgenv().g.Get)
     local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
+    local myPlayer = game:GetService("Players").LocalPlayer
     
-    if isDiscoTents then
-        DiscoTentsBtn.Text = "⛺ Disco Tents (Rainbow): ON"
-        DiscoTentsBtn.BackgroundColor3 = Color3.fromRGB(255, 100, 150) -- Hot Pink
+    if isTentTraitActive then
+        TentTraitBtn.Text = "⛺ Tent Trait (Trail): ON"
+        TentTraitBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
+        lastTentPos = nil
         
         task.spawn(function()
-            while isDiscoTents do
-                local rColor = Color3.new(math.random(), math.random(), math.random())
+            while isTentTraitActive do
+                local char = myPlayer.Character
+                local hrp = char and char:FindFirstChild("HumanoidRootPart")
+                local RS = game:GetService("ReplicatedStorage")
+                local tentModel = RS:FindFirstChild("LargePlaceables") and RS.LargePlaceables:FindFirstChild("Tent")
                 
-                if Send then
+                if hrp and Get and Send and tentModel then
                     local placed = workspace:FindFirstChild("PlacedModels") or workspace:FindFirstChild("ModelsPlaced")
+                    local myTentsCount = 0
+                    
+                    -- 1. SAFETY CLEANUP: Delete tents before they get stuck outside 50 studs
                     if placed then
                         for _, model in ipairs(placed:GetChildren()) do
                             if model.Name == "Tent" then
                                 local ownerId = model:GetAttribute("owner_id")
-                                if tostring(ownerId) == tostring(game:GetService("Players").LocalPlayer.UserId) then
+                                if tostring(ownerId) == tostring(myPlayer.UserId) then
+                                    myTentsCount = myTentsCount + 1
                                     
-                                    local cd = model:FindFirstChild("InteractionClickDetector", true) or model:FindFirstChildWhichIsA("ClickDetector", true)
-                                    if cd then
+                                    local dist = (model:GetPivot().Position - hrp.Position).Magnitude
+                                    
+                                    -- If it gets 40 studs away, pick it up IMMEDIATELY before it breaks
+                                    if dist > 40 then
                                         task.spawn(function()
-                                            -- 1. Tell the server we are selecting THIS tent to color
-                                            pcall(function() Send("interaction", cd, "Change Color") end)
-                                            
-                                            -- 2. Wait a microscopic amount of time for the server to register the selection
-                                            task.wait(0.05)
-                                            
-                                            -- 3. Apply the random color!
-                                            pcall(function() Send("add_to_color_history", rColor) end)
-                                            
-                                            -- (Failsafe for standard RP games just in case)
-                                            pcall(function() Send("interaction", cd, "Color", rColor) end)
+                                            local cd = model:FindFirstChildWhichIsA("ClickDetector", true) or Instance.new("ClickDetector")
+                                            pcall(function() Send("interaction", cd, "Pick Up") end)
                                         end)
                                     end
-                                    
                                 end
                             end
                         end
                     end
+                    
+                    -- 2. SPAWN TRAIL: Only spawn if we moved far enough from the last tent
+                    -- Limits to 18 tents max so you never hit the 21 hard-limit and break your game
+                    if myTentsCount < 18 then
+                        if not lastTentPos or (hrp.Position - lastTentPos).Magnitude > 8 then
+                            
+                            -- Puts the tent exactly 8 studs behind your character's back
+                            local spawnCFrame = hrp.CFrame * CFrame.new(0, -1, 8)
+                            local placeCFrame = CFrame.new(spawnCFrame.Position, spawnCFrame.Position + hrp.CFrame.LookVector)
+                            
+                            task.spawn(function()
+                                pcall(function() Get("large_place", tentModel, placeCFrame) end)
+                            end)
+                            
+                            lastTentPos = hrp.Position
+                        end
+                    end
                 end
                 
-                -- Flashes a new color every 0.3 seconds!
-                task.wait(0.3) 
+                task.wait(0.15)
+            end
+            
+            -- 3. AUTO-WIPE: Pick up the remaining trail when turned off
+            local placed = workspace:FindFirstChild("PlacedModels") or workspace:FindFirstChild("ModelsPlaced")
+            if placed and Send then
+                for _, model in ipairs(placed:GetChildren()) do
+                    if model.Name == "Tent" then
+                        local ownerId = model:GetAttribute("owner_id")
+                        if tostring(ownerId) == tostring(myPlayer.UserId) then
+                            task.spawn(function()
+                                local cd = model:FindFirstChildWhichIsA("ClickDetector", true) or Instance.new("ClickDetector")
+                                pcall(function() Send("interaction", cd, "Pick Up") end)
+                            end)
+                        end
+                    end
+                end
             end
         end)
     else
-        DiscoTentsBtn.Text = "⛺ Disco Tents (Rainbow): OFF"
-        DiscoTentsBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+        TentTraitBtn.Text = "⛺ Tent Trait (Trail): OFF"
+        TentTraitBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
     end
 end)
 
 -- Safety clear if you die
 game:GetService("Players").LocalPlayer.CharacterAdded:Connect(function()
-    if isDiscoTents then
-        isDiscoTents = false
-        DiscoTentsBtn.Text = "⛺ Disco Tents (Rainbow): OFF"
-        DiscoTentsBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+    if isTentTraitActive then
+        isTentTraitActive = false
+        TentTraitBtn.Text = "⛺ Tent Trait (Trail): OFF"
+        TentTraitBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
     end
 end)
 
@@ -2595,7 +2630,7 @@ applySmartHold(
     ToolMainBtn,    
     ToolContainer,  
     40,             
-    365,            -- Increased height to perfectly fit the new Disco Tents button!
+    405,            -- Expands to perfectly fit the new Tent Trait button
     0.5,              
     function()
         if ToolInput.Text ~= "" then
