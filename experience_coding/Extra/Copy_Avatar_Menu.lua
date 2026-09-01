@@ -2896,7 +2896,7 @@ applySmartHold(
     ToolMainBtn,    
     ToolContainer,  
     40,             
-    585,            -- Expands completely to fit the new UI!
+    590,            
     0.5,              
     function()
         if ToolInput.Text ~= "" then
