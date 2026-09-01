@@ -2697,7 +2697,7 @@ game:GetService("Players").LocalPlayer.CharacterAdded:Connect(function()
     end
 end)
 -- ==========================================
--- ⭕ ITEM CIRCLE (SMART RADIUS & TRACKING)
+-- ⭕ ITEM CIRCLE (INTEGRATED SMART RADIUS)
 -- ==========================================
 local isCircleActive = false
 local lastCircleCenter = nil
@@ -2708,30 +2708,23 @@ local radiusChangeTick = 0
 local myPlayer = game:GetService("Players").LocalPlayer
 local g = getgenv()
 
--- 1. Main Container
-local ItemCircleContainer = Instance.new("Frame")
-ItemCircleContainer.Size = UDim2.new(1, -5, 0, 40) -- Starts collapsed
-ItemCircleContainer.BackgroundColor3 = Color3.fromRGB(30, 30, 38)
-ItemCircleContainer.BorderSizePixel = 0
-ItemCircleContainer.ClipsDescendants = true
-ItemCircleContainer.Parent = ToolsScroll -- Assumes it's in Tools tab
-
--- 2. The Main Toggle Button
+-- 1. The Toggle Button (Pushed down to 400 to sit below Tent Trait)
 local ItemCircleBtn = Instance.new("TextButton")
-ItemCircleBtn.Size = UDim2.new(1, 0, 0, 40)
-ItemCircleBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+ItemCircleBtn.Size = UDim2.new(1, -20, 0, 32)
+ItemCircleBtn.Position = UDim2.new(0, 10, 0, 400) 
+ItemCircleBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
 ItemCircleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 ItemCircleBtn.Font = Enum.Font.SourceSansBold
-ItemCircleBtn.TextSize = 16
-ItemCircleBtn.Text = "⭕ Item Circle: OFF (Hold for Options)"
+ItemCircleBtn.TextSize = 14
+ItemCircleBtn.Text = "⭕ Item Circle: OFF"
 ItemCircleBtn.BorderSizePixel = 0
-ItemCircleBtn.Parent = ItemCircleContainer
-Instance.new("UICorner", ItemCircleBtn).CornerRadius = UDim.new(0, 8)
+ItemCircleBtn.Parent = ToolContainer 
+Instance.new("UICorner", ItemCircleBtn).CornerRadius = UDim.new(0, 6)
 
--- 3. Item Name Input
+-- 2. Item Name Input
 local CircleItemName = Instance.new("TextBox")
 CircleItemName.Size = UDim2.new(0.6, -15, 0, 30)
-CircleItemName.Position = UDim2.new(0, 10, 0, 45)
+CircleItemName.Position = UDim2.new(0, 10, 0, 440)
 CircleItemName.PlaceholderText = "Item Name (e.g. Tent)"
 CircleItemName.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
 CircleItemName.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -2739,13 +2732,13 @@ CircleItemName.Font = Enum.Font.SourceSansBold
 CircleItemName.TextSize = 13
 CircleItemName.Text = "Tent"
 CircleItemName.ClearTextOnFocus = false
-CircleItemName.Parent = ItemCircleContainer
+CircleItemName.Parent = ToolContainer
 Instance.new("UICorner", CircleItemName).CornerRadius = UDim.new(0, 6)
 
--- 4. Max Spawn Limit Input
+-- 3. Max Spawn Limit Input
 local CircleItemLimit = Instance.new("TextBox")
 CircleItemLimit.Size = UDim2.new(0.4, -15, 0, 30)
-CircleItemLimit.Position = UDim2.new(0.6, 5, 0, 45)
+CircleItemLimit.Position = UDim2.new(0.6, 5, 0, 440)
 CircleItemLimit.PlaceholderText = "Max (Limit 21)"
 CircleItemLimit.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
 CircleItemLimit.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -2753,29 +2746,28 @@ CircleItemLimit.Font = Enum.Font.SourceSansBold
 CircleItemLimit.TextSize = 13
 CircleItemLimit.Text = "15"
 CircleItemLimit.ClearTextOnFocus = false
-CircleItemLimit.Parent = ItemCircleContainer
+CircleItemLimit.Parent = ToolContainer
 Instance.new("UICorner", CircleItemLimit).CornerRadius = UDim.new(0, 6)
 
--- 5. Radius Slider (1 to 40)
--- Utilizes your existing createSlider function!
-local CircleRadiusSlider = createSlider(ItemCircleContainer, "Radius Spread", 1, 40, 15, function(val)
+-- 4. Radius Slider (1 to 40)
+local CircleRadiusSlider = createSlider(ToolContainer, "Circle Radius Spread", 1, 40, 15, function(val)
     targetRadius = val
-    radiusChangeTick = tick() -- Debounce tracker
+    radiusChangeTick = tick()
 end)
-CircleRadiusSlider.Position = UDim2.new(0, 10, 0, 85)
+CircleRadiusSlider.Position = UDim2.new(0, 10, 0, 480)
 CircleRadiusSlider.Size = UDim2.new(1, -20, 0, 50)
 
--- 6. Clear All Items Button
+-- 5. Clear All Items Button
 local CircleClearBtn = Instance.new("TextButton")
 CircleClearBtn.Size = UDim2.new(1, -20, 0, 32)
-CircleClearBtn.Position = UDim2.new(0, 10, 0, 140)
+CircleClearBtn.Position = UDim2.new(0, 10, 0, 540)
 CircleClearBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
 CircleClearBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 CircleClearBtn.Font = Enum.Font.SourceSansBold
 CircleClearBtn.TextSize = 14
-CircleClearBtn.Text = "🗑️ Clear All Items"
+CircleClearBtn.Text = "🗑️ Clear Circle Items"
 CircleClearBtn.BorderSizePixel = 0
-CircleClearBtn.Parent = ItemCircleContainer
+CircleClearBtn.Parent = ToolContainer
 Instance.new("UICorner", CircleClearBtn).CornerRadius = UDim.new(0, 6)
 
 -- ==========================================
@@ -2791,7 +2783,6 @@ local function clearCircleItems()
     if placed then
         for _, model in ipairs(placed:GetChildren()) do
             local modelName = string.lower(model.Name:gsub("%s+", ""))
-            -- Only pick up items that belong to YOU and match the Name Box (so you don't delete your chairs if you type Tent)
             if modelName == targetItem or targetItem == "" then
                 local ownerId = model:GetAttribute("owner_id")
                 if tostring(ownerId) == tostring(myPlayer.UserId) then
@@ -2809,10 +2800,31 @@ CircleClearBtn.MouseButton1Click:Connect(function()
     CircleClearBtn.Text = "Clearing..."
     clearCircleItems()
     task.wait(1)
-    CircleClearBtn.Text = "🗑️ Clear All Items"
+    CircleClearBtn.Text = "🗑️ Clear Circle Items"
 end)
 
--- Background loop to track movement & slider updates smoothly
+ItemCircleBtn.MouseButton1Click:Connect(function()
+    isCircleActive = not isCircleActive
+    if isCircleActive then
+        ItemCircleBtn.Text = "⭕ Item Circle: ON"
+        ItemCircleBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
+        lastCircleCenter = nil 
+    else
+        ItemCircleBtn.Text = "⭕ Item Circle: OFF"
+        ItemCircleBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+        clearCircleItems()
+        lastCircleCenter = nil
+    end
+end)
+
+game:GetService("Players").LocalPlayer.CharacterAdded:Connect(function()
+    if isCircleActive then
+        isCircleActive = false
+        ItemCircleBtn.Text = "⭕ Item Circle: OFF"
+        ItemCircleBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+    end
+end)
+
 task.spawn(function()
     while true do
         task.wait(0.2)
@@ -2822,13 +2834,11 @@ task.spawn(function()
             if hrp then
                 local shouldRebuild = false
                 
-                -- SMART SLIDER DEBOUNCE: Only rebuild 0.4s AFTER you stop dragging the slider to prevent game crashes
                 if currentRadius ~= targetRadius and (tick() - radiusChangeTick) > 0.4 then
                     currentRadius = targetRadius
                     shouldRebuild = true
                 end
                 
-                -- PLAYER TRACKING: If you move more than 8 studs away, the circle follows you
                 if not lastCircleCenter or (hrp.Position - lastCircleCenter).Magnitude > 8 then
                     lastCircleCenter = hrp.Position
                     shouldRebuild = true
@@ -2836,16 +2846,14 @@ task.spawn(function()
                 
                 if shouldRebuild then
                     clearCircleItems()
-                    task.wait(0.3) -- Give the server a moment to delete old ones
+                    task.wait(0.3)
                     
                     local itemName = CircleItemName.Text
-                    -- Strict limits to prevent hitting the 21 item cap
                     local limit = tonumber(CircleItemLimit.Text) or 15
                     limit = math.clamp(limit, 1, 20) 
                     
                     if itemName ~= "" then
                         local RS = game:GetService("ReplicatedStorage")
-                        -- Automatically detects if it's a giant item or a small tool
                         local largeModel = RS:FindFirstChild("LargePlaceables") and RS.LargePlaceables:FindFirstChild(itemName)
                         
                         local Get = g.Get or (g.g and g.g.Get)
@@ -2859,10 +2867,8 @@ task.spawn(function()
                             
                             task.spawn(function()
                                 if largeModel and Get then
-                                    -- Direct placement for Tents/Chairs
                                     pcall(function() Get("large_place", largeModel, CFrame.new(spawnPos, lastCircleCenter)) end)
                                 elseif Send then
-                                    -- Tool logic (Mines/Explosives)
                                     pcall(function() Send("get_tool", itemName) end)
                                     task.wait(0.15)
                                     local bp = myPlayer:FindFirstChild("Backpack")
@@ -2874,7 +2880,7 @@ task.spawn(function()
                                     end
                                 end
                             end)
-                            task.wait(0.02) -- Tiny buffer to prevent RemoteEvent kicks
+                            task.wait(0.02)
                         end
                     end
                 end
@@ -2884,44 +2890,13 @@ task.spawn(function()
 end)
 
 -- ==========================================
--- SMART HOLD EXPANSION CONNECTION
--- ==========================================
-applySmartHold(
-    ItemCircleBtn,    
-    ItemCircleContainer,  
-    40,             
-    185,            -- Expands to perfectly fit Inputs, Slider, and Clear Button
-    0.5,              
-    function()
-        -- The actual ON/OFF click
-        isCircleActive = not isCircleActive
-        if isCircleActive then
-            ItemCircleBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
-            -- Force immediate build upon turn-on
-            lastCircleCenter = nil 
-        else
-            ItemCircleBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-            clearCircleItems()
-            lastCircleCenter = nil
-        end
-    end,
-    function(isExpanded)
-        if isExpanded then
-            ItemCircleBtn.Text = isCircleActive and "⭕ Item Circle: ON [▲ Options]" or "⭕ Item Circle: OFF [▲ Options]"
-        else
-            ItemCircleBtn.Text = isCircleActive and "⭕ Item Circle: ON (Hold for Options)" or "⭕ Item Circle: OFF (Hold for Options)"
-        end
-    end
-)
-
--- ==========================================
--- SMART HOLD CONNECTION (UPDATED HEIGHT)
+-- SMART HOLD EXPANSION CONNECTION (UPDATED)
 -- ==========================================
 applySmartHold(
     ToolMainBtn,    
     ToolContainer,  
     40,             
-    405,            -- Expands to perfectly fit the new Tent Trait button
+    585,            -- Massively expanded to fit the entire Item Circle UI suite
     0.5,              
     function()
         if ToolInput.Text ~= "" then
