@@ -2721,6 +2721,223 @@ applySmartHold(
         end
     end
 )
+-- ==========================================
+-- ⭕ ITEM CIRCLE (SMART RADIUS & TRACKING)
+-- ==========================================
+local isCircleActive = false
+local lastCircleCenter = nil
+local targetRadius = 15
+local currentRadius = 15
+local radiusChangeTick = 0
+
+local myPlayer = game:GetService("Players").LocalPlayer
+local g = getgenv()
+
+-- 1. Main Container
+local ItemCircleContainer = Instance.new("Frame")
+ItemCircleContainer.Size = UDim2.new(1, -5, 0, 40) -- Starts collapsed
+ItemCircleContainer.BackgroundColor3 = Color3.fromRGB(30, 30, 38)
+ItemCircleContainer.BorderSizePixel = 0
+ItemCircleContainer.ClipsDescendants = true
+ItemCircleContainer.Parent = ToolsScroll -- Assumes it's in Tools tab
+
+-- 2. The Main Toggle Button
+local ItemCircleBtn = Instance.new("TextButton")
+ItemCircleBtn.Size = UDim2.new(1, 0, 0, 40)
+ItemCircleBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+ItemCircleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ItemCircleBtn.Font = Enum.Font.SourceSansBold
+ItemCircleBtn.TextSize = 16
+ItemCircleBtn.Text = "⭕ Item Circle: OFF (Hold for Options)"
+ItemCircleBtn.BorderSizePixel = 0
+ItemCircleBtn.Parent = ItemCircleContainer
+Instance.new("UICorner", ItemCircleBtn).CornerRadius = UDim.new(0, 8)
+
+-- 3. Item Name Input
+local CircleItemName = Instance.new("TextBox")
+CircleItemName.Size = UDim2.new(0.6, -15, 0, 30)
+CircleItemName.Position = UDim2.new(0, 10, 0, 45)
+CircleItemName.PlaceholderText = "Item Name (e.g. Tent)"
+CircleItemName.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
+CircleItemName.TextColor3 = Color3.fromRGB(255, 255, 255)
+CircleItemName.Font = Enum.Font.SourceSansBold
+CircleItemName.TextSize = 13
+CircleItemName.Text = "Tent"
+CircleItemName.ClearTextOnFocus = false
+CircleItemName.Parent = ItemCircleContainer
+Instance.new("UICorner", CircleItemName).CornerRadius = UDim.new(0, 6)
+
+-- 4. Max Spawn Limit Input
+local CircleItemLimit = Instance.new("TextBox")
+CircleItemLimit.Size = UDim2.new(0.4, -15, 0, 30)
+CircleItemLimit.Position = UDim2.new(0.6, 5, 0, 45)
+CircleItemLimit.PlaceholderText = "Max (Limit 21)"
+CircleItemLimit.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
+CircleItemLimit.TextColor3 = Color3.fromRGB(255, 255, 255)
+CircleItemLimit.Font = Enum.Font.SourceSansBold
+CircleItemLimit.TextSize = 13
+CircleItemLimit.Text = "15"
+CircleItemLimit.ClearTextOnFocus = false
+CircleItemLimit.Parent = ItemCircleContainer
+Instance.new("UICorner", CircleItemLimit).CornerRadius = UDim.new(0, 6)
+
+-- 5. Radius Slider (1 to 40)
+-- Utilizes your existing createSlider function!
+local CircleRadiusSlider = createSlider(ItemCircleContainer, "Radius Spread", 1, 40, 15, function(val)
+    targetRadius = val
+    radiusChangeTick = tick() -- Debounce tracker
+end)
+CircleRadiusSlider.Position = UDim2.new(0, 10, 0, 85)
+CircleRadiusSlider.Size = UDim2.new(1, -20, 0, 50)
+
+-- 6. Clear All Items Button
+local CircleClearBtn = Instance.new("TextButton")
+CircleClearBtn.Size = UDim2.new(1, -20, 0, 32)
+CircleClearBtn.Position = UDim2.new(0, 10, 0, 140)
+CircleClearBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+CircleClearBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+CircleClearBtn.Font = Enum.Font.SourceSansBold
+CircleClearBtn.TextSize = 14
+CircleClearBtn.Text = "🗑️ Clear All Items"
+CircleClearBtn.BorderSizePixel = 0
+CircleClearBtn.Parent = ItemCircleContainer
+Instance.new("UICorner", CircleClearBtn).CornerRadius = UDim.new(0, 6)
+
+-- ==========================================
+-- CIRCLE LOGIC & AUTO-TRACKING
+-- ==========================================
+local function clearCircleItems()
+    local Send = g.Send or (g.g and g.g.Send)
+    if not Send then return end
+    
+    local targetItem = string.lower(CircleItemName.Text:gsub("%s+", ""))
+    local placed = workspace:FindFirstChild("PlacedModels") or workspace:FindFirstChild("ModelsPlaced")
+    
+    if placed then
+        for _, model in ipairs(placed:GetChildren()) do
+            local modelName = string.lower(model.Name:gsub("%s+", ""))
+            -- Only pick up items that belong to YOU and match the Name Box (so you don't delete your chairs if you type Tent)
+            if modelName == targetItem or targetItem == "" then
+                local ownerId = model:GetAttribute("owner_id")
+                if tostring(ownerId) == tostring(myPlayer.UserId) then
+                    task.spawn(function()
+                        local cd = model:FindFirstChildWhichIsA("ClickDetector", true) or Instance.new("ClickDetector")
+                        pcall(function() Send("interaction", cd, "Pick Up") end)
+                    end)
+                end
+            end
+        end
+    end
+end
+
+CircleClearBtn.MouseButton1Click:Connect(function()
+    CircleClearBtn.Text = "Clearing..."
+    clearCircleItems()
+    task.wait(1)
+    CircleClearBtn.Text = "🗑️ Clear All Items"
+end)
+
+-- Background loop to track movement & slider updates smoothly
+task.spawn(function()
+    while true do
+        task.wait(0.2)
+        if isCircleActive then
+            local char = myPlayer.Character
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                local shouldRebuild = false
+                
+                -- SMART SLIDER DEBOUNCE: Only rebuild 0.4s AFTER you stop dragging the slider to prevent game crashes
+                if currentRadius ~= targetRadius and (tick() - radiusChangeTick) > 0.4 then
+                    currentRadius = targetRadius
+                    shouldRebuild = true
+                end
+                
+                -- PLAYER TRACKING: If you move more than 8 studs away, the circle follows you
+                if not lastCircleCenter or (hrp.Position - lastCircleCenter).Magnitude > 8 then
+                    lastCircleCenter = hrp.Position
+                    shouldRebuild = true
+                end
+                
+                if shouldRebuild then
+                    clearCircleItems()
+                    task.wait(0.3) -- Give the server a moment to delete old ones
+                    
+                    local itemName = CircleItemName.Text
+                    -- Strict limits to prevent hitting the 21 item cap
+                    local limit = tonumber(CircleItemLimit.Text) or 15
+                    limit = math.clamp(limit, 1, 20) 
+                    
+                    if itemName ~= "" then
+                        local RS = game:GetService("ReplicatedStorage")
+                        -- Automatically detects if it's a giant item or a small tool
+                        local largeModel = RS:FindFirstChild("LargePlaceables") and RS.LargePlaceables:FindFirstChild(itemName)
+                        
+                        local Get = g.Get or (g.g and g.g.Get)
+                        local Send = g.Send or (g.g and g.g.Send)
+                        
+                        for i = 1, limit do
+                            local angle = (math.pi * 2 / limit) * i
+                            local x = math.cos(angle) * currentRadius
+                            local z = math.sin(angle) * currentRadius
+                            local spawnPos = lastCircleCenter + Vector3.new(x, 0, z)
+                            
+                            task.spawn(function()
+                                if largeModel and Get then
+                                    -- Direct placement for Tents/Chairs
+                                    pcall(function() Get("large_place", largeModel, CFrame.new(spawnPos, lastCircleCenter)) end)
+                                elseif Send then
+                                    -- Tool logic (Mines/Explosives)
+                                    pcall(function() Send("get_tool", itemName) end)
+                                    task.wait(0.15)
+                                    local bp = myPlayer:FindFirstChild("Backpack")
+                                    local tool = (char:FindFirstChild(itemName) or (bp and bp:FindFirstChild(itemName)))
+                                    if tool then
+                                        pcall(function() tool.Parent = char end)
+                                        pcall(function() Send("place", spawnPos, Vector3.new(0, 1, 0)) end)
+                                        pcall(function() Send("delete_tool") end)
+                                    end
+                                end
+                            end)
+                            task.wait(0.02) -- Tiny buffer to prevent RemoteEvent kicks
+                        end
+                    end
+                end
+            end
+        end
+    end
+end)
+
+-- ==========================================
+-- SMART HOLD EXPANSION CONNECTION
+-- ==========================================
+applySmartHold(
+    ItemCircleBtn,    
+    ItemCircleContainer,  
+    40,             
+    185,            -- Expands to perfectly fit Inputs, Slider, and Clear Button
+    0.5,              
+    function()
+        -- The actual ON/OFF click
+        isCircleActive = not isCircleActive
+        if isCircleActive then
+            ItemCircleBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
+            -- Force immediate build upon turn-on
+            lastCircleCenter = nil 
+        else
+            ItemCircleBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+            clearCircleItems()
+            lastCircleCenter = nil
+        end
+    end,
+    function(isExpanded)
+        if isExpanded then
+            ItemCircleBtn.Text = isCircleActive and "⭕ Item Circle: ON [▲ Options]" or "⭕ Item Circle: OFF [▲ Options]"
+        else
+            ItemCircleBtn.Text = isCircleActive and "⭕ Item Circle: ON (Hold for Options)" or "⭕ Item Circle: OFF (Hold for Options)"
+        end
+    end
+)
 
 -- ==============================================================
 -- 🚙 SMART VEHICLE SPAWNER & TANK CARPET BOMBER (Hold for Options)
