@@ -2536,28 +2536,33 @@ DiscoTentsBtn.MouseButton1Click:Connect(function()
         
         task.spawn(function()
             while isDiscoTents do
-                -- Generate a completely random color
                 local rColor = Color3.new(math.random(), math.random(), math.random())
                 
                 if Send then
-                    -- 1. Fire the remote you provided to add it to history
-                    pcall(function() Send("add_to_color_history", rColor) end)
-                    
-                    -- 2. Actively scan and color any tents already placed on the ground
                     local placed = workspace:FindFirstChild("PlacedModels") or workspace:FindFirstChild("ModelsPlaced")
                     if placed then
                         for _, model in ipairs(placed:GetChildren()) do
                             if model.Name == "Tent" then
                                 local ownerId = model:GetAttribute("owner_id")
                                 if tostring(ownerId) == tostring(game:GetService("Players").LocalPlayer.UserId) then
-                                    task.spawn(function()
-                                        -- Force the placed tent to change color
-                                        pcall(function() Send("color_placeable", model, rColor) end)
-                                        
-                                        -- Fallback interaction just in case the game uses the ClickDetector
-                                        local cd = model:FindFirstChildWhichIsA("ClickDetector", true)
-                                        if cd then pcall(function() Send("interaction", cd, "Color", rColor) end) end
-                                    end)
+                                    
+                                    local cd = model:FindFirstChild("InteractionClickDetector", true) or model:FindFirstChildWhichIsA("ClickDetector", true)
+                                    if cd then
+                                        task.spawn(function()
+                                            -- 1. Tell the server we are selecting THIS tent to color
+                                            pcall(function() Send("interaction", cd, "Change Color") end)
+                                            
+                                            -- 2. Wait a microscopic amount of time for the server to register the selection
+                                            task.wait(0.05)
+                                            
+                                            -- 3. Apply the random color!
+                                            pcall(function() Send("add_to_color_history", rColor) end)
+                                            
+                                            -- (Failsafe for standard RP games just in case)
+                                            pcall(function() Send("interaction", cd, "Color", rColor) end)
+                                        end)
+                                    end
+                                    
                                 end
                             end
                         end
