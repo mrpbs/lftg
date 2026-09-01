@@ -2696,21 +2696,185 @@ game:GetService("Players").LocalPlayer.CharacterAdded:Connect(function()
         TentTraitBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
     end
 end)
+-- ==========================================
+-- ⭕ ITEM CIRCLE (ZERO-LOCAL MEMORY LIMIT FIX)
+-- ==========================================
+do
+    local IC = {
+        On = false, Last = nil, tRad = 15, cRad = 15, tick = 0,
+        Btn = Instance.new("TextButton", ToolContainer),
+        NameBox = Instance.new("TextBox", ToolContainer),
+        LimBox = Instance.new("TextBox", ToolContainer),
+        ClearBtn = Instance.new("TextButton", ToolContainer),
+        Player = game:GetService("Players").LocalPlayer
+    }
+
+    IC.Btn.Size = UDim2.new(1, -20, 0, 32)
+    IC.Btn.Position = UDim2.new(0, 10, 0, 400) 
+    IC.Btn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+    IC.Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    IC.Btn.Font = Enum.Font.SourceSansBold
+    IC.Btn.TextSize = 14
+    IC.Btn.Text = "⭕ Item Circle: OFF"
+    IC.Btn.BorderSizePixel = 0
+    Instance.new("UICorner", IC.Btn).CornerRadius = UDim.new(0, 6)
+
+    IC.NameBox.Size = UDim2.new(0.6, -15, 0, 30)
+    IC.NameBox.Position = UDim2.new(0, 10, 0, 440)
+    IC.NameBox.PlaceholderText = "Item Name (e.g. Tent)"
+    IC.NameBox.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
+    IC.NameBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+    IC.NameBox.Font = Enum.Font.SourceSansBold
+    IC.NameBox.TextSize = 13
+    IC.NameBox.Text = "Tent"
+    IC.NameBox.ClearTextOnFocus = false
+    Instance.new("UICorner", IC.NameBox).CornerRadius = UDim.new(0, 6)
+
+    IC.LimBox.Size = UDim2.new(0.4, -15, 0, 30)
+    IC.LimBox.Position = UDim2.new(0.6, 5, 0, 440)
+    IC.LimBox.PlaceholderText = "Max (Limit 21)"
+    IC.LimBox.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
+    IC.LimBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+    IC.LimBox.Font = Enum.Font.SourceSansBold
+    IC.LimBox.TextSize = 13
+    IC.LimBox.Text = "15"
+    IC.LimBox.ClearTextOnFocus = false
+    Instance.new("UICorner", IC.LimBox).CornerRadius = UDim.new(0, 6)
+
+    IC.Slider = createSlider(ToolContainer, "Circle Radius Spread", 1, 40, 15, function(val)
+        IC.tRad = val
+        IC.tick = tick()
+    end)
+    IC.Slider.Position = UDim2.new(0, 10, 0, 480)
+    IC.Slider.Size = UDim2.new(1, -20, 0, 50)
+
+    IC.ClearBtn.Size = UDim2.new(1, -20, 0, 32)
+    IC.ClearBtn.Position = UDim2.new(0, 10, 0, 540)
+    IC.ClearBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+    IC.ClearBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    IC.ClearBtn.Font = Enum.Font.SourceSansBold
+    IC.ClearBtn.TextSize = 14
+    IC.ClearBtn.Text = "🗑️ Clear Circle Items"
+    IC.ClearBtn.BorderSizePixel = 0
+    Instance.new("UICorner", IC.ClearBtn).CornerRadius = UDim.new(0, 6)
+
+    local function wipeC()
+        local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
+        if not Send then return end
+        local tItem = string.lower(IC.NameBox.Text:gsub("%s+", ""))
+        local placed = workspace:FindFirstChild("PlacedModels") or workspace:FindFirstChild("ModelsPlaced")
+        if placed then
+            for _, m in ipairs(placed:GetChildren()) do
+                if string.lower(m.Name:gsub("%s+", "")) == tItem or tItem == "" then
+                    if tostring(m:GetAttribute("owner_id")) == tostring(IC.Player.UserId) then
+                        task.spawn(function()
+                            local cd = m:FindFirstChildWhichIsA("ClickDetector", true) or Instance.new("ClickDetector")
+                            pcall(function() Send("interaction", cd, "Pick Up") end)
+                        end)
+                    end
+                end
+            end
+        end
+    end
+
+    IC.ClearBtn.MouseButton1Click:Connect(function()
+        IC.ClearBtn.Text = "Clearing..."
+        wipeC()
+        task.wait(1)
+        IC.ClearBtn.Text = "🗑️ Clear Circle Items"
+    end)
+
+    IC.Btn.MouseButton1Click:Connect(function()
+        IC.On = not IC.On
+        if IC.On then
+            IC.Btn.Text = "⭕ Item Circle: ON"
+            IC.Btn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
+            IC.Last = nil 
+        else
+            IC.Btn.Text = "⭕ Item Circle: OFF"
+            IC.Btn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+            wipeC()
+            IC.Last = nil
+        end
+    end)
+
+    IC.Player.CharacterAdded:Connect(function()
+        if IC.On then
+            IC.On = false
+            IC.Btn.Text = "⭕ Item Circle: OFF"
+            IC.Btn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+        end
+    end)
+
+    task.spawn(function()
+        while true do
+            task.wait(0.2)
+            if IC.On then
+                local char = IC.Player.Character
+                local hrp = char and char:FindFirstChild("HumanoidRootPart")
+                if hrp then
+                    local rebuild = false
+                    if IC.cRad ~= IC.tRad and (tick() - IC.tick) > 0.4 then
+                        IC.cRad = IC.tRad
+                        rebuild = true
+                    end
+                    if not IC.Last or (hrp.Position - IC.Last).Magnitude > 8 then
+                        IC.Last = hrp.Position
+                        rebuild = true
+                    end
+                    
+                    if rebuild then
+                        wipeC()
+                        task.wait(0.3)
+                        local iName = IC.NameBox.Text
+                        local lim = math.clamp(tonumber(IC.LimBox.Text) or 15, 1, 21) 
+                        if iName ~= "" then
+                            local RS = game:GetService("ReplicatedStorage")
+                            local lModel = RS:FindFirstChild("LargePlaceables") and RS.LargePlaceables:FindFirstChild(iName)
+                            local Get = getgenv().Get or (getgenv().g and getgenv().g.Get)
+                            local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
+                            
+                            for i = 1, lim do
+                                local angle = (math.pi * 2 / lim) * i
+                                local x = math.cos(angle) * IC.cRad
+                                local z = math.sin(angle) * IC.cRad
+                                local spawnPos = IC.Last + Vector3.new(x, 0, z)
+                                task.spawn(function()
+                                    if lModel and Get then
+                                        pcall(function() Get("large_place", lModel, CFrame.new(spawnPos, IC.Last)) end)
+                                    elseif Send then
+                                        pcall(function() Send("get_tool", iName) end)
+                                        task.wait(0.15)
+                                        local bp = IC.Player:FindFirstChild("Backpack")
+                                        local tool = char:FindFirstChild(iName) or (bp and bp:FindFirstChild(iName))
+                                        if tool then
+                                            pcall(function() tool.Parent = char; Send("place", spawnPos, Vector3.new(0, 1, 0)); Send("delete_tool") end)
+                                        end
+                                    end
+                                end)
+                                task.wait(0.02)
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end)
+end
 
 -- ==========================================
--- SMART HOLD CONNECTION (UPDATED HEIGHT)
+-- SMART HOLD EXPANSION CONNECTION
 -- ==========================================
 applySmartHold(
     ToolMainBtn,    
     ToolContainer,  
     40,             
-    405,            -- Expands to perfectly fit the new Tent Trait button
+    590,            
     0.5,              
     function()
-        if ToolInput.Text ~= "" then
-            for _, conn in ipairs(getconnections(SpawnToolBtn.MouseButton1Click)) do
-                conn.Function()
-            end
+        if ToolInput and ToolInput.Text ~= "" then
+            local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
+            if Send then pcall(function() Send("get_tool", ToolInput.Text) end) end
         end
     end,
     function(isExpanded)
@@ -2721,6 +2885,7 @@ applySmartHold(
         end
     end
 )
+
 
 -- ==============================================================
 -- 🚙 SMART VEHICLE SPAWNER & TANK CARPET BOMBER (Hold for Options)
@@ -2954,218 +3119,6 @@ SpawnFireBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- ==============================================================
--- ⭕ SMART ITEM CIRCLE SPAWNER (Hold for Options)
--- ==============================================================
-local isCircleActive = false
-local lastCircleCenter = nil
-local targetRadius = 15
-local currentRadius = 15
-local radiusChangeTick = 0
-
--- 1. Main Container
-local ItemCircleContainer = Instance.new("Frame")
-ItemCircleContainer.Size = UDim2.new(1, -5, 0, 40)
-ItemCircleContainer.BackgroundColor3 = Color3.fromRGB(30, 30, 38)
-ItemCircleContainer.BorderSizePixel = 0
-ItemCircleContainer.ClipsDescendants = true
-ItemCircleContainer.Parent = ToolsScroll
-
--- 2. Main Expanding Button
-local ItemCircleMainBtn = Instance.new("TextButton")
-ItemCircleMainBtn.Size = UDim2.new(1, 0, 0, 40)
-ItemCircleMainBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-ItemCircleMainBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-ItemCircleMainBtn.Font = Enum.Font.SourceSansBold
-ItemCircleMainBtn.TextSize = 16
-ItemCircleMainBtn.Text = "⭕ Item Circle: OFF (Hold for Options)"
-ItemCircleMainBtn.BorderSizePixel = 0
-ItemCircleMainBtn.Parent = ItemCircleContainer
-Instance.new("UICorner", ItemCircleMainBtn).CornerRadius = UDim.new(0, 8)
-
--- 3. Inputs & Sliders
-local CircleItemName = Instance.new("TextBox")
-CircleItemName.Size = UDim2.new(0.6, -15, 0, 30)
-CircleItemName.Position = UDim2.new(0, 10, 0, 45)
-CircleItemName.PlaceholderText = "Item Name (e.g. Tent)"
-CircleItemName.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
-CircleItemName.TextColor3 = Color3.fromRGB(255, 255, 255)
-CircleItemName.Font = Enum.Font.SourceSansBold
-CircleItemName.TextSize = 13
-CircleItemName.Text = "Tent"
-CircleItemName.ClearTextOnFocus = false
-CircleItemName.Parent = ItemCircleContainer
-Instance.new("UICorner", CircleItemName).CornerRadius = UDim.new(0, 6)
-
-local CircleItemLimit = Instance.new("TextBox")
-CircleItemLimit.Size = UDim2.new(0.4, -15, 0, 30)
-CircleItemLimit.Position = UDim2.new(0.6, 5, 0, 45)
-CircleItemLimit.PlaceholderText = "Max (Limit 21)"
-CircleItemLimit.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
-CircleItemLimit.TextColor3 = Color3.fromRGB(255, 255, 255)
-CircleItemLimit.Font = Enum.Font.SourceSansBold
-CircleItemLimit.TextSize = 13
-CircleItemLimit.Text = "15"
-CircleItemLimit.ClearTextOnFocus = false
-CircleItemLimit.Parent = ItemCircleContainer
-Instance.new("UICorner", CircleItemLimit).CornerRadius = UDim.new(0, 6)
-
-local CircleRadiusSlider = createSlider(ItemCircleContainer, "Circle Radius Spread", 1, 40, 15, function(val)
-    targetRadius = val
-    radiusChangeTick = tick()
-end)
-CircleRadiusSlider.Position = UDim2.new(0, 10, 0, 85)
-CircleRadiusSlider.Size = UDim2.new(1, -20, 0, 50)
-
-local CircleClearBtn = Instance.new("TextButton")
-CircleClearBtn.Size = UDim2.new(1, -20, 0, 32)
-CircleClearBtn.Position = UDim2.new(0, 10, 0, 140)
-CircleClearBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-CircleClearBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-CircleClearBtn.Font = Enum.Font.SourceSansBold
-CircleClearBtn.TextSize = 14
-CircleClearBtn.Text = "🗑️ Clear Circle Items"
-CircleClearBtn.BorderSizePixel = 0
-CircleClearBtn.Parent = ItemCircleContainer
-Instance.new("UICorner", CircleClearBtn).CornerRadius = UDim.new(0, 6)
-
--- ==========================================
--- CIRCLE LOGIC & AUTO-TRACKING
--- ==========================================
-local function clearCircleItems()
-    local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
-    if not Send then return end
-    local targetItem = string.lower(CircleItemName.Text:gsub("%s+", ""))
-    local placed = workspace:FindFirstChild("PlacedModels") or workspace:FindFirstChild("ModelsPlaced")
-    if placed then
-        for _, model in ipairs(placed:GetChildren()) do
-            local modelName = string.lower(model.Name:gsub("%s+", ""))
-            if modelName == targetItem or targetItem == "" then
-                local ownerId = model:GetAttribute("owner_id")
-                if tostring(ownerId) == tostring(LocalPlayer.UserId) then
-                    task.spawn(function()
-                        local cd = model:FindFirstChildWhichIsA("ClickDetector", true) or Instance.new("ClickDetector")
-                        pcall(function() Send("interaction", cd, "Pick Up") end)
-                    end)
-                end
-            end
-        end
-    end
-end
-
-CircleClearBtn.MouseButton1Click:Connect(function()
-    CircleClearBtn.Text = "Clearing..."
-    clearCircleItems()
-    task.wait(1)
-    CircleClearBtn.Text = "🗑️ Clear Circle Items"
-end)
-
-LocalPlayer.CharacterAdded:Connect(function()
-    if isCircleActive then
-        isCircleActive = false
-        ItemCircleMainBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-        if ItemCircleContainer.Size.Y.Offset > 50 then
-            ItemCircleMainBtn.Text = "⭕ Item Circle: OFF [▲ Options]"
-        else
-            ItemCircleMainBtn.Text = "⭕ Item Circle: OFF (Hold for Options)"
-        end
-    end
-end)
-
-task.spawn(function()
-    while true do
-        task.wait(0.2)
-        if isCircleActive then
-            local char = LocalPlayer.Character
-            local hrp = char and char:FindFirstChild("HumanoidRootPart")
-            if hrp then
-                local shouldRebuild = false
-                
-                -- Smart Debounce
-                if currentRadius ~= targetRadius and (tick() - radiusChangeTick) > 0.4 then
-                    currentRadius = targetRadius
-                    shouldRebuild = true
-                end
-                
-                -- Player Tracking
-                if not lastCircleCenter or (hrp.Position - lastCircleCenter).Magnitude > 8 then
-                    lastCircleCenter = hrp.Position
-                    shouldRebuild = true
-                end
-                
-                if shouldRebuild then
-                    clearCircleItems()
-                    task.wait(0.3)
-                    
-                    local itemName = CircleItemName.Text
-                    local limit = tonumber(CircleItemLimit.Text) or 15
-                    limit = math.clamp(limit, 1, 21) 
-                    
-                    if itemName ~= "" then
-                        local RS = game:GetService("ReplicatedStorage")
-                        local largeModel = RS:FindFirstChild("LargePlaceables") and RS.LargePlaceables:FindFirstChild(itemName)
-                        
-                        local Get = getgenv().Get or (getgenv().g and getgenv().g.Get)
-                        local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
-                        
-                        for i = 1, limit do
-                            local angle = (math.pi * 2 / limit) * i
-                            local x = math.cos(angle) * currentRadius
-                            local z = math.sin(angle) * currentRadius
-                            local spawnPos = lastCircleCenter + Vector3.new(x, 0, z)
-                            
-                            task.spawn(function()
-                                if largeModel and Get then
-                                    pcall(function() Get("large_place", largeModel, CFrame.new(spawnPos, lastCircleCenter)) end)
-                                elseif Send then
-                                    pcall(function() Send("get_tool", itemName) end)
-                                    task.wait(0.15)
-                                    local bp = LocalPlayer:FindFirstChild("Backpack")
-                                    local tool = (char:FindFirstChild(itemName) or (bp and bp:FindFirstChild(itemName)))
-                                    if tool then
-                                        pcall(function() tool.Parent = char end)
-                                        pcall(function() Send("place", spawnPos, Vector3.new(0, 1, 0)) end)
-                                        pcall(function() Send("delete_tool") end)
-                                    end
-                                end
-                            end)
-                            task.wait(0.02)
-                        end
-                    end
-                end
-            end
-        end
-    end
-end)
-
--- ==========================================
--- ITEM CIRCLE SMART HOLD EXPANSION
--- ==========================================
-applySmartHold(
-    ItemCircleMainBtn,    
-    ItemCircleContainer,  
-    40,             
-    185,            -- Expands nicely to fit Inputs, Slider, and Clear Button
-    0.5,              
-    function()
-        isCircleActive = not isCircleActive
-        if isCircleActive then
-            ItemCircleMainBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
-            lastCircleCenter = nil 
-        else
-            ItemCircleMainBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-            clearCircleItems()
-            lastCircleCenter = nil
-        end
-    end,
-    function(isExpanded)
-        if isExpanded then
-            ItemCircleMainBtn.Text = isCircleActive and "⭕ Item Circle: ON [▲ Options]" or "⭕ Item Circle: OFF [▲ Options]"
-        else
-            ItemCircleMainBtn.Text = isCircleActive and "⭕ Item Circle: ON (Hold for Options)" or "⭕ Item Circle: OFF (Hold for Options)"
-        end
-    end
-)
 
 -- ========== MASS SERVER FLING (Underground Uppercut + Auto-Respawn & Stack Logs) ==========
 local RunService = game:GetService("RunService")
