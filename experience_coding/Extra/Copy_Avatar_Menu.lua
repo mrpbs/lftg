@@ -2697,11 +2697,14 @@ game:GetService("Players").LocalPlayer.CharacterAdded:Connect(function()
     end
 end)
 -- ==========================================
--- ⭕ ITEM CIRCLE (ZERO-LOCAL MEMORY LIMIT FIX)
+-- ⭕ ITEM CIRCLE (SMART ARC & RADIUS SYSTEM)
 -- ==========================================
 do
     local IC = {
-        On = false, Last = nil, tRad = 15, cRad = 15, tick = 0, lastSpawned = "",
+        On = false, LastPos = nil, LastCF = nil, 
+        tRad = 15, cRad = 15, 
+        tDeg = 360, cDeg = 360,
+        tick = 0, lastSpawned = "",
         Btn = Instance.new("TextButton", ToolContainer),
         NameBox = Instance.new("TextBox", ToolContainer),
         LimBox = Instance.new("TextBox", ToolContainer),
@@ -2741,15 +2744,24 @@ do
     IC.LimBox.ClearTextOnFocus = false
     Instance.new("UICorner", IC.LimBox).CornerRadius = UDim.new(0, 6)
 
-    IC.Slider = createSlider(ToolContainer, "Circle Radius Spread", 1, 40, 15, function(val)
+    -- Radius Slider
+    IC.RadSlider = createSlider(ToolContainer, "Circle Radius Spread", 1, 40, 15, function(val)
         IC.tRad = val
         IC.tick = tick()
     end)
-    IC.Slider.Position = UDim2.new(0, 10, 0, 480)
-    IC.Slider.Size = UDim2.new(1, -20, 0, 50)
+    IC.RadSlider.Position = UDim2.new(0, 10, 0, 480)
+    IC.RadSlider.Size = UDim2.new(1, -20, 0, 50)
+
+    -- Arc / Degrees Slider (NEW!)
+    IC.DegSlider = createSlider(ToolContainer, "Arc Degrees (360 = Full Circle)", 10, 360, 360, function(val)
+        IC.tDeg = val
+        IC.tick = tick()
+    end)
+    IC.DegSlider.Position = UDim2.new(0, 10, 0, 530)
+    IC.DegSlider.Size = UDim2.new(1, -20, 0, 50)
 
     IC.ClearBtn.Size = UDim2.new(1, -20, 0, 32)
-    IC.ClearBtn.Position = UDim2.new(0, 10, 0, 540)
+    IC.ClearBtn.Position = UDim2.new(0, 10, 0, 590)
     IC.ClearBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
     IC.ClearBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
     IC.ClearBtn.Font = Enum.Font.SourceSansBold
@@ -2766,7 +2778,6 @@ do
         if placed then
             for _, m in ipairs(placed:GetChildren()) do
                 local mName = string.lower(m.Name:gsub("%s+", ""))
-                -- Delete if it matches the current text box OR the last item spawned by the circle
                 if mName == tItem or mName == IC.lastSpawned or tItem == "" then
                     if tostring(m:GetAttribute("owner_id")) == tostring(IC.Player.UserId) then
                         task.spawn(function()
@@ -2791,18 +2802,16 @@ do
         if IC.On then
             IC.Btn.Text = "⭕ Item Circle: ON"
             IC.Btn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
-            IC.Last = nil 
+            IC.LastPos = nil 
         else
             IC.Btn.Text = "⭕ Item Circle: OFF"
             IC.Btn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
-            -- wipeC() removed from here! Items will stay placed when turned off.
-            IC.Last = nil
+            IC.LastPos = nil
         end
     end)
     
-    -- Forces the circle to rebuild the exact moment you finish typing a new item name
-    IC.NameBox.FocusLost:Connect(function() IC.Last = nil end)
-    IC.LimBox.FocusLost:Connect(function() IC.Last = nil end)
+    IC.NameBox.FocusLost:Connect(function() IC.LastPos = nil end)
+    IC.LimBox.FocusLost:Connect(function() IC.LastPos = nil end)
 
     IC.Player.CharacterAdded:Connect(function()
         if IC.On then
@@ -2820,12 +2829,23 @@ do
                 local hrp = char and char:FindFirstChild("HumanoidRootPart")
                 if hrp then
                     local rebuild = false
-                    if IC.cRad ~= IC.tRad and (tick() - IC.tick) > 0.4 then
+                    
+                    -- Capture flattened facing direction
+                    local _, yRot, _ = hrp.CFrame:ToEulerAnglesYXZ()
+                    local flatCF = CFrame.new(hrp.Position) * CFrame.Angles(0, yRot, 0)
+                    
+                    -- Check if sliders changed
+                    if (IC.cRad ~= IC.tRad or IC.cDeg ~= IC.tDeg) and (tick() - IC.tick) > 0.4 then
                         IC.cRad = IC.tRad
+                        IC.cDeg = IC.tDeg
+                        IC.LastCF = flatCF
                         rebuild = true
                     end
-                    if not IC.Last or (hrp.Position - IC.Last).Magnitude > 8 then
-                        IC.Last = hrp.Position
+                    
+                    -- Check if player moved
+                    if not IC.LastPos or (hrp.Position - IC.LastPos).Magnitude > 8 then
+                        IC.LastPos = hrp.Position
+                        IC.LastCF = flatCF
                         rebuild = true
                     end
                     
@@ -2837,14 +2857,12 @@ do
                         local lim = math.clamp(tonumber(IC.LimBox.Text) or 15, 1, 21) 
                         
                         if iName ~= "" then
-                            -- Save what we are spawning so we can clear it properly later
                             IC.lastSpawned = string.lower(iName:gsub("%s+", ""))
                             
                             local RS = game:GetService("ReplicatedStorage")
                             local lModel = nil
                             local lpFolder = RS:FindFirstChild("LargePlaceables")
                             
-                            -- Smart Fuzzy Search (Fixes the "CampingChair" vs "Camping Chair" bug)
                             if lpFolder then
                                 for _, v in ipairs(lpFolder:GetChildren()) do
                                     if string.lower(v.Name:gsub("%s+", "")) == IC.lastSpawned then
@@ -2857,15 +2875,26 @@ do
                             local Get = getgenv().Get or (getgenv().g and getgenv().g.Get)
                             local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
                             
+                            local radArc = math.rad(IC.cDeg)
+                            
                             for i = 1, lim do
-                                local angle = (math.pi * 2 / lim) * i
-                                local x = math.cos(angle) * IC.cRad
-                                local z = math.sin(angle) * IC.cRad
-                                local spawnPos = IC.Last + Vector3.new(x, 0, z)
+                                local angle
+                                if IC.cDeg == 360 then
+                                    angle = (math.pi * 2 / lim) * i
+                                else
+                                    -- Calculate spread so it perfectly centers in front of the player's view
+                                    local step = lim > 1 and (radArc / (lim - 1)) or 0
+                                    angle = (-radArc / 2) + (step * (i - 1))
+                                end
+                                
+                                -- Applies the math to match your exact facing orientation (-Z is forward)
+                                local targetCF = IC.LastCF * CFrame.Angles(0, angle, 0) * CFrame.new(0, 0, -IC.cRad)
+                                local spawnPos = targetCF.Position
                                 
                                 task.spawn(function()
                                     if lModel and Get then
-                                        pcall(function() Get("large_place", lModel, CFrame.new(spawnPos, IC.Last)) end)
+                                        -- Make the placed item face you naturally
+                                        pcall(function() Get("large_place", lModel, CFrame.new(spawnPos, IC.LastPos)) end)
                                     elseif Send then
                                         pcall(function() Send("get_tool", iName) end)
                                         task.wait(0.15)
@@ -2893,7 +2922,7 @@ applySmartHold(
     ToolMainBtn,    
     ToolContainer,  
     40,             
-    590,            
+    640,            -- Increased to 640px to neatly fit the new Arc Degrees slider!
     0.5,              
     function()
         if ToolInput and ToolInput.Text ~= "" then
@@ -2909,7 +2938,6 @@ applySmartHold(
         end
     end
 )
-
 
 -- ==============================================================
 -- 🚙 SMART VEHICLE SPAWNER & TANK CARPET BOMBER (Hold for Options)
