@@ -6,6 +6,17 @@ local MarketplaceService = game:GetService("MarketplaceService")
 local InsertService = game:GetService("InsertService")
 local HttpService = game:GetService("HttpService")
 local UserInputService = game:GetService("UserInputService")
+--logger
+local LogService = game:GetService("LogService")
+
+LogService.MessageOut:Connect(function(message, messageType)
+    if messageType == Enum.MessageType.MessageOutput or messageType == Enum.MessageType.MessageError then
+        if message:find("attempt to call a nil value") then
+            print("🚨 ERROR DETECTED! Context trace:")
+            print(debug.traceback()) -- Forces Lua to dump the actual local script lines
+        end
+    end
+end)
 
 ---load network
 pcall(function()
