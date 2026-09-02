@@ -5188,114 +5188,136 @@ openSavedOutfitDetail = function(outfitInfo)
 end
 
 -- ==========================================
--- SAVED OUTFITS LIST BUILDER
+-- SAVED OUTFITS LIST BUILDER (ANTI-LAG & MEMORY OPTIMIZED)
 -- ==========================================
 populateSavedOutfits = function()
     for _, child in pairs(SavedScroll:GetChildren()) do if child:IsA("TextButton") then child:Destroy() end end
 
-    local folderName = "lifetogether_admin_savedoutfits"
-    if not isfolder or not isfolder(folderName) then return end
+    if not isfolder or not isfolder("lifetogether_admin_savedoutfits") then return end
 
     local outfitsList = {}
-    for _, file in ipairs(listfiles(folderName)) do
+    for _, file in ipairs(listfiles("lifetogether_admin_savedoutfits")) do
         if file:match("%.json$") then
             local name = file:match("([^/\\]+)%.json$")
             local ok, content = pcall(readfile, file)
             if ok and content and #content > 0 then
                 local success, data = pcall(function() return HttpService:JSONDecode(content) end)
                 if success and type(data) == "table" then
-                    table.insert(outfitsList, {name = name, data = data, file = file, isScanned = (string.find(name, "_Scanned") ~= nil), time = tonumber(data.SavedAtTime) or 0})
+                    table.insert(outfitsList, {
+                        name = name, 
+                        data = data, 
+                        file = file, 
+                        isScanned = (string.find(name, "_Scanned") ~= nil), 
+                        time = tonumber(data.SavedAtTime) or 0
+                    })
                 end
             end
         end
     end
 
     table.sort(outfitsList, function(a, b)
-        if a.isScanned and not b.isScanned then return true elseif not a.isScanned and b.isScanned then return false else
-            if a.time ~= b.time then return a.time > b.time else return string.lower(a.name) < string.lower(b.name) end
+        if a.isScanned and not b.isScanned then return true 
+        elseif not a.isScanned and b.isScanned then return false 
+        else
+            if a.time ~= b.time then return a.time > b.time 
+            else return string.lower(a.name) < string.lower(b.name) end
         end
     end)
 
-    for _, outfitInfo in ipairs(outfitsList) do
-        local name, data = outfitInfo.name, outfitInfo.data
+    local scannedCount = 0
+    for idx, info in ipairs(outfitsList) do
+        local showItem = true
+        if info.isScanned then
+            scannedCount = scannedCount + 1
+            if scannedCount > 8 then showItem = false end
+        end
 
         local Entry = Instance.new("TextButton", SavedScroll)
         Entry.BackgroundColor3, Entry.BorderSizePixel, Entry.Text = Color3.fromRGB(24, 24, 30), 0, ""
+        Entry.Visible = showItem
+        Entry:SetAttribute("DefaultVisible", showItem)
         Instance.new("UICorner", Entry).CornerRadius = UDim.new(0, 8)
 
-        local SmallViewport = Instance.new("ViewportFrame", Entry)
-        SmallViewport.Name, SmallViewport.BackgroundColor3, SmallViewport.BorderSizePixel = "ViewportFrame", Color3.fromRGB(15, 15, 18), 0
-        Instance.new("UICorner", SmallViewport).CornerRadius = UDim.new(0, 6)
-
-        local smallWorldModel = Instance.new("WorldModel", SmallViewport)
-
-        task.spawn(function()
-            local desc = Instance.new("HumanoidDescription")
-            desc.Shirt, desc.Pants, desc.GraphicTShirt = data.Shirt or 0, data.Pants or 0, data.GraphicTShirt or 0
-            desc.Face, desc.Head = data.Face or 0, data.Head or 0
-            if data.SkinTone then
-                local c = Color3.new(data.SkinTone[1], data.SkinTone[2], data.SkinTone[3])
-                desc.HeadColor, desc.TorsoColor, desc.LeftArmColor, desc.RightArmColor, desc.LeftLegColor, desc.RightLegColor = c, c, c, c, c, c
-            end
-            if data.Accessories then
-                local accGroups = {}
-                for _, acc in pairs(data.Accessories) do
-                    local typeName = acc.AccessoryType
-                    if not string.find(typeName, "Accessory") then typeName = typeName .. "Accessory" end
-                    accGroups[typeName] = accGroups[typeName] and (accGroups[typeName] .. "," .. tostring(acc.AssetId)) or tostring(acc.AssetId)
-                end
-                for prop, val in pairs(accGroups) do pcall(function() desc[prop] = val end) end
-            end
-
-            local dummy
-            pcall(function() dummy = Players:CreateHumanoidModelFromDescription(desc, Enum.HumanoidRigType.R15) end)
-            if not dummy then
-                pcall(function()
-                    local myChar = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-                    local oldArch = myChar.Archivable
-                    myChar.Archivable = true
-                    dummy = myChar:Clone()
-                    myChar.Archivable = oldArch
-                    local hum = dummy:FindFirstChildOfClass("Humanoid")
-                    if hum then hum:ApplyDescription(desc) end
-                end)
-            end
-
-            if dummy then
-                for _, v in pairs(dummy:GetDescendants()) do if v:IsA("Script") or v:IsA("LocalScript") then v:Destroy() end end
-                dummy:PivotTo(CFrame.new(0, 0, 0))
-                dummy.Parent = smallWorldModel
-                local camera = Instance.new("Camera", SmallViewport)
-                local hrp = dummy:FindFirstChild("HumanoidRootPart") or dummy:FindFirstChild("UpperTorso") or dummy:FindFirstChild("Torso")
-                if hrp then
-                    camera.CFrame = hrp.CFrame * CFrame.new(0, 0.5, -5.5) * CFrame.Angles(0, math.pi, 0)
-                    camera.Focus = hrp.CFrame
-                end
-                SmallViewport.CurrentCamera = camera
-            end
-        end)
-
         local NameBox = Instance.new("TextLabel", Entry)
-        NameBox.Name, NameBox.BackgroundTransparency, NameBox.Text = "NameBox", 1, name
-        NameBox.TextColor3 = outfitInfo.isScanned and Color3.fromRGB(0, 255, 200) or Color3.fromRGB(255, 255, 255)
+        NameBox.Name, NameBox.BackgroundTransparency, NameBox.Text = "NameBox", 1, info.name
+        NameBox.TextColor3 = info.isScanned and Color3.fromRGB(0, 255, 200) or Color3.fromRGB(255, 255, 255)
         NameBox.Font, NameBox.TextSize, NameBox.TextTruncate = Enum.Font.SourceSansBold, 12, Enum.TextTruncate.AtEnd
-        
+
         if isSavedGridMode then
-            SmallViewport.Size, SmallViewport.Position = UDim2.new(0, 60, 0, 60), UDim2.new(0.5, -30, 0, 5)
             NameBox.Size, NameBox.Position, NameBox.TextXAlignment = UDim2.new(1, -4, 0, 15), UDim2.new(0, 2, 0, 75), Enum.TextXAlignment.Center
         else
-            SmallViewport.Size, SmallViewport.Position = UDim2.new(0, 40, 0, 40), UDim2.new(0, 5, 0, 5)
             NameBox.Size, NameBox.Position, NameBox.TextXAlignment = UDim2.new(1, -60, 0, 40), UDim2.new(0, 55, 0, 0), Enum.TextXAlignment.Left
         end
-        
-        Entry.MouseButton1Click:Connect(function() openSavedOutfitDetail(outfitInfo) end)
+
+        Entry.MouseButton1Click:Connect(function() openSavedOutfitDetail(info) end)
+
+        -- 🛡️ MEMORY SAVER: Only spawn 3D Avatars for the visible ones!
+        if showItem then
+            local SmallViewport = Instance.new("ViewportFrame", Entry)
+            SmallViewport.Name, SmallViewport.BackgroundColor3, SmallViewport.BorderSizePixel = "ViewportFrame", Color3.fromRGB(15, 15, 18), 0
+            Instance.new("UICorner", SmallViewport).CornerRadius = UDim.new(0, 6)
+            
+            if isSavedGridMode then
+                SmallViewport.Size, SmallViewport.Position = UDim2.new(0, 60, 0, 60), UDim2.new(0.5, -30, 0, 5)
+            else
+                SmallViewport.Size, SmallViewport.Position = UDim2.new(0, 40, 0, 40), UDim2.new(0, 5, 0, 5)
+            end
+
+            local smallWorldModel = Instance.new("WorldModel", SmallViewport)
+
+            task.spawn(function()
+                local d = info.data
+                local desc = Instance.new("HumanoidDescription")
+                desc.Shirt, desc.Pants, desc.GraphicTShirt, desc.Face, desc.Head = d.Shirt or 0, d.Pants or 0, d.GraphicTShirt or 0, d.Face or 0, d.Head or 0
+                
+                if d.SkinTone then
+                    local c = Color3.new(d.SkinTone[1], d.SkinTone[2], d.SkinTone[3])
+                    desc.HeadColor, desc.TorsoColor, desc.LeftArmColor, desc.RightArmColor, desc.LeftLegColor, desc.RightLegColor = c, c, c, c, c, c
+                end
+                
+                if d.Accessories then
+                    local accGroups = {}
+                    for _, acc in pairs(d.Accessories) do
+                        local tName = acc.AccessoryType
+                        if not string.find(tName, "Accessory") then tName = tName .. "Accessory" end
+                        accGroups[tName] = accGroups[tName] and (accGroups[tName] .. "," .. tostring(acc.AssetId)) or tostring(acc.AssetId)
+                    end
+                    for prop, val in pairs(accGroups) do pcall(function() desc[prop] = val end) end
+                end
+
+                local dummy
+                pcall(function() dummy = Players:CreateHumanoidModelFromDescription(desc, Enum.HumanoidRigType.R15) end)
+                if not dummy then
+                    pcall(function()
+                        local myChar = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+                        local oldArch = myChar.Archivable
+                        myChar.Archivable = true
+                        dummy = myChar:Clone()
+                        myChar.Archivable = oldArch
+                        local hum = dummy:FindFirstChildOfClass("Humanoid")
+                        if hum then hum:ApplyDescription(desc) end
+                    end)
+                end
+
+                if dummy then
+                    for _, v in pairs(dummy:GetDescendants()) do if v:IsA("Script") or v:IsA("LocalScript") then v:Destroy() end end
+                    dummy:PivotTo(CFrame.new(0, 0, 0))
+                    dummy.Parent = smallWorldModel
+                    local camera = Instance.new("Camera", SmallViewport)
+                    local hrp = dummy:FindFirstChild("HumanoidRootPart") or dummy:FindFirstChild("UpperTorso") or dummy:FindFirstChild("Torso")
+                    if hrp then
+                        camera.CFrame = hrp.CFrame * CFrame.new(0, 0.5, -5.5) * CFrame.Angles(0, math.pi, 0)
+                        camera.Focus = hrp.CFrame
+                    end
+                    SmallViewport.CurrentCamera = camera
+                end
+            end)
+        end
+        if idx % 10 == 0 then task.wait() end
     end
     
-    -- 🔥 SCROLL FIX: Forces the scroll bar to expand perfectly after loading
     task.delay(0.2, function()
-        if SavedGrid and SavedScroll then
-            SavedScroll.CanvasSize = UDim2.new(0, 0, 0, SavedGrid.AbsoluteContentSize.Y + 50)
-        end
+        if SavedGrid and SavedScroll then SavedScroll.CanvasSize = UDim2.new(0, 0, 0, SavedGrid.AbsoluteContentSize.Y + 50) end
     end)
 end
 
