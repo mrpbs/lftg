@@ -5120,7 +5120,7 @@ openSavedOutfitDetail = function(outfitInfo)
 
     local worldModel = Instance.new("WorldModel", bigViewport)
 
-    task.spawn(function()
+       task.spawn(function()
         local desc = Instance.new("HumanoidDescription")
         desc.Shirt, desc.Pants, desc.GraphicTShirt = data.Shirt or 0, data.Pants or 0, data.GraphicTShirt or 0
         desc.Face, desc.Head = data.Face or 0, data.Head or 0
@@ -5152,8 +5152,10 @@ openSavedOutfitDetail = function(outfitInfo)
                 if hum then hum:ApplyDescription(desc) end
             end)
         end
+        
         if dummy then
             for _, v in pairs(dummy:GetDescendants()) do if v:IsA("Script") or v:IsA("LocalScript") then v:Destroy() end end
+            -- EXACT COPY FROM DEEP SCAN: Centers the model to fix Layered Clothing offsets!
             dummy:PivotTo(CFrame.new(0, 0, 0))
             dummy.Parent = worldModel
             local camera = Instance.new("Camera", bigViewport)
@@ -5165,6 +5167,7 @@ openSavedOutfitDetail = function(outfitInfo)
             bigViewport.CurrentCamera = camera
         end
     end)
+
 
     local actionFrame = Instance.new("Frame", AssetScroll)
     actionFrame.Size, actionFrame.BackgroundTransparency, actionFrame.LayoutOrder = UDim2.new(1, -5, 0, 95), 1, 2
@@ -5283,7 +5286,7 @@ renderSavedPage = function()
 
         local smallWorldModel = Instance.new("WorldModel", SmallViewport)
 
-        task.spawn(function()
+           task.spawn(function()
             local desc = Instance.new("HumanoidDescription")
             local d = info.data
             desc.Shirt, desc.Pants, desc.GraphicTShirt = d.Shirt or 0, d.Pants or 0, d.GraphicTShirt or 0
@@ -5306,9 +5309,12 @@ renderSavedPage = function()
             pcall(function() dummy = Players:CreateHumanoidModelFromDescription(desc, Enum.HumanoidRigType.R15) end)
             if dummy then
                 for _, v in pairs(dummy:GetDescendants()) do if v:IsA("Script") or v:IsA("LocalScript") then v:Destroy() end end
+                -- EXACT COPY FROM DEEP SCAN: Centers the model
                 dummy:PivotTo(CFrame.new(0, 0, 0))
                 dummy.Parent = smallWorldModel
                 local camera = Instance.new("Camera", SmallViewport)
+                
+                -- Targets the HEAD directly with the correct -2.5 offset for the Grid Thumbnail
                 local head = dummy:FindFirstChild("Head")
                 if head then
                     camera.CFrame = head.CFrame * CFrame.new(0, 0, -2.5) * CFrame.Angles(0, math.pi, 0)
