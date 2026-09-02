@@ -849,11 +849,18 @@ SavedSearchBox:GetPropertyChangedSignal("Text"):Connect(function()
     for _, child in ipairs(SavedScroll:GetChildren()) do
         if child:IsA("TextButton") then
             local nb = child:FindFirstChild("NameBox")
-            if nb then child.Visible = (string.find(string.lower(nb.Text), query) ~= nil) end
+            if nb then
+                if query == "all" then
+                    child.Visible = true
+                elseif query == "" then
+                    child.Visible = child:GetAttribute("DefaultVisible") or false
+                else
+                    child.Visible = (string.find(string.lower(nb.Text), query) ~= nil)
+                end
+            end
         end
     end
 end)
-
 
 -- ========== NO CLIP TOOL (State-Saving Hybrid) ==========
 local RunService = game:GetService("RunService")
@@ -3732,13 +3739,25 @@ end)
 
 
 -- ==========================================
--- TAB NAVIGATION LOGIC
+-- TAB NAVIGATION LOGIC (WITH BACK BUTTON FIX)
 -- ==========================================
+local isViewingSaved = false
+
 BackBtn.MouseButton1Click:Connect(function()
-    AssetScroll.Visible, SavedScroll.Visible, ToolsScroll.Visible = false, false, false
-    PlayerScroll.Visible, PlayerSearchBar.Visible, SavedSearchBar.Visible = true, true, false
-    BackBtn.Visible, RefreshBtn.Visible, SavedTabBtn.Visible, ToolsTabBtn.Visible = false, true, true, true
-    Title.Text = "🧬 Deep Live Outfit Scanner"
+    AssetScroll.Visible, ToolsScroll.Visible = false, false
+    BackBtn.Visible = false
+    
+    if isViewingSaved then
+        SavedScroll.Visible, SavedSearchBar.Visible = true, true
+        PlayerScroll.Visible, PlayerSearchBar.Visible = false, false
+        RefreshBtn.Visible, SavedTabBtn.Visible, ToolsTabBtn.Visible = false, false, false
+        Title.Text = "📁 Saved Outfits"
+    else
+        SavedScroll.Visible, SavedSearchBar.Visible = false, false
+        PlayerScroll.Visible, PlayerSearchBar.Visible = true, true
+        RefreshBtn.Visible, SavedTabBtn.Visible, ToolsTabBtn.Visible = true, true, true
+        Title.Text = "🧬 Deep Live Outfit Scanner"
+    end
 end)
 
 SavedTabBtn.MouseButton1Click:Connect(function()
@@ -3755,6 +3774,7 @@ ToolsTabBtn.MouseButton1Click:Connect(function()
     BackBtn.Visible, RefreshBtn.Visible, SavedTabBtn.Visible, ToolsTabBtn.Visible = true, false, false, false
     Title.Text = "🛠️ Utility Tools"
 end)
+
 ---
 local function createDetailedAssetCard(categoryName, assetId, rawPropertySource)
     local numericId = tonumber(assetId)
@@ -5026,9 +5046,11 @@ if outfitData.ProportionScale then for i=1,3 do Send("body_scale", "ProportionSc
 end
 ----
 -- ==========================================
--- SAVED OUTFIT DETAILED VIEW (OPENS WHEN CLICKED)
+-- SAVED OUTFIT DETAILED VIEW
 -- ==========================================
 openSavedOutfitDetail = function(outfitInfo)
+    isViewingSaved = true -- TRACKS WHERE WE CAME FROM
+    
     local data, name, file = outfitInfo.data, outfitInfo.name, outfitInfo.file
     local folderName = "lifetogether_admin_savedoutfits"
 
@@ -5128,7 +5150,7 @@ openSavedOutfitDetail = function(outfitInfo)
     WearBtn.MouseButton1Click:Connect(function()
         WearBtn.Text = "..."
         local payload = buildBatchPayload(data)
-        local Send, Get = getgenv().Send or (getgenv().g and getgenv().g.Send), getgenv().Get or (getgenv().g and getgenv().g.Get)
+        local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
         if Send then
             task.spawn(function()
                 for i = 1, 3 do Send("wear_outfit_from_desc", payload) task.wait(0.1) end
@@ -5188,7 +5210,7 @@ openSavedOutfitDetail = function(outfitInfo)
 end
 
 -- ==========================================
--- SAVED OUTFITS LIST BUILDER (ANTI-LAG & MEMORY OPTIMIZED)
+-- SAVED OUTFITS LIST BUILDER (ANTI-LAG & THUMBNAIL FIX)
 -- ==========================================
 populateSavedOutfits = function()
     for _, child in pairs(SavedScroll:GetChildren()) do if child:IsA("TextButton") then child:Destroy() end end
@@ -5251,7 +5273,6 @@ populateSavedOutfits = function()
 
         Entry.MouseButton1Click:Connect(function() openSavedOutfitDetail(info) end)
 
-        -- 🛡️ MEMORY SAVER: Only spawn 3D Avatars for the visible ones!
         if showItem then
             local SmallViewport = Instance.new("ViewportFrame", Entry)
             SmallViewport.Name, SmallViewport.BackgroundColor3, SmallViewport.BorderSizePixel = "ViewportFrame", Color3.fromRGB(15, 15, 18), 0
@@ -5304,10 +5325,12 @@ populateSavedOutfits = function()
                     dummy:PivotTo(CFrame.new(0, 0, 0))
                     dummy.Parent = smallWorldModel
                     local camera = Instance.new("Camera", SmallViewport)
-                    local hrp = dummy:FindFirstChild("HumanoidRootPart") or dummy:FindFirstChild("UpperTorso") or dummy:FindFirstChild("Torso")
-                    if hrp then
-                        camera.CFrame = hrp.CFrame * CFrame.new(0, 0.5, -5.5) * CFrame.Angles(0, math.pi, 0)
-                        camera.Focus = hrp.CFrame
+                    
+                    -- 🔥 FIX: Target the Head like the Player Scanner
+                    local head = dummy:FindFirstChild("Head")
+                    if head then
+                        camera.CFrame = head.CFrame * CFrame.new(0, 0, -2.5) * CFrame.Angles(0, math.pi, 0)
+                        camera.Focus = head.CFrame
                     end
                     SmallViewport.CurrentCamera = camera
                 end
@@ -5325,11 +5348,10 @@ end
 -- PLAYER LIST BUILDER
 -- ==========================================
 local function populatePlayerList()
-    for _, child in pairs(PlayerScroll:GetChildren()) do
-        if child:IsA("TextButton") then child:Destroy() end
-    end
+    for _, child in pairs(PlayerScroll:GetChildren()) do if child:IsA("TextButton") then child:Destroy() end end
 
-    for _, player in pairs(Players:GetPlayers()) do
+    local players = Players:GetPlayers()
+    for idx, player in ipairs(players) do
         local PlayerBtn = Instance.new("TextButton", PlayerScroll)
         PlayerBtn.BackgroundColor3, PlayerBtn.BorderSizePixel, PlayerBtn.Text = Color3.fromRGB(24, 24, 30), 0, ""
         Instance.new("UICorner", PlayerBtn).CornerRadius = UDim.new(0, 8)
@@ -5381,17 +5403,18 @@ local function populatePlayerList()
             end
         end)
         
-        PlayerBtn.MouseButton1Click:Connect(function() deepScanPlayerOutfit(player, cachedDescription) end)
+        PlayerBtn.MouseButton1Click:Connect(function() 
+            isViewingSaved = false -- TRACKS WHERE WE CAME FROM
+            deepScanPlayerOutfit(player, cachedDescription) 
+        end)
+        
+        if idx % 10 == 0 then task.wait() end 
     end
     
-    -- 🔥 SCROLL FIX: Forces the scroll bar to expand perfectly after loading
     task.delay(0.2, function()
-        if PlayerGrid and PlayerScroll then
-            PlayerScroll.CanvasSize = UDim2.new(0, 0, 0, PlayerGrid.AbsoluteContentSize.Y + 50)
-        end
+        if PlayerGrid and PlayerScroll then PlayerScroll.CanvasSize = UDim2.new(0, 0, 0, PlayerGrid.AbsoluteContentSize.Y + 50) end
     end)
 end
 
--- Initialize
 RefreshBtn.MouseButton1Click:Connect(populatePlayerList)
 populatePlayerList()
