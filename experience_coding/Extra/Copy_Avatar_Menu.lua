@@ -718,6 +718,122 @@ local AssetScroll, AssetListLayout = createTabScroll("AssetScroll", false)
 local SavedScroll, SavedListLayout = createTabScroll("SavedScroll", false)
 local ToolsScroll, ToolsListLayout = createTabScroll("ToolsScroll", false)
 
+-- ==========================================
+-- 🔍 SEARCH BAR & GRID TOGGLE
+-- ==========================================
+local PlayerSearchBar = Instance.new("Frame")
+PlayerSearchBar.Size = UDim2.new(1, -16, 0, 30)
+PlayerSearchBar.Position = UDim2.new(0, 8, 0, 0)
+PlayerSearchBar.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+PlayerSearchBar.BorderSizePixel = 0
+PlayerSearchBar.Parent = ContentContainer
+Instance.new("UICorner", PlayerSearchBar).CornerRadius = UDim.new(0, 6)
+
+local SearchBox = Instance.new("TextBox")
+SearchBox.Size = UDim2.new(1, -40, 1, 0)
+SearchBox.Position = UDim2.new(0, 10, 0, 0)
+SearchBox.BackgroundTransparency = 1
+SearchBox.PlaceholderText = "🔍 Search Players..."
+SearchBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+SearchBox.Font = Enum.Font.SourceSansBold
+SearchBox.TextSize = 14
+SearchBox.TextXAlignment = Enum.TextXAlignment.Left
+SearchBox.ClearTextOnFocus = false
+SearchBox.Parent = PlayerSearchBar
+
+local ViewToggleBtn = Instance.new("TextButton")
+ViewToggleBtn.Size = UDim2.new(0, 30, 0, 30)
+ViewToggleBtn.Position = UDim2.new(1, -30, 0, 0)
+ViewToggleBtn.BackgroundTransparency = 1
+ViewToggleBtn.Text = "▦"
+ViewToggleBtn.TextColor3 = Color3.fromRGB(0, 255, 200)
+ViewToggleBtn.Font = Enum.Font.SourceSansBold
+ViewToggleBtn.TextSize = 18
+ViewToggleBtn.Parent = PlayerSearchBar
+
+PlayerScroll.Position = UDim2.new(0, 8, 0, 35)
+PlayerScroll.Size = UDim2.new(1, -16, 1, -45)
+
+PlayerListLayout:Destroy()
+local PlayerGrid = Instance.new("UIGridLayout")
+PlayerGrid.SortOrder = Enum.SortOrder.LayoutOrder
+PlayerGrid.CellPadding = UDim2.new(0.02, 0, 0.02, 0)
+PlayerGrid.CellSize = UDim2.new(0.235, 0, 0, 105) -- Default: 4 Items Per Row
+PlayerGrid.Parent = PlayerScroll
+
+PlayerGrid:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    PlayerScroll.CanvasSize = UDim2.new(0, 0, 0, PlayerGrid.AbsoluteContentSize.Y + 10)
+end)
+
+local isGridMode = true
+ViewToggleBtn.MouseButton1Click:Connect(function()
+    isGridMode = not isGridMode
+    if isGridMode then
+        ViewToggleBtn.Text = "▦"
+        PlayerGrid.CellSize = UDim2.new(0.235, 0, 0, 105)
+        
+        for _, btn in ipairs(PlayerScroll:GetChildren()) do
+            if btn:IsA("TextButton") then
+                local vp = btn:FindFirstChild("ViewportFrame")
+                local dn = btn:FindFirstChild("DisplayName")
+                local un = btn:FindFirstChild("Username")
+                
+                if vp and dn and un then
+                    vp.Size = UDim2.new(0, 60, 0, 60)
+                    vp.Position = UDim2.new(0.5, -30, 0, 5)
+                    
+                    dn.Size = UDim2.new(1, -4, 0, 15)
+                    dn.Position = UDim2.new(0, 2, 0, 70)
+                    dn.TextXAlignment = Enum.TextXAlignment.Center
+                    
+                    un.Size = UDim2.new(1, -4, 0, 15)
+                    un.Position = UDim2.new(0, 2, 0, 85)
+                    un.TextXAlignment = Enum.TextXAlignment.Center
+                end
+            end
+        end
+    else
+        ViewToggleBtn.Text = "☰"
+        PlayerGrid.CellSize = UDim2.new(1, -10, 0, 50)
+        
+        for _, btn in ipairs(PlayerScroll:GetChildren()) do
+            if btn:IsA("TextButton") then
+                local vp = btn:FindFirstChild("ViewportFrame")
+                local dn = btn:FindFirstChild("DisplayName")
+                local un = btn:FindFirstChild("Username")
+                
+                if vp and dn and un then
+                    vp.Size = UDim2.new(0, 40, 0, 40)
+                    vp.Position = UDim2.new(0, 5, 0, 5)
+                    
+                    dn.Size = UDim2.new(1, -60, 0, 20)
+                    dn.Position = UDim2.new(0, 55, 0, 5)
+                    dn.TextXAlignment = Enum.TextXAlignment.Left
+                    
+                    un.Size = UDim2.new(1, -60, 0, 20)
+                    un.Position = UDim2.new(0, 55, 0, 25)
+                    un.TextXAlignment = Enum.TextXAlignment.Left
+                end
+            end
+        end
+    end
+end)
+
+SearchBox:GetPropertyChangedSignal("Text"):Connect(function()
+    local query = string.lower(SearchBox.Text)
+    for _, child in ipairs(PlayerScroll:GetChildren()) do
+        if child:IsA("TextButton") then
+            local dn = child:FindFirstChild("DisplayName")
+            local un = child:FindFirstChild("Username")
+            if dn and un then
+                local match = string.find(string.lower(dn.Text), query) or string.find(string.lower(un.Text), query)
+                child.Visible = (match ~= nil)
+            end
+        end
+    end
+end)
+
+
 -- ========== NO CLIP TOOL (State-Saving Hybrid) ==========
 local RunService = game:GetService("RunService")
 local noclipEnabled = false
@@ -3595,12 +3711,12 @@ end)
 
 -- We need to forward-declare the populate function so the button can call it
 local populateSavedOutfits
-
 BackBtn.MouseButton1Click:Connect(function()
     AssetScroll.Visible = false
     SavedScroll.Visible = false
     ToolsScroll.Visible = false
     PlayerScroll.Visible = true
+    PlayerSearchBar.Visible = true -- < ADD THIS
     
     BackBtn.Visible = false
     RefreshBtn.Visible = true
@@ -3614,6 +3730,7 @@ SavedTabBtn.MouseButton1Click:Connect(function()
     PlayerScroll.Visible = false
     ToolsScroll.Visible = false
     SavedScroll.Visible = true
+    PlayerSearchBar.Visible = false -- < ADD THIS
     
     BackBtn.Visible = true
     RefreshBtn.Visible = false
@@ -3628,6 +3745,7 @@ ToolsTabBtn.MouseButton1Click:Connect(function()
     PlayerScroll.Visible = false
     SavedScroll.Visible = false
     ToolsScroll.Visible = true
+    PlayerSearchBar.Visible = false -- < ADD THIS
     
     BackBtn.Visible = true
     RefreshBtn.Visible = false
@@ -3635,7 +3753,6 @@ ToolsTabBtn.MouseButton1Click:Connect(function()
     ToolsTabBtn.Visible = false
     Title.Text = "🛠️ Utility Tools"
 end)
-
 
 local function createDetailedAssetCard(categoryName, assetId, rawPropertySource)
     local numericId = tonumber(assetId)
@@ -3886,6 +4003,7 @@ local function deepScanPlayerOutfit(targetPlayer, cachedDescription)
     
     Title.Text = "🧬 Scanning: " .. targetPlayer.DisplayName
     PlayerScroll.Visible = false
+    PlayerSearchBar.Visible = false -- < ADD THIS LINE
     AssetScroll.Visible = true
     RefreshBtn.Visible = false
     BackBtn.Visible = true
@@ -5207,40 +5325,49 @@ local function populatePlayerList()
 
     for _, player in pairs(Players:GetPlayers()) do
         local PlayerBtn = Instance.new("TextButton")
-        PlayerBtn.Size = UDim2.new(1, -5, 0, 50)
         PlayerBtn.BackgroundColor3 = Color3.fromRGB(24, 24, 30)
         PlayerBtn.BorderSizePixel = 0
         PlayerBtn.Text = ""
         PlayerBtn.Parent = PlayerScroll
+        Instance.new("UICorner", PlayerBtn).CornerRadius = UDim.new(0, 8)
 
         local SmallViewport = Instance.new("ViewportFrame")
-        SmallViewport.Size = UDim2.new(0, 40, 0, 40)
-        SmallViewport.Position = UDim2.new(0, 5, 0, 5)
+        SmallViewport.Name = "ViewportFrame"
+        SmallViewport.Size = UDim2.new(0, 60, 0, 60)
+        SmallViewport.Position = UDim2.new(0.5, -30, 0, 5)
         SmallViewport.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
         SmallViewport.BorderSizePixel = 0
         SmallViewport.Parent = PlayerBtn
+        Instance.new("UICorner", SmallViewport).CornerRadius = UDim.new(0, 6)
 
         local DisplayName = Instance.new("TextLabel")
-        DisplayName.Size = UDim2.new(1, -60, 0, 20)
-        DisplayName.Position = UDim2.new(0, 55, 0, 5)
+        DisplayName.Name = "DisplayName"
+        DisplayName.Size = UDim2.new(1, -4, 0, 15)
+        DisplayName.Position = UDim2.new(0, 2, 0, 70)
         DisplayName.Text = player.DisplayName
         DisplayName.TextColor3 = Color3.fromRGB(255, 255, 255)
         DisplayName.Font = Enum.Font.SourceSansBold
-        DisplayName.TextSize = 16
-        DisplayName.TextXAlignment = Enum.TextXAlignment.Left
+        DisplayName.TextSize = 12
+        DisplayName.TextXAlignment = Enum.TextXAlignment.Center
+        DisplayName.TextTruncate = Enum.TextTruncate.AtEnd
         DisplayName.BackgroundTransparency = 1
         DisplayName.Parent = PlayerBtn
 
         local Username = Instance.new("TextLabel")
-        Username.Size = UDim2.new(1, -60, 0, 20)
-        Username.Position = UDim2.new(0, 55, 0, 25)
+        Username.Name = "Username"
+        Username.Size = UDim2.new(1, -4, 0, 15)
+        Username.Position = UDim2.new(0, 2, 0, 85)
         Username.Text = "@" .. player.Name
         Username.TextColor3 = Color3.fromRGB(150, 150, 150)
         Username.Font = Enum.Font.SourceSans
-        Username.TextSize = 14
-        Username.TextXAlignment = Enum.TextXAlignment.Left
+        Username.TextSize = 11
+        Username.TextXAlignment = Enum.TextXAlignment.Center
+        Username.TextTruncate = Enum.TextTruncate.AtEnd
         Username.BackgroundTransparency = 1
         Username.Parent = PlayerBtn
+        
+        -- ... Keep your existing cachedDescription and thumbnail capture logic exactly as it is down here!
+
 
         -- [FIXED] Smart State Capture Logic
         local cachedDescription = nil
