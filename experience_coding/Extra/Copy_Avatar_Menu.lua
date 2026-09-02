@@ -3742,18 +3742,54 @@ end)
 -- TAB NAVIGATION LOGIC (WITH BACK BUTTON FIX)
 -- ==========================================
 local isViewingSaved = false
+local searchQuery = ""
+local customOnly = false
+local currentPage = 1
+local itemsPerPage = 16
+local totalPages = 1
+local allSavedOutfits = {}
+
+-- 🎛️ PAGINATION UI
+local SavedPaginationBar = Instance.new("Frame", ContentContainer)
+SavedPaginationBar.Size, SavedPaginationBar.Position = UDim2.new(1, -16, 0, 30), UDim2.new(0, 8, 1, -35)
+SavedPaginationBar.BackgroundColor3, SavedPaginationBar.Visible = Color3.fromRGB(20, 20, 25), false
+Instance.new("UICorner", SavedPaginationBar).CornerRadius = UDim.new(0, 6)
+
+local PagLayout = Instance.new("UIListLayout", SavedPaginationBar)
+PagLayout.FillDirection, PagLayout.HorizontalAlignment = Enum.FillDirection.Horizontal, Enum.HorizontalAlignment.Center
+PagLayout.SortOrder, PagLayout.Padding, PagLayout.VerticalAlignment = Enum.SortOrder.LayoutOrder, UDim.new(0, 5), Enum.VerticalAlignment.Center
+
+local function createPagBtn(text, order, width)
+    local b = Instance.new("TextButton", SavedPaginationBar)
+    b.Size, b.BackgroundColor3, b.TextColor3 = UDim2.new(0, width, 0, 24), Color3.fromRGB(40, 40, 50), Color3.fromRGB(255, 255, 255)
+    b.Font, b.TextSize, b.Text, b.LayoutOrder = Enum.Font.SourceSansBold, 12, text, order
+    Instance.new("UICorner", b).CornerRadius = UDim.new(0, 4)
+    return b
+end
+
+local BtnFirst = createPagBtn("«", 1, 24)
+local BtnPrev = createPagBtn("<", 2, 24)
+local LblPage = Instance.new("TextLabel", SavedPaginationBar)
+LblPage.Size, LblPage.BackgroundTransparency, LblPage.TextColor3 = UDim2.new(0, 60, 0, 24), 1, Color3.fromRGB(0, 255, 200)
+LblPage.Font, LblPage.TextSize, LblPage.Text, LblPage.LayoutOrder = Enum.Font.SourceSansBold, 12, "Page 1/1", 3
+local BtnCustom = createPagBtn("Custom Fits", 4, 75)
+local BtnNext = createPagBtn(">", 5, 24)
+local BtnLast = createPagBtn("»", 6, 24)
+
+-- Shrink the list to make room for pagination
+SavedScroll.Size = UDim2.new(1, -16, 1, -75)
 
 BackBtn.MouseButton1Click:Connect(function()
     AssetScroll.Visible, ToolsScroll.Visible = false, false
     BackBtn.Visible = false
     
     if isViewingSaved then
-        SavedScroll.Visible, SavedSearchBar.Visible = true, true
+        SavedScroll.Visible, SavedSearchBar.Visible, SavedPaginationBar.Visible = true, true, true
         PlayerScroll.Visible, PlayerSearchBar.Visible = false, false
-        RefreshBtn.Visible, SavedTabBtn.Visible, ToolsTabBtn.Visible = false, false, false
+        RefreshBtn.Visible, SavedTabBtn.Visible, ToolsTabBtn.Visible = false, true, true
         Title.Text = "📁 Saved Outfits"
     else
-        SavedScroll.Visible, SavedSearchBar.Visible = false, false
+        SavedScroll.Visible, SavedSearchBar.Visible, SavedPaginationBar.Visible = false, false, false
         PlayerScroll.Visible, PlayerSearchBar.Visible = true, true
         RefreshBtn.Visible, SavedTabBtn.Visible, ToolsTabBtn.Visible = true, true, true
         Title.Text = "🧬 Deep Live Outfit Scanner"
@@ -3762,18 +3798,21 @@ end)
 
 SavedTabBtn.MouseButton1Click:Connect(function()
     AssetScroll.Visible, PlayerScroll.Visible, ToolsScroll.Visible = false, false, false
-    SavedScroll.Visible, PlayerSearchBar.Visible, SavedSearchBar.Visible = true, false, true
-    BackBtn.Visible, RefreshBtn.Visible, SavedTabBtn.Visible, ToolsTabBtn.Visible = true, false, false, false
+    SavedScroll.Visible, SavedSearchBar.Visible, SavedPaginationBar.Visible = true, true, true
+    PlayerSearchBar.Visible = false 
+    BackBtn.Visible, RefreshBtn.Visible, SavedTabBtn.Visible, ToolsTabBtn.Visible = false, false, true, true
     Title.Text = "📁 Saved Outfits"
     if populateSavedOutfits then populateSavedOutfits() end
 end)
 
 ToolsTabBtn.MouseButton1Click:Connect(function()
     AssetScroll.Visible, PlayerScroll.Visible, SavedScroll.Visible = false, false, false
-    ToolsScroll.Visible, PlayerSearchBar.Visible, SavedSearchBar.Visible = true, false, false
-    BackBtn.Visible, RefreshBtn.Visible, SavedTabBtn.Visible, ToolsTabBtn.Visible = true, false, false, false
+    ToolsScroll.Visible = true
+    PlayerSearchBar.Visible, SavedSearchBar.Visible, SavedPaginationBar.Visible = false, false, false
+    BackBtn.Visible, RefreshBtn.Visible, SavedTabBtn.Visible, ToolsTabBtn.Visible = false, false, true, true
     Title.Text = "🛠️ Utility Tools"
 end)
+
 
 ---
 local function createDetailedAssetCard(categoryName, assetId, rawPropertySource)
@@ -5045,19 +5084,19 @@ if outfitData.ProportionScale then for i=1,3 do Send("body_scale", "ProportionSc
     end
 end
 ----
+
 -- ==========================================
 -- SAVED OUTFIT DETAILED VIEW
 -- ==========================================
 openSavedOutfitDetail = function(outfitInfo)
-    isViewingSaved = true -- TRACKS WHERE WE CAME FROM
-    
+    isViewingSaved = true 
     local data, name, file = outfitInfo.data, outfitInfo.name, outfitInfo.file
     local folderName = "lifetogether_admin_savedoutfits"
 
     for _, child in pairs(AssetScroll:GetChildren()) do if child:IsA("Frame") then child:Destroy() end end
     
     Title.Text = "📁 Viewing: " .. name
-    SavedScroll.Visible, SavedSearchBar.Visible = false, false
+    SavedScroll.Visible, SavedSearchBar.Visible, SavedPaginationBar.Visible = false, false, false
     AssetScroll.Visible, RefreshBtn.Visible, BackBtn.Visible = true, false, true
 
     local avatarFrame = Instance.new("Frame", AssetScroll)
@@ -5067,6 +5106,7 @@ openSavedOutfitDetail = function(outfitInfo)
     local bigViewport = Instance.new("ViewportFrame", avatarFrame)
     bigViewport.Size, bigViewport.BackgroundTransparency = UDim2.new(1, 0, 1, 0), 1
 
+    -- THUMBNAIL FIX: Force WorldModel implementation!
     local worldModel = Instance.new("WorldModel", bigViewport)
 
     task.spawn(function()
@@ -5210,140 +5250,146 @@ openSavedOutfitDetail = function(outfitInfo)
 end
 
 -- ==========================================
--- SAVED OUTFITS LIST BUILDER (ANTI-LAG & THUMBNAIL FIX)
+-- PAGE RENDERER (ELIMINATES ALL LAG)
+-- ==========================================
+local function renderSavedPage()
+    for _, child in pairs(SavedScroll:GetChildren()) do if child:IsA("TextButton") then child:Destroy() end end
+    
+    LblPage.Text = "Page " .. currentPage .. "/" .. totalPages
+    
+    local startIdx = (currentPage - 1) * itemsPerPage + 1
+    local endIdx = math.min(currentPage * itemsPerPage, #allSavedOutfits)
+    
+    for i = startIdx, endIdx do
+        local info = allSavedOutfits[i]
+        local Entry = Instance.new("TextButton", SavedScroll)
+        Entry.BackgroundColor3, Entry.BorderSizePixel, Entry.Text = Color3.fromRGB(24, 24, 30), 0, ""
+        Instance.new("UICorner", Entry).CornerRadius = UDim.new(0, 8)
+
+        local SmallViewport = Instance.new("ViewportFrame", Entry)
+        SmallViewport.Name, SmallViewport.BackgroundColor3, SmallViewport.BorderSizePixel = "ViewportFrame", Color3.fromRGB(15, 15, 18), 0
+        Instance.new("UICorner", SmallViewport).CornerRadius = UDim.new(0, 6)
+
+        -- THUMBNAIL FIX: Use WorldModel for the list view thumbnails!
+        local smallWorldModel = Instance.new("WorldModel", SmallViewport)
+
+        task.spawn(function()
+            local desc = Instance.new("HumanoidDescription")
+            local d = info.data
+            desc.Shirt, desc.Pants, desc.GraphicTShirt = d.Shirt or 0, d.Pants or 0, d.GraphicTShirt or 0
+            desc.Face, desc.Head = d.Face or 0, d.Head or 0
+            if d.SkinTone then
+                local c = Color3.new(d.SkinTone[1], d.SkinTone[2], d.SkinTone[3])
+                desc.HeadColor, desc.TorsoColor, desc.LeftArmColor, desc.RightArmColor, desc.LeftLegColor, desc.RightLegColor = c, c, c, c, c, c
+            end
+            if d.Accessories then
+                local accGroups = {}
+                for _, acc in pairs(d.Accessories) do
+                    local tName = acc.AccessoryType
+                    if not string.find(tName, "Accessory") then tName = tName .. "Accessory" end
+                    accGroups[tName] = accGroups[tName] and (accGroups[tName] .. "," .. tostring(acc.AssetId)) or tostring(acc.AssetId)
+                end
+                for prop, val in pairs(accGroups) do pcall(function() desc[prop] = val end) end
+            end
+
+            local dummy
+            pcall(function() dummy = Players:CreateHumanoidModelFromDescription(desc, Enum.HumanoidRigType.R15) end)
+            if dummy then
+                for _, v in pairs(dummy:GetDescendants()) do if v:IsA("Script") or v:IsA("LocalScript") then v:Destroy() end end
+                dummy:PivotTo(CFrame.new(0, 0, 0))
+                dummy.Parent = smallWorldModel
+                local camera = Instance.new("Camera", SmallViewport)
+                
+                -- THUMBNAIL FIX: Aim directly at the head, just like the player scanner!
+                local head = dummy:FindFirstChild("Head")
+                if head then
+                    camera.CFrame = head.CFrame * CFrame.new(0, 0, -2.5) * CFrame.Angles(0, math.pi, 0)
+                    camera.Focus = head.CFrame
+                end
+                SmallViewport.CurrentCamera = camera
+            end
+        end)
+
+        local NameBox = Instance.new("TextLabel", Entry)
+        NameBox.Name, NameBox.BackgroundTransparency, NameBox.Text = "NameBox", 1, info.name
+        NameBox.TextColor3 = info.isScanned and Color3.fromRGB(0, 255, 200) or Color3.fromRGB(255, 255, 255)
+        NameBox.Font, NameBox.TextSize, NameBox.TextTruncate = Enum.Font.SourceSansBold, 12, Enum.TextTruncate.AtEnd
+        
+        if isSavedGridMode then
+            SmallViewport.Size, SmallViewport.Position = UDim2.new(0, 60, 0, 60), UDim2.new(0.5, -30, 0, 5)
+            NameBox.Size, NameBox.Position, NameBox.TextXAlignment = UDim2.new(1, -4, 0, 15), UDim2.new(0, 2, 0, 75), Enum.TextXAlignment.Center
+        else
+            SmallViewport.Size, SmallViewport.Position = UDim2.new(0, 40, 0, 40), UDim2.new(0, 5, 0, 5)
+            NameBox.Size, NameBox.Position, NameBox.TextXAlignment = UDim2.new(1, -60, 0, 40), UDim2.new(0, 55, 0, 0), Enum.TextXAlignment.Left
+        end
+        
+        Entry.MouseButton1Click:Connect(function() openSavedOutfitDetail(info) end)
+    end
+    
+    task.delay(0.1, function()
+        if SavedGrid and SavedScroll then SavedScroll.CanvasSize = UDim2.new(0, 0, 0, SavedGrid.AbsoluteContentSize.Y + 20) end
+    end)
+end
+
+-- ==========================================
+-- SAVED OUTFITS LIST BUILDER (DATA FETCHING)
 -- ==========================================
 populateSavedOutfits = function()
-    for _, child in pairs(SavedScroll:GetChildren()) do if child:IsA("TextButton") then child:Destroy() end end
+    allSavedOutfits = {}
+    local folderName = "lifetogether_admin_savedoutfits"
+    if not isfolder or not isfolder(folderName) then return end
 
-    if not isfolder or not isfolder("lifetogether_admin_savedoutfits") then return end
-
-    local outfitsList = {}
-    for _, file in ipairs(listfiles("lifetogether_admin_savedoutfits")) do
+    for _, file in ipairs(listfiles(folderName)) do
         if file:match("%.json$") then
             local name = file:match("([^/\\]+)%.json$")
+            local isScanned = (string.find(name, "_Scanned") ~= nil)
+            
+            -- PAGINATION & SEARCH LOGIC: Filter before building!
+            if customOnly and isScanned then continue end
+            if searchQuery ~= "" and not string.find(string.lower(name), searchQuery) then continue end
+            
             local ok, content = pcall(readfile, file)
             if ok and content and #content > 0 then
                 local success, data = pcall(function() return HttpService:JSONDecode(content) end)
                 if success and type(data) == "table" then
-                    table.insert(outfitsList, {
-                        name = name, 
-                        data = data, 
-                        file = file, 
-                        isScanned = (string.find(name, "_Scanned") ~= nil), 
-                        time = tonumber(data.SavedAtTime) or 0
+                    table.insert(allSavedOutfits, {
+                        name = name, data = data, file = file, isScanned = isScanned, time = tonumber(data.SavedAtTime) or 0
                     })
                 end
             end
         end
     end
 
-    table.sort(outfitsList, function(a, b)
-        if a.isScanned and not b.isScanned then return true 
-        elseif not a.isScanned and b.isScanned then return false 
-        else
-            if a.time ~= b.time then return a.time > b.time 
-            else return string.lower(a.name) < string.lower(b.name) end
-        end
+    table.sort(allSavedOutfits, function(a, b)
+        if a.time ~= b.time then return a.time > b.time else return string.lower(a.name) < string.lower(b.name) end
     end)
-
-    local scannedCount = 0
-    for idx, info in ipairs(outfitsList) do
-        local showItem = true
-        if info.isScanned then
-            scannedCount = scannedCount + 1
-            if scannedCount > 8 then showItem = false end
-        end
-
-        local Entry = Instance.new("TextButton", SavedScroll)
-        Entry.BackgroundColor3, Entry.BorderSizePixel, Entry.Text = Color3.fromRGB(24, 24, 30), 0, ""
-        Entry.Visible = showItem
-        Entry:SetAttribute("DefaultVisible", showItem)
-        Instance.new("UICorner", Entry).CornerRadius = UDim.new(0, 8)
-
-        local NameBox = Instance.new("TextLabel", Entry)
-        NameBox.Name, NameBox.BackgroundTransparency, NameBox.Text = "NameBox", 1, info.name
-        NameBox.TextColor3 = info.isScanned and Color3.fromRGB(0, 255, 200) or Color3.fromRGB(255, 255, 255)
-        NameBox.Font, NameBox.TextSize, NameBox.TextTruncate = Enum.Font.SourceSansBold, 12, Enum.TextTruncate.AtEnd
-
-        if isSavedGridMode then
-            NameBox.Size, NameBox.Position, NameBox.TextXAlignment = UDim2.new(1, -4, 0, 15), UDim2.new(0, 2, 0, 75), Enum.TextXAlignment.Center
-        else
-            NameBox.Size, NameBox.Position, NameBox.TextXAlignment = UDim2.new(1, -60, 0, 40), UDim2.new(0, 55, 0, 0), Enum.TextXAlignment.Left
-        end
-
-        Entry.MouseButton1Click:Connect(function() openSavedOutfitDetail(info) end)
-
-        if showItem then
-            local SmallViewport = Instance.new("ViewportFrame", Entry)
-            SmallViewport.Name, SmallViewport.BackgroundColor3, SmallViewport.BorderSizePixel = "ViewportFrame", Color3.fromRGB(15, 15, 18), 0
-            Instance.new("UICorner", SmallViewport).CornerRadius = UDim.new(0, 6)
-            
-            if isSavedGridMode then
-                SmallViewport.Size, SmallViewport.Position = UDim2.new(0, 60, 0, 60), UDim2.new(0.5, -30, 0, 5)
-            else
-                SmallViewport.Size, SmallViewport.Position = UDim2.new(0, 40, 0, 40), UDim2.new(0, 5, 0, 5)
-            end
-
-            local smallWorldModel = Instance.new("WorldModel", SmallViewport)
-
-            task.spawn(function()
-                local d = info.data
-                local desc = Instance.new("HumanoidDescription")
-                desc.Shirt, desc.Pants, desc.GraphicTShirt, desc.Face, desc.Head = d.Shirt or 0, d.Pants or 0, d.GraphicTShirt or 0, d.Face or 0, d.Head or 0
-                
-                if d.SkinTone then
-                    local c = Color3.new(d.SkinTone[1], d.SkinTone[2], d.SkinTone[3])
-                    desc.HeadColor, desc.TorsoColor, desc.LeftArmColor, desc.RightArmColor, desc.LeftLegColor, desc.RightLegColor = c, c, c, c, c, c
-                end
-                
-                if d.Accessories then
-                    local accGroups = {}
-                    for _, acc in pairs(d.Accessories) do
-                        local tName = acc.AccessoryType
-                        if not string.find(tName, "Accessory") then tName = tName .. "Accessory" end
-                        accGroups[tName] = accGroups[tName] and (accGroups[tName] .. "," .. tostring(acc.AssetId)) or tostring(acc.AssetId)
-                    end
-                    for prop, val in pairs(accGroups) do pcall(function() desc[prop] = val end) end
-                end
-
-                local dummy
-                pcall(function() dummy = Players:CreateHumanoidModelFromDescription(desc, Enum.HumanoidRigType.R15) end)
-                if not dummy then
-                    pcall(function()
-                        local myChar = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-                        local oldArch = myChar.Archivable
-                        myChar.Archivable = true
-                        dummy = myChar:Clone()
-                        myChar.Archivable = oldArch
-                        local hum = dummy:FindFirstChildOfClass("Humanoid")
-                        if hum then hum:ApplyDescription(desc) end
-                    end)
-                end
-
-                if dummy then
-                    for _, v in pairs(dummy:GetDescendants()) do if v:IsA("Script") or v:IsA("LocalScript") then v:Destroy() end end
-                    dummy:PivotTo(CFrame.new(0, 0, 0))
-                    dummy.Parent = smallWorldModel
-                    local camera = Instance.new("Camera", SmallViewport)
-                    
-                    -- 🔥 FIX: Target the Head like the Player Scanner
-                    local head = dummy:FindFirstChild("Head")
-                    if head then
-                        camera.CFrame = head.CFrame * CFrame.new(0, 0, -2.5) * CFrame.Angles(0, math.pi, 0)
-                        camera.Focus = head.CFrame
-                    end
-                    SmallViewport.CurrentCamera = camera
-                end
-            end)
-        end
-        if idx % 10 == 0 then task.wait() end
-    end
     
-    task.delay(0.2, function()
-        if SavedGrid and SavedScroll then SavedScroll.CanvasSize = UDim2.new(0, 0, 0, SavedGrid.AbsoluteContentSize.Y + 50) end
-    end)
+    totalPages = math.ceil(#allSavedOutfits / itemsPerPage)
+    if totalPages < 1 then totalPages = 1 end
+    currentPage = 1
+    
+    renderSavedPage()
 end
 
+-- ==========================================
+-- 🎛️ PAGINATION LOGIC CONTROLS
+-- ==========================================
+BtnFirst.MouseButton1Click:Connect(function() if currentPage > 1 then currentPage = 1 renderSavedPage() end end)
+BtnPrev.MouseButton1Click:Connect(function() if currentPage > 1 then currentPage = currentPage - 1 renderSavedPage() end end)
+BtnNext.MouseButton1Click:Connect(function() if currentPage < totalPages then currentPage = currentPage + 1 renderSavedPage() end end)
+BtnLast.MouseButton1Click:Connect(function() if currentPage < totalPages then currentPage = totalPages renderSavedPage() end end)
+
+BtnCustom.MouseButton1Click:Connect(function()
+    customOnly = not customOnly
+    BtnCustom.BackgroundColor3 = customOnly and Color3.fromRGB(40, 170, 90) or Color3.fromRGB(40, 40, 50)
+    populateSavedOutfits()
+end)
+
+SavedSearchBox:GetPropertyChangedSignal("Text"):Connect(function()
+    searchQuery = string.lower(SavedSearchBox.Text)
+    if searchQuery == "all" then searchQuery = "" end -- 'all' bypass
+    populateSavedOutfits()
+end)
 -- ==========================================
 -- PLAYER LIST BUILDER
 -- ==========================================
