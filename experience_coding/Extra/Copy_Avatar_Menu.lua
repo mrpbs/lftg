@@ -2697,13 +2697,13 @@ game:GetService("Players").LocalPlayer.CharacterAdded:Connect(function()
     end
 end)
 -- ==========================================
--- ⭕ ITEM CIRCLE (SMART ARC & RADIUS SYSTEM)
+-- ⭕ ITEM CIRCLE (WHEEL TILT & SMART RADIUS)
 -- ==========================================
 do
     local IC = {
         On = false, LastPos = nil, LastCF = nil, 
         tRad = 15, cRad = 15, 
-        tDeg = 360, cDeg = 360,
+        tTilt = 0, cTilt = 0, -- 0 = Flat on ground, 90 = Standing up like a wheel
         tick = 0, lastSpawned = "",
         Btn = Instance.new("TextButton", ToolContainer),
         NameBox = Instance.new("TextBox", ToolContainer),
@@ -2752,13 +2752,13 @@ do
     IC.RadSlider.Position = UDim2.new(0, 10, 0, 480)
     IC.RadSlider.Size = UDim2.new(1, -20, 0, 50)
 
-    -- Arc / Degrees Slider (NEW!)
-    IC.DegSlider = createSlider(ToolContainer, "Arc Degrees (360 = Full Circle)", 10, 360, 360, function(val)
-        IC.tDeg = val
+    -- Tilt Slider (0 = Flat, 90 = Wheel)
+    IC.TiltSlider = createSlider(ToolContainer, "Circle Tilt (0=Flat, 90=Wheel)", 0, 180, 0, function(val)
+        IC.tTilt = val
         IC.tick = tick()
     end)
-    IC.DegSlider.Position = UDim2.new(0, 10, 0, 530)
-    IC.DegSlider.Size = UDim2.new(1, -20, 0, 50)
+    IC.TiltSlider.Position = UDim2.new(0, 10, 0, 530)
+    IC.TiltSlider.Size = UDim2.new(1, -20, 0, 50)
 
     IC.ClearBtn.Size = UDim2.new(1, -20, 0, 32)
     IC.ClearBtn.Position = UDim2.new(0, 10, 0, 590)
@@ -2834,15 +2834,13 @@ do
                     local _, yRot, _ = hrp.CFrame:ToEulerAnglesYXZ()
                     local flatCF = CFrame.new(hrp.Position) * CFrame.Angles(0, yRot, 0)
                     
-                    -- Check if sliders changed
-                    if (IC.cRad ~= IC.tRad or IC.cDeg ~= IC.tDeg) and (tick() - IC.tick) > 0.4 then
+                    if (IC.cRad ~= IC.tRad or IC.cTilt ~= IC.tTilt) and (tick() - IC.tick) > 0.4 then
                         IC.cRad = IC.tRad
-                        IC.cDeg = IC.tDeg
+                        IC.cTilt = IC.tTilt
                         IC.LastCF = flatCF
                         rebuild = true
                     end
                     
-                    -- Check if player moved
                     if not IC.LastPos or (hrp.Position - IC.LastPos).Magnitude > 8 then
                         IC.LastPos = hrp.Position
                         IC.LastCF = flatCF
@@ -2875,25 +2873,22 @@ do
                             local Get = getgenv().Get or (getgenv().g and getgenv().g.Get)
                             local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
                             
-                            local radArc = math.rad(IC.cDeg)
-                            
                             for i = 1, lim do
-                                local angle
-                                if IC.cDeg == 360 then
-                                    angle = (math.pi * 2 / lim) * i
-                                else
-                                    -- Calculate spread so it perfectly centers in front of the player's view
-                                    local step = lim > 1 and (radArc / (lim - 1)) or 0
-                                    angle = (-radArc / 2) + (step * (i - 1))
-                                end
+                                local angle = (math.pi * 2 / lim) * i
                                 
-                                -- Applies the math to match your exact facing orientation (-Z is forward)
-                                local targetCF = IC.LastCF * CFrame.Angles(0, angle, 0) * CFrame.new(0, 0, -IC.cRad)
+                                -- 1. Calculate the flat circle around origin
+                                local flatOffset = Vector3.new(math.cos(angle) * IC.cRad, 0, math.sin(angle) * IC.cRad)
+                                
+                                -- 2. Apply tilt (pitch rotation)
+                                local tiltedOffset = CFrame.Angles(math.rad(IC.cTilt), 0, 0) * flatOffset
+                                
+                                -- 3. Transform to world space relative to the player's facing CFrame
+                                local targetCF = IC.LastCF * CFrame.new(tiltedOffset)
                                 local spawnPos = targetCF.Position
                                 
                                 task.spawn(function()
                                     if lModel and Get then
-                                        -- Make the placed item face you naturally
+                                        -- Make the item point at the center of the circle
                                         pcall(function() Get("large_place", lModel, CFrame.new(spawnPos, IC.LastPos)) end)
                                     elseif Send then
                                         pcall(function() Send("get_tool", iName) end)
@@ -2922,7 +2917,7 @@ applySmartHold(
     ToolMainBtn,    
     ToolContainer,  
     40,             
-    640,            -- Increased to 640px to neatly fit the new Arc Degrees slider!
+    640,            
     0.5,              
     function()
         if ToolInput and ToolInput.Text ~= "" then
