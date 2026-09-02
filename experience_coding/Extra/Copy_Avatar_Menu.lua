@@ -5376,6 +5376,7 @@ end
 -- SAVED OUTFITS LIST BUILDER
 -- ==========================================
 populateSavedOutfits = function()
+    -- Clear current list
     for _, child in pairs(SavedScroll:GetChildren()) do
         if child:IsA("TextButton") then child:Destroy() end
     end
@@ -5412,7 +5413,6 @@ populateSavedOutfits = function()
     for _, outfitInfo in ipairs(outfitsList) do
         local name = outfitInfo.name
         local data = outfitInfo.data
-        local file = outfitInfo.file
 
         -- Rebuilt as a Profile Card Button exactly like the Players tab!
         local Entry = Instance.new("TextButton")
@@ -5424,8 +5424,6 @@ populateSavedOutfits = function()
 
         local SmallViewport = Instance.new("ViewportFrame")
         SmallViewport.Name = "ViewportFrame"
-        SmallViewport.Size = UDim2.new(0, 60, 0, 60)
-        SmallViewport.Position = UDim2.new(0.5, -30, 0, 5)
         SmallViewport.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
         SmallViewport.BorderSizePixel = 0
         SmallViewport.Parent = Entry
@@ -5441,10 +5439,12 @@ populateSavedOutfits = function()
             desc.GraphicTShirt = data.GraphicTShirt or 0
             desc.Face = data.Face or 0
             desc.Head = data.Head or 0
+            
             if data.SkinTone then
                 local c = Color3.new(data.SkinTone[1], data.SkinTone[2], data.SkinTone[3])
                 desc.HeadColor = c; desc.TorsoColor = c; desc.LeftArmColor = c; desc.RightArmColor = c; desc.LeftLegColor = c; desc.RightLegColor = c
             end
+            
             if data.Accessories then
                 local accGroups = {}
                 for _, acc in pairs(data.Accessories) do
@@ -5486,26 +5486,39 @@ populateSavedOutfits = function()
 
         local NameBox = Instance.new("TextLabel")
         NameBox.Name = "NameBox"
-        NameBox.Size = UDim2.new(1, -4, 0, 15)
-        NameBox.Position = UDim2.new(0, 2, 0, 75)
         NameBox.BackgroundTransparency = 1
         NameBox.Text = name
         NameBox.TextColor3 = outfitInfo.isScanned and Color3.fromRGB(0, 255, 200) or Color3.fromRGB(255, 255, 255)
         NameBox.Font = Enum.Font.SourceSansBold
         NameBox.TextSize = 12
-        NameBox.TextXAlignment = Enum.TextXAlignment.Center
         NameBox.TextTruncate = Enum.TextTruncate.AtEnd
         NameBox.Parent = Entry
         
-        -- Opens the detailed view!
+        -- Adapt to Grid vs Compact Mode smoothly!
+        if isSavedGridMode then
+            SmallViewport.Size = UDim2.new(0, 60, 0, 60)
+            SmallViewport.Position = UDim2.new(0.5, -30, 0, 5)
+            NameBox.Size = UDim2.new(1, -4, 0, 15)
+            NameBox.Position = UDim2.new(0, 2, 0, 75)
+            NameBox.TextXAlignment = Enum.TextXAlignment.Center
+        else
+            SmallViewport.Size = UDim2.new(0, 40, 0, 40)
+            SmallViewport.Position = UDim2.new(0, 5, 0, 5)
+            NameBox.Size = UDim2.new(1, -60, 0, 40)
+            NameBox.Position = UDim2.new(0, 55, 0, 0)
+            NameBox.TextXAlignment = Enum.TextXAlignment.Left
+        end
+        
+        -- Opens the detailed view instead of triggering messy buttons
         Entry.MouseButton1Click:Connect(function()
             openSavedOutfitDetail(outfitInfo)
         end)
     end
 end
 
-
-----
+-- ==========================================
+-- PLAYER LIST BUILDER
+-- ==========================================
 local function populatePlayerList()
     for _, child in pairs(PlayerScroll:GetChildren()) do
         if child:IsA("TextButton") then child:Destroy() end
@@ -5521,8 +5534,6 @@ local function populatePlayerList()
 
         local SmallViewport = Instance.new("ViewportFrame")
         SmallViewport.Name = "ViewportFrame"
-        SmallViewport.Size = UDim2.new(0, 60, 0, 60)
-        SmallViewport.Position = UDim2.new(0.5, -30, 0, 5)
         SmallViewport.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
         SmallViewport.BorderSizePixel = 0
         SmallViewport.Parent = PlayerBtn
@@ -5530,54 +5541,56 @@ local function populatePlayerList()
 
         local DisplayName = Instance.new("TextLabel")
         DisplayName.Name = "DisplayName"
-        DisplayName.Size = UDim2.new(1, -4, 0, 15)
-        DisplayName.Position = UDim2.new(0, 2, 0, 70)
         DisplayName.Text = player.DisplayName
         DisplayName.TextColor3 = Color3.fromRGB(255, 255, 255)
         DisplayName.Font = Enum.Font.SourceSansBold
         DisplayName.TextSize = 12
-        DisplayName.TextXAlignment = Enum.TextXAlignment.Center
         DisplayName.TextTruncate = Enum.TextTruncate.AtEnd
         DisplayName.BackgroundTransparency = 1
         DisplayName.Parent = PlayerBtn
 
         local Username = Instance.new("TextLabel")
         Username.Name = "Username"
-        Username.Size = UDim2.new(1, -4, 0, 15)
-        Username.Position = UDim2.new(0, 2, 0, 85)
         Username.Text = "@" .. player.Name
         Username.TextColor3 = Color3.fromRGB(150, 150, 150)
         Username.Font = Enum.Font.SourceSans
         Username.TextSize = 11
-        Username.TextXAlignment = Enum.TextXAlignment.Center
         Username.TextTruncate = Enum.TextTruncate.AtEnd
         Username.BackgroundTransparency = 1
         Username.Parent = PlayerBtn
         
-        -- ... Keep your existing cachedDescription and thumbnail capture logic exactly as it is down here!
+        -- Adapt to Grid vs Compact Mode smoothly!
+        if isGridMode then
+            SmallViewport.Size = UDim2.new(0, 60, 0, 60)
+            SmallViewport.Position = UDim2.new(0.5, -30, 0, 5)
+            DisplayName.Size = UDim2.new(1, -4, 0, 15)
+            DisplayName.Position = UDim2.new(0, 2, 0, 70)
+            DisplayName.TextXAlignment = Enum.TextXAlignment.Center
+            Username.Size = UDim2.new(1, -4, 0, 15)
+            Username.Position = UDim2.new(0, 2, 0, 85)
+            Username.TextXAlignment = Enum.TextXAlignment.Center
+        else
+            SmallViewport.Size = UDim2.new(0, 40, 0, 40)
+            SmallViewport.Position = UDim2.new(0, 5, 0, 5)
+            DisplayName.Size = UDim2.new(1, -60, 0, 20)
+            DisplayName.Position = UDim2.new(0, 55, 0, 5)
+            DisplayName.TextXAlignment = Enum.TextXAlignment.Left
+            Username.Size = UDim2.new(1, -60, 0, 20)
+            Username.Position = UDim2.new(0, 55, 0, 25)
+            Username.TextXAlignment = Enum.TextXAlignment.Left
+        end
 
-
-        -- [FIXED] Smart State Capture Logic
         local cachedDescription = nil
         
         task.spawn(function()
-            -- 1. Wait for their 3D character to actually exist in the world
             local char = player.Character or player.CharacterAdded:Wait()
-            
-            -- 2. Wait for Roblox to finish dressing them (prevents blank/bald captures!)
             if not player:HasAppearanceLoaded() then
                 player.CharacterAppearanceLoaded:Wait()
             end
 
-            -- 3. Now that they are fully loaded, permanently lock in the snapshot!
             local hum = char:WaitForChild("Humanoid", 5)
-            if hum then
-                pcall(function()
-                    cachedDescription = hum:GetAppliedDescription()
-                end)
-            end
+            if hum then pcall(function() cachedDescription = hum:GetAppliedDescription() end) end
 
-            -- 4. Build the thumbnail picture safely
             local oldArchivable = char.Archivable
             char.Archivable = true
             local headClone = char:Clone()
@@ -5602,9 +5615,6 @@ local function populatePlayerList()
         end)
     end
 end
------
-      
-   
 
 -- Initialize
 RefreshBtn.MouseButton1Click:Connect(populatePlayerList)
