@@ -717,10 +717,10 @@ local PlayerScroll, PlayerListLayout = createTabScroll("PlayerScroll", true)
 local AssetScroll, AssetListLayout = createTabScroll("AssetScroll", false)
 local SavedScroll, SavedListLayout = createTabScroll("SavedScroll", false)
 local ToolsScroll, ToolsListLayout = createTabScroll("ToolsScroll", false)
-
 -- ==========================================
--- 🔍 SEARCH BAR & GRID TOGGLE
+-- 🔍 SEARCH BARS & GRID TOGGLES
 -- ==========================================
+-- PLAYER SEARCH
 local PlayerSearchBar = Instance.new("Frame")
 PlayerSearchBar.Size = UDim2.new(1, -16, 0, 30)
 PlayerSearchBar.Position = UDim2.new(0, 8, 0, 0)
@@ -758,7 +758,7 @@ PlayerListLayout:Destroy()
 local PlayerGrid = Instance.new("UIGridLayout")
 PlayerGrid.SortOrder = Enum.SortOrder.LayoutOrder
 PlayerGrid.CellPadding = UDim2.new(0.02, 0, 0.02, 0)
-PlayerGrid.CellSize = UDim2.new(0.235, 0, 0, 105) -- Default: 4 Items Per Row
+PlayerGrid.CellSize = UDim2.new(0.235, 0, 0, 105) 
 PlayerGrid.Parent = PlayerScroll
 
 PlayerGrid:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
@@ -771,21 +771,17 @@ ViewToggleBtn.MouseButton1Click:Connect(function()
     if isGridMode then
         ViewToggleBtn.Text = "▦"
         PlayerGrid.CellSize = UDim2.new(0.235, 0, 0, 105)
-        
         for _, btn in ipairs(PlayerScroll:GetChildren()) do
             if btn:IsA("TextButton") then
                 local vp = btn:FindFirstChild("ViewportFrame")
                 local dn = btn:FindFirstChild("DisplayName")
                 local un = btn:FindFirstChild("Username")
-                
                 if vp and dn and un then
                     vp.Size = UDim2.new(0, 60, 0, 60)
                     vp.Position = UDim2.new(0.5, -30, 0, 5)
-                    
                     dn.Size = UDim2.new(1, -4, 0, 15)
                     dn.Position = UDim2.new(0, 2, 0, 70)
                     dn.TextXAlignment = Enum.TextXAlignment.Center
-                    
                     un.Size = UDim2.new(1, -4, 0, 15)
                     un.Position = UDim2.new(0, 2, 0, 85)
                     un.TextXAlignment = Enum.TextXAlignment.Center
@@ -795,21 +791,17 @@ ViewToggleBtn.MouseButton1Click:Connect(function()
     else
         ViewToggleBtn.Text = "☰"
         PlayerGrid.CellSize = UDim2.new(1, -10, 0, 50)
-        
         for _, btn in ipairs(PlayerScroll:GetChildren()) do
             if btn:IsA("TextButton") then
                 local vp = btn:FindFirstChild("ViewportFrame")
                 local dn = btn:FindFirstChild("DisplayName")
                 local un = btn:FindFirstChild("Username")
-                
                 if vp and dn and un then
                     vp.Size = UDim2.new(0, 40, 0, 40)
                     vp.Position = UDim2.new(0, 5, 0, 5)
-                    
                     dn.Size = UDim2.new(1, -60, 0, 20)
                     dn.Position = UDim2.new(0, 55, 0, 5)
                     dn.TextXAlignment = Enum.TextXAlignment.Left
-                    
                     un.Size = UDim2.new(1, -60, 0, 20)
                     un.Position = UDim2.new(0, 55, 0, 25)
                     un.TextXAlignment = Enum.TextXAlignment.Left
@@ -827,6 +819,103 @@ SearchBox:GetPropertyChangedSignal("Text"):Connect(function()
             local un = child:FindFirstChild("Username")
             if dn and un then
                 local match = string.find(string.lower(dn.Text), query) or string.find(string.lower(un.Text), query)
+                child.Visible = (match ~= nil)
+            end
+        end
+    end
+end)
+
+-- SAVED OUTFITS SEARCH
+local SavedSearchBar = Instance.new("Frame")
+SavedSearchBar.Size = UDim2.new(1, -16, 0, 30)
+SavedSearchBar.Position = UDim2.new(0, 8, 0, 0)
+SavedSearchBar.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+SavedSearchBar.BorderSizePixel = 0
+SavedSearchBar.Visible = false
+SavedSearchBar.Parent = ContentContainer
+Instance.new("UICorner", SavedSearchBar).CornerRadius = UDim.new(0, 6)
+
+local SavedSearchBox = Instance.new("TextBox")
+SavedSearchBox.Size = UDim2.new(1, -40, 1, 0)
+SavedSearchBox.Position = UDim2.new(0, 10, 0, 0)
+SavedSearchBox.BackgroundTransparency = 1
+SavedSearchBox.PlaceholderText = "🔍 Search Saved Outfits..."
+SavedSearchBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+SavedSearchBox.Font = Enum.Font.SourceSansBold
+SavedSearchBox.TextSize = 14
+SavedSearchBox.TextXAlignment = Enum.TextXAlignment.Left
+SavedSearchBox.ClearTextOnFocus = false
+SavedSearchBox.Parent = SavedSearchBar
+
+local SavedViewToggleBtn = Instance.new("TextButton")
+SavedViewToggleBtn.Size = UDim2.new(0, 30, 0, 30)
+SavedViewToggleBtn.Position = UDim2.new(1, -30, 0, 0)
+SavedViewToggleBtn.BackgroundTransparency = 1
+SavedViewToggleBtn.Text = "▦"
+SavedViewToggleBtn.TextColor3 = Color3.fromRGB(0, 255, 200)
+SavedViewToggleBtn.Font = Enum.Font.SourceSansBold
+SavedViewToggleBtn.TextSize = 18
+SavedViewToggleBtn.Parent = SavedSearchBar
+
+SavedScroll.Position = UDim2.new(0, 8, 0, 35)
+SavedScroll.Size = UDim2.new(1, -16, 1, -45)
+
+SavedListLayout:Destroy()
+local SavedGrid = Instance.new("UIGridLayout")
+SavedGrid.SortOrder = Enum.SortOrder.LayoutOrder
+SavedGrid.CellPadding = UDim2.new(0.02, 0, 0.02, 0)
+SavedGrid.CellSize = UDim2.new(0.235, 0, 0, 105)
+SavedGrid.Parent = SavedScroll
+
+SavedGrid:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    SavedScroll.CanvasSize = UDim2.new(0, 0, 0, SavedGrid.AbsoluteContentSize.Y + 10)
+end)
+
+local isSavedGridMode = true
+SavedViewToggleBtn.MouseButton1Click:Connect(function()
+    isSavedGridMode = not isSavedGridMode
+    if isSavedGridMode then
+        SavedViewToggleBtn.Text = "▦"
+        SavedGrid.CellSize = UDim2.new(0.235, 0, 0, 105)
+        for _, btn in ipairs(SavedScroll:GetChildren()) do
+            if btn:IsA("TextButton") then
+                local vp = btn:FindFirstChild("ViewportFrame")
+                local nb = btn:FindFirstChild("NameBox")
+                if vp and nb then
+                    vp.Size = UDim2.new(0, 60, 0, 60)
+                    vp.Position = UDim2.new(0.5, -30, 0, 5)
+                    nb.Size = UDim2.new(1, -4, 0, 15)
+                    nb.Position = UDim2.new(0, 2, 0, 75)
+                    nb.TextXAlignment = Enum.TextXAlignment.Center
+                end
+            end
+        end
+    else
+        SavedViewToggleBtn.Text = "☰"
+        SavedGrid.CellSize = UDim2.new(1, -10, 0, 50)
+        for _, btn in ipairs(SavedScroll:GetChildren()) do
+            if btn:IsA("TextButton") then
+                local vp = btn:FindFirstChild("ViewportFrame")
+                local nb = btn:FindFirstChild("NameBox")
+                if vp and nb then
+                    vp.Size = UDim2.new(0, 40, 0, 40)
+                    vp.Position = UDim2.new(0, 5, 0, 5)
+                    nb.Size = UDim2.new(1, -60, 0, 40)
+                    nb.Position = UDim2.new(0, 55, 0, 0)
+                    nb.TextXAlignment = Enum.TextXAlignment.Left
+                end
+            end
+        end
+    end
+end)
+
+SavedSearchBox:GetPropertyChangedSignal("Text"):Connect(function()
+    local query = string.lower(SavedSearchBox.Text)
+    for _, child in ipairs(SavedScroll:GetChildren()) do
+        if child:IsA("TextButton") then
+            local nb = child:FindFirstChild("NameBox")
+            if nb then
+                local match = string.find(string.lower(nb.Text), query)
                 child.Visible = (match ~= nil)
             end
         end
@@ -3709,14 +3798,19 @@ CloseBtn.MouseButton1Click:Connect(function()
     ScreenGui:Destroy()
 end)
 
--- We need to forward-declare the populate function so the button can call it
+
+-- ==========================================
+-- TAB NAVIGATION LOGIC
+-- ==========================================
 local populateSavedOutfits
+
 BackBtn.MouseButton1Click:Connect(function()
     AssetScroll.Visible = false
     SavedScroll.Visible = false
     ToolsScroll.Visible = false
     PlayerScroll.Visible = true
-    PlayerSearchBar.Visible = true -- < ADD THIS
+    PlayerSearchBar.Visible = true 
+    SavedSearchBar.Visible = false
     
     BackBtn.Visible = false
     RefreshBtn.Visible = true
@@ -3730,7 +3824,8 @@ SavedTabBtn.MouseButton1Click:Connect(function()
     PlayerScroll.Visible = false
     ToolsScroll.Visible = false
     SavedScroll.Visible = true
-    PlayerSearchBar.Visible = false -- < ADD THIS
+    PlayerSearchBar.Visible = false 
+    SavedSearchBar.Visible = true
     
     BackBtn.Visible = true
     RefreshBtn.Visible = false
@@ -3745,7 +3840,8 @@ ToolsTabBtn.MouseButton1Click:Connect(function()
     PlayerScroll.Visible = false
     SavedScroll.Visible = false
     ToolsScroll.Visible = true
-    PlayerSearchBar.Visible = false -- < ADD THIS
+    PlayerSearchBar.Visible = false 
+    SavedSearchBar.Visible = false
     
     BackBtn.Visible = true
     RefreshBtn.Visible = false
@@ -5022,18 +5118,261 @@ if outfitData.ProportionScale then for i=1,3 do Send("body_scale", "ProportionSc
         createDetailedAssetCard(label, acc.AssetId, "HumanoidDesc." .. accType)
     end
 end
-populateSavedOutfits = function()
-    -- Clear current list
-    for _, child in pairs(SavedScroll:GetChildren()) do
+----
+-- ==========================================
+-- SAVED OUTFIT DETAILED VIEW (OPENS WHEN CLICKED)
+-- ==========================================
+local function openSavedOutfitDetail(outfitInfo)
+    local data = outfitInfo.data
+    local name = outfitInfo.name
+    local file = outfitInfo.file
+    local folderName = "lifetogether_admin_savedoutfits"
+
+    for _, child in pairs(AssetScroll:GetChildren()) do
         if child:IsA("Frame") then child:Destroy() end
+    end
+    
+    Title.Text = "📁 Viewing: " .. name
+    SavedScroll.Visible = false
+    SavedSearchBar.Visible = false
+    AssetScroll.Visible = true
+    RefreshBtn.Visible = false
+    BackBtn.Visible = true
+
+    -- Big Avatar Viewport
+    local avatarFrame = Instance.new("Frame")
+    avatarFrame.Size = UDim2.new(1, -5, 0, 250)
+    avatarFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
+    avatarFrame.BorderSizePixel = 1
+    avatarFrame.BorderColor3 = Color3.fromRGB(0, 255, 150)
+    avatarFrame.LayoutOrder = 1
+    avatarFrame.Parent = AssetScroll
+
+    local bigViewport = Instance.new("ViewportFrame")
+    bigViewport.Size = UDim2.new(1, 0, 1, 0)
+    bigViewport.BackgroundTransparency = 1
+    bigViewport.Parent = avatarFrame
+
+    local worldModel = Instance.new("WorldModel")
+    worldModel.Parent = bigViewport
+
+    -- Background logic to spawn the 3D model
+    task.spawn(function()
+        local desc = Instance.new("HumanoidDescription")
+        desc.Shirt = data.Shirt or 0
+        desc.Pants = data.Pants or 0
+        desc.GraphicTShirt = data.GraphicTShirt or 0
+        desc.Face = data.Face or 0
+        desc.Head = data.Head or 0
+        
+        if data.SkinTone then
+            local c = Color3.new(data.SkinTone[1], data.SkinTone[2], data.SkinTone[3])
+            desc.HeadColor = c; desc.TorsoColor = c; desc.LeftArmColor = c
+            desc.RightArmColor = c; desc.LeftLegColor = c; desc.RightLegColor = c
+        end
+        if data.Accessories then
+            local accGroups = {}
+            for _, acc in pairs(data.Accessories) do
+                local typeName = acc.AccessoryType
+                if not string.find(typeName, "Accessory") then typeName = typeName .. "Accessory" end
+                accGroups[typeName] = accGroups[typeName] and (accGroups[typeName] .. "," .. tostring(acc.AssetId)) or tostring(acc.AssetId)
+            end
+            for prop, val in pairs(accGroups) do pcall(function() desc[prop] = val end) end
+        end
+
+        local dummy
+        pcall(function() dummy = Players:CreateHumanoidModelFromDescription(desc, Enum.HumanoidRigType.R15) end)
+        if not dummy then
+            pcall(function()
+                local myChar = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+                local oldArch = myChar.Archivable
+                myChar.Archivable = true
+                dummy = myChar:Clone()
+                myChar.Archivable = oldArch
+                local hum = dummy:FindFirstChildOfClass("Humanoid")
+                if hum then hum:ApplyDescription(desc) end
+            end)
+        end
+        if dummy then
+            for _, v in pairs(dummy:GetDescendants()) do if v:IsA("Script") or v:IsA("LocalScript") then v:Destroy() end end
+            dummy:PivotTo(CFrame.new(0, 0, 0))
+            dummy.Parent = worldModel
+            local camera = Instance.new("Camera")
+            camera.Parent = bigViewport
+            local hrp = dummy:FindFirstChild("HumanoidRootPart") or dummy:FindFirstChild("UpperTorso") or dummy:FindFirstChild("Torso")
+            if hrp then
+                camera.CFrame = hrp.CFrame * CFrame.new(0, 0.5, -6) * CFrame.Angles(0, math.pi, 0)
+                camera.Focus = hrp.CFrame
+            end
+            bigViewport.CurrentCamera = camera
+        end
+    end)
+
+    -- Action & Edit Panel
+    local actionFrame = Instance.new("Frame")
+    actionFrame.Size = UDim2.new(1, -5, 0, 95)
+    actionFrame.BackgroundTransparency = 1
+    actionFrame.LayoutOrder = 2
+    actionFrame.Parent = AssetScroll
+
+    local RenameBox = Instance.new("TextBox")
+    RenameBox.Size = UDim2.new(1, -10, 0, 30)
+    RenameBox.Position = UDim2.new(0, 5, 0, 0)
+    RenameBox.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
+    RenameBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+    RenameBox.Font = Enum.Font.SourceSansBold
+    RenameBox.TextSize = 14
+    RenameBox.Text = name
+    RenameBox.ClearTextOnFocus = false
+    RenameBox.Parent = actionFrame
+    Instance.new("UICorner", RenameBox).CornerRadius = UDim.new(0, 6)
+
+    local actionLayout = Instance.new("Frame")
+    actionLayout.Size = UDim2.new(1, -10, 0, 60)
+    actionLayout.Position = UDim2.new(0, 5, 0, 35)
+    actionLayout.BackgroundTransparency = 1
+    actionLayout.Parent = actionFrame
+
+    local uigrid = Instance.new("UIGridLayout")
+    uigrid.CellSize = UDim2.new(0.235, 0, 0, 26) 
+    uigrid.CellPadding = UDim2.new(0.02, 0, 0.08, 0)
+    uigrid.SortOrder = Enum.SortOrder.LayoutOrder
+    uigrid.FillDirectionMaxCells = 4
+    uigrid.Parent = actionLayout
+
+    local WearBtn = Instance.new("TextButton")
+    WearBtn.Text = "Wear"
+    WearBtn.BackgroundColor3 = Color3.fromRGB(249, 180, 0)
+    WearBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
+    WearBtn.Font = Enum.Font.SourceSansBold
+    WearBtn.TextSize = 11
+    WearBtn.BorderSizePixel = 0
+    WearBtn.LayoutOrder = 1
+    WearBtn.Parent = actionLayout
+
+    local RenameBtn = Instance.new("TextButton")
+    RenameBtn.Text = "Rename"
+    RenameBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 150)
+    RenameBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    RenameBtn.Font = Enum.Font.SourceSansBold
+    RenameBtn.TextSize = 11
+    RenameBtn.BorderSizePixel = 0
+    RenameBtn.LayoutOrder = 2
+    RenameBtn.Parent = actionLayout
+
+    local DeleteBtn = Instance.new("TextButton")
+    DeleteBtn.Text = "Delete"
+    DeleteBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+    DeleteBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    DeleteBtn.Font = Enum.Font.SourceSansBold
+    DeleteBtn.TextSize = 11
+    DeleteBtn.BorderSizePixel = 0
+    DeleteBtn.LayoutOrder = 3
+    DeleteBtn.Parent = actionLayout
+
+    local ShareBtn = Instance.new("TextButton")
+    ShareBtn.Text = "Share All"
+    ShareBtn.BackgroundColor3 = Color3.fromRGB(200, 100, 200)
+    ShareBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    ShareBtn.Font = Enum.Font.SourceSansBold
+    ShareBtn.TextSize = 11
+    ShareBtn.BorderSizePixel = 0
+    ShareBtn.LayoutOrder = 4
+    ShareBtn.Parent = actionLayout
+
+    -- 🖲️ Action Button Functions
+    WearBtn.MouseButton1Click:Connect(function()
+        WearBtn.Text = "..."
+        local payload = buildBatchPayload(data)
+        local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
+        if Send then
+            task.spawn(function()
+                for i = 1, 3 do Send("wear_outfit_from_desc", payload) task.wait(0.1) end
+                task.wait(0.2)
+                if data.SkinTone then pcall(function() local c = Color3.new(data.SkinTone[1], data.SkinTone[2], data.SkinTone[3]) for i = 1, 3 do Send("skin_tone", c) task.wait(0.1) end end) end
+                if data.HeightScale then for i=1,3 do Send("body_scale", "HeightScale", data.HeightScale * 100) task.wait(0.1) end end
+                if data.WidthScale then for i=1,3 do Send("body_scale", "WidthScale", data.WidthScale * 100) task.wait(0.1) end end
+                if data.BodyTypeScale then for i=1,3 do Send("body_scale", "BodyTypeScale", data.BodyTypeScale * 100) task.wait(0.1) end end
+                if data.ProportionScale then for i=1,3 do Send("body_scale", "ProportionScale", data.ProportionScale * 100) task.wait(0.1) end end
+                WearBtn.Text = "Worn!"
+                task.wait(1.5)
+                WearBtn.Text = "Wear"
+            end)
+        end
+    end)
+
+    RenameBtn.MouseButton1Click:Connect(function() RenameBox:CaptureFocus() end)
+    
+    RenameBox.FocusLost:Connect(function()
+        local newName = RenameBox.Text:gsub("%s+", "")
+        if newName ~= "" and newName ~= name then
+            local oldPath = folderName .. "/" .. name .. ".json"
+            local newPath = folderName .. "/" .. newName .. ".json"
+            if not isfile(newPath) then
+                pcall(function()
+                    writefile(newPath, HttpService:JSONEncode(data))
+                    if isfile(oldPath) then delfile(oldPath) end
+                end)
+                name = newName
+                Title.Text = "📁 Saved: " .. name
+                populateSavedOutfits()
+            end
+        end
+    end)
+
+    DeleteBtn.MouseButton1Click:Connect(function()
+        pcall(function() if isfile(file) then delfile(file) end end)
+        populateSavedOutfits()
+        BackBtn.MouseButton1Click:Fire() 
+    end)
+
+    ShareBtn.MouseButton1Click:Connect(function()
+        local excludedTarget = nil
+        for _, p in ipairs(Players:GetPlayers()) do
+            if string.find(name, p.Name) then excludedTarget = p break end
+        end
+        shareOutfitToAll(data, ShareBtn, "Share All", Color3.fromRGB(200, 100, 200), excludedTarget)
+    end)
+
+    -- 📦 Populate the Individual Asset Items for the Detail View
+    if data.Shirt and data.Shirt ~= 0 then createDetailedAssetCard("Classic Shirt", data.Shirt, "Saved.Shirt") end
+    if data.Pants and data.Pants ~= 0 then createDetailedAssetCard("Classic Pants", data.Pants, "Saved.Pants") end
+    if data.GraphicTShirt and data.GraphicTShirt ~= 0 then createDetailedAssetCard("T-Shirt Graphic", data.GraphicTShirt, "Saved.GraphicTShirt") end
+    if data.Face and data.Face ~= 0 then createDetailedAssetCard("Face Texture", data.Face, "Saved.Face") end
+
+    local bodyParts = {"Head", "Torso", "LeftArm", "RightArm", "LeftLeg", "RightLeg"}
+    for _, part in ipairs(bodyParts) do
+        local partId = tonumber(data[part]) or 0
+        if partId ~= 0 then createDetailedAssetCard("Body: " .. part, partId, "Saved." .. part) end
+    end
+
+    local animations = {"IdleAnimation", "RunAnimation", "WalkAnimation", "JumpAnimation", "ClimbAnimation", "FallAnimation", "SwimAnimation"}
+    for _, anim in ipairs(animations) do
+        local animId = tonumber(data[anim]) or 0
+        if animId ~= 0 then createDetailedAssetCard("Anim: " .. anim:gsub("Animation", ""), animId, "Saved." .. anim) end
+    end
+
+    if data.Accessories then
+        for _, acc in pairs(data.Accessories) do
+            local accType = tostring(acc.AccessoryType):gsub("Enum.AccessoryType.", "")
+            local label = acc.IsLayered and ("Layered " .. accType) or accType
+            createDetailedAssetCard(label, acc.AssetId, "Saved." .. accType)
+        end
+    end
+end
+
+-- ==========================================
+-- SAVED OUTFITS LIST BUILDER
+-- ==========================================
+populateSavedOutfits = function()
+    for _, child in pairs(SavedScroll:GetChildren()) do
+        if child:IsA("TextButton") then child:Destroy() end
     end
 
     local folderName = "lifetogether_admin_savedoutfits"
     if not isfolder or not isfolder(folderName) then return end
 
-       -- 1. Collect all valid outfits into a table first
     local outfitsList = {}
-    
     for _, file in ipairs(listfiles(folderName)) do
         if file:match("%.json$") then
             local name = file:match("([^/\\]+)%.json$")
@@ -5043,64 +5382,47 @@ populateSavedOutfits = function()
                 local success, data = pcall(function() return HttpService:JSONDecode(content) end)
                 if success and type(data) == "table" then
                     local isScanned = string.find(name, "_Scanned") ~= nil
-                    -- Extract the time we saved earlier (Default to 0 for older saved files)
                     local savedTime = tonumber(data.SavedAtTime) or 0
-                    
-                    table.insert(outfitsList, {
-                        name = name,
-                        data = data,
-                        file = file,
-                        isScanned = isScanned,
-                        time = savedTime
-                    })
+                    table.insert(outfitsList, {name = name, data = data, file = file, isScanned = isScanned, time = savedTime})
                 end
             end
         end
     end
 
-    -- 2. Sort the table: Scanned outfits first, then Latest to Oldest
     table.sort(outfitsList, function(a, b)
-        -- Keep scanned files pinned to the very top
-        if a.isScanned and not b.isScanned then
-            return true
-        elseif not a.isScanned and b.isScanned then
-            return false
+        if a.isScanned and not b.isScanned then return true
+        elseif not a.isScanned and b.isScanned then return false
         else
-            -- If neither is scanned (or both are), sort by newest time first
-            if a.time ~= b.time then
-                return a.time > b.time
-            else
-                -- Fallback to alphabetical if they have the exact same time (or are old saves without a time)
-                return string.lower(a.name) < string.lower(b.name)
-            end
+            if a.time ~= b.time then return a.time > b.time
+            else return string.lower(a.name) < string.lower(b.name) end
         end
     end)
 
-    -- 3. Build the UI in the sorted order
     for _, outfitInfo in ipairs(outfitsList) do
         local name = outfitInfo.name
         local data = outfitInfo.data
         local file = outfitInfo.file
 
-        local Entry = Instance.new("Frame")
-        Entry.Size = UDim2.new(1, -5, 0, 40)
+        -- Rebuilt as a Profile Card Button exactly like the Players tab!
+        local Entry = Instance.new("TextButton")
         Entry.BackgroundColor3 = Color3.fromRGB(24, 24, 30)
         Entry.BorderSizePixel = 0
+        Entry.Text = ""
         Entry.Parent = SavedScroll
+        Instance.new("UICorner", Entry).CornerRadius = UDim.new(0, 8)
 
-            -- NEW: Mini 3D Viewport Thumbnail
         local SmallViewport = Instance.new("ViewportFrame")
-        SmallViewport.Size = UDim2.new(0, 30, 0, 30)
-        SmallViewport.Position = UDim2.new(0, 5, 0, 5)
+        SmallViewport.Name = "ViewportFrame"
+        SmallViewport.Size = UDim2.new(0, 60, 0, 60)
+        SmallViewport.Position = UDim2.new(0.5, -30, 0, 5)
         SmallViewport.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
         SmallViewport.BorderSizePixel = 0
         SmallViewport.Parent = Entry
+        Instance.new("UICorner", SmallViewport).CornerRadius = UDim.new(0, 6)
 
-        -- [NEW] WorldModel for Layered Clothing deformation in thumbnails
         local smallWorldModel = Instance.new("WorldModel")
         smallWorldModel.Parent = SmallViewport
 
-        -- Background thread to build the avatar and take a picture
         task.spawn(function()
             local desc = Instance.new("HumanoidDescription")
             desc.Shirt = data.Shirt or 0
@@ -5108,210 +5430,65 @@ populateSavedOutfits = function()
             desc.GraphicTShirt = data.GraphicTShirt or 0
             desc.Face = data.Face or 0
             desc.Head = data.Head or 0
-
             if data.SkinTone then
                 local c = Color3.new(data.SkinTone[1], data.SkinTone[2], data.SkinTone[3])
-                desc.HeadColor = c
-                desc.TorsoColor = c
-                desc.LeftArmColor = c
-                desc.RightArmColor = c
-                desc.LeftLegColor = c
-                desc.RightLegColor = c
+                desc.HeadColor = c; desc.TorsoColor = c; desc.LeftArmColor = c; desc.RightArmColor = c; desc.LeftLegColor = c; desc.RightLegColor = c
             end
-
-            -- Safely attach accessories by grouping their types
             if data.Accessories then
                 local accGroups = {}
                 for _, acc in pairs(data.Accessories) do
                     local typeName = acc.AccessoryType
-                    if not string.find(typeName, "Accessory") then
-                        typeName = typeName .. "Accessory"
-                    end
-                    
-                    if accGroups[typeName] then
-                        accGroups[typeName] = accGroups[typeName] .. "," .. tostring(acc.AssetId)
-                    else
-                        accGroups[typeName] = tostring(acc.AssetId)
-                    end
+                    if not string.find(typeName, "Accessory") then typeName = typeName .. "Accessory" end
+                    accGroups[typeName] = accGroups[typeName] and (accGroups[typeName] .. "," .. tostring(acc.AssetId)) or tostring(acc.AssetId)
                 end
-                for prop, val in pairs(accGroups) do
-                    pcall(function() desc[prop] = val end)
-                end
+                for prop, val in pairs(accGroups) do pcall(function() desc[prop] = val end) end
             end
 
-            -- Create dummy model
             local dummy
-            local success, err = pcall(function()
-                dummy = Players:CreateHumanoidModelFromDescription(desc, Enum.HumanoidRigType.R15)
-            end)
-
-            -- Fallback
-            if not success or not dummy then
+            pcall(function() dummy = Players:CreateHumanoidModelFromDescription(desc, Enum.HumanoidRigType.R15) end)
+            if not dummy then
                 pcall(function()
                     local myChar = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
                     local oldArch = myChar.Archivable
                     myChar.Archivable = true
                     dummy = myChar:Clone()
                     myChar.Archivable = oldArch
-                    
                     local hum = dummy:FindFirstChildOfClass("Humanoid")
-                    if hum then
-                        hum:ApplyDescription(desc)
-                    end
+                    if hum then hum:ApplyDescription(desc) end
                 end)
             end
 
             if dummy then
-                for _, v in pairs(dummy:GetDescendants()) do
-                    if v:IsA("Script") or v:IsA("LocalScript") then v:Destroy() end
-                end
-
-                -- Center dummy and parent to WorldModel
+                for _, v in pairs(dummy:GetDescendants()) do if v:IsA("Script") or v:IsA("LocalScript") then v:Destroy() end end
                 dummy:PivotTo(CFrame.new(0, 0, 0))
                 dummy.Parent = smallWorldModel
-    
                 local camera = Instance.new("Camera")
                 camera.Parent = SmallViewport
-    
                 local hrp = dummy:FindFirstChild("HumanoidRootPart") or dummy:FindFirstChild("UpperTorso") or dummy:FindFirstChild("Torso")
                 if hrp then
                     camera.CFrame = hrp.CFrame * CFrame.new(0, 0.5, -5.5) * CFrame.Angles(0, math.pi, 0)
                     camera.Focus = hrp.CFrame
                 end
-                
                 SmallViewport.CurrentCamera = camera
             end
         end)
 
-        -- Text Box shifted over to make room for the picture
-        local NameBox = Instance.new("TextBox")
-        NameBox.Size = UDim2.new(0.35, -30, 1, 0)
-        NameBox.Position = UDim2.new(0, 40, 0, 0)
+        local NameBox = Instance.new("TextLabel")
+        NameBox.Name = "NameBox"
+        NameBox.Size = UDim2.new(1, -4, 0, 15)
+        NameBox.Position = UDim2.new(0, 2, 0, 75)
         NameBox.BackgroundTransparency = 1
         NameBox.Text = name
-        
-        if outfitInfo.isScanned then
-            NameBox.TextColor3 = Color3.fromRGB(0, 255, 200)
-        else
-            NameBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-        end
-        
+        NameBox.TextColor3 = outfitInfo.isScanned and Color3.fromRGB(0, 255, 200) or Color3.fromRGB(255, 255, 255)
         NameBox.Font = Enum.Font.SourceSansBold
-        NameBox.TextSize = 14
-        NameBox.TextXAlignment = Enum.TextXAlignment.Left
-        NameBox.ClearTextOnFocus = false
+        NameBox.TextSize = 12
+        NameBox.TextXAlignment = Enum.TextXAlignment.Center
+        NameBox.TextTruncate = Enum.TextTruncate.AtEnd
         NameBox.Parent = Entry
-
-      local WearBtn = Instance.new("TextButton")
-        WearBtn.Size = UDim2.new(0.14, 0, 0, 26)
-        WearBtn.Position = UDim2.new(0.38, 0, 0.5, -13)
-        WearBtn.Text = "Wear"
-        WearBtn.BackgroundColor3 = Color3.fromRGB(249, 180, 0)
-        WearBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
-        WearBtn.Font = Enum.Font.SourceSansBold
-        WearBtn.TextSize = 11
-        WearBtn.BorderSizePixel = 0
-        WearBtn.Parent = Entry
-
-        local RenameBtn = Instance.new("TextButton")
-        RenameBtn.Size = UDim2.new(0.16, 0, 0, 26)
-        RenameBtn.Position = UDim2.new(0.53, 0, 0.5, -13)
-        RenameBtn.Text = "Rename"
-        RenameBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 150)
-        RenameBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-        RenameBtn.Font = Enum.Font.SourceSansBold
-        RenameBtn.TextSize = 11
-        RenameBtn.BorderSizePixel = 0
-        RenameBtn.Parent = Entry
-
-        local DeleteBtn = Instance.new("TextButton")
-        DeleteBtn.Size = UDim2.new(0.12, 0, 0, 26)
-        DeleteBtn.Position = UDim2.new(0.70, 0, 0.5, -13)
-        DeleteBtn.Text = "Del"
-        DeleteBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-        DeleteBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-        DeleteBtn.Font = Enum.Font.SourceSansBold
-        DeleteBtn.TextSize = 11
-        DeleteBtn.BorderSizePixel = 0
-        DeleteBtn.Parent = Entry
-
-        -- NEW: Share All Button for Saved Outfits
-        local ShareBtn = Instance.new("TextButton")
-        ShareBtn.Size = UDim2.new(0.16, 0, 0, 26)
-        ShareBtn.Position = UDim2.new(0.83, 0, 0.5, -13)
-        ShareBtn.Text = "All Share"
-        ShareBtn.BackgroundColor3 = Color3.fromRGB(200, 100, 200)
-        ShareBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-        ShareBtn.Font = Enum.Font.SourceSansBold
-        ShareBtn.TextSize = 11
-        ShareBtn.BorderSizePixel = 0
-        ShareBtn.Parent = Entry
-
-             -- [UPDATED] Share All Logic for Saved Outfit
-        ShareBtn.MouseButton1Click:Connect(function()
-            -- Attempt to find if the person we saved this from is currently in the server
-            local excludedTarget = nil
-            for _, p in ipairs(Players:GetPlayers()) do
-                if string.find(name, p.Name) then -- Checks if their name is in the save file
-                    excludedTarget = p
-                    break
-                end
-            end
-            
-            shareOutfitToAll(data, ShareBtn, "Share All", Color3.fromRGB(200, 100, 200), excludedTarget)
-        end)
-
-        -- Wear Logic
-        WearBtn.MouseButton1Click:Connect(function()
-            WearBtn.Text = "..."
-            local payload = buildBatchPayload(data)
-            local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
-            local Get = getgenv().Get or (getgenv().g and getgenv().g.Get)
-            
-            if Send then
-                task.spawn(function()
-                    for i = 1, 3 do Send("wear_outfit_from_desc", payload) task.wait(0.1) end
-                    task.wait(0.2)
-                    if data.SkinTone then pcall(function() local c = Color3.new(data.SkinTone[1], data.SkinTone[2], data.SkinTone[3]) for i = 1, 3 do Send("skin_tone", c) task.wait(0.1) end end) end
-               --     if data.Age and Get then pcall(function() Get("age", tostring(data.Age)) end) end
-                    if data.HeightScale then for i=1,3 do Send("body_scale", "HeightScale", data.HeightScale * 100) task.wait(0.1) end end
-                    if data.WidthScale then for i=1,3 do Send("body_scale", "WidthScale", data.WidthScale * 100) task.wait(0.1) end end
-                            
- if data.BodyTypeScale then for i=1,3 do Send("body_scale", "BodyTypeScale", data.BodyTypeScale * 100) task.wait(0.1) end end
- if data.ProportionScale then for i=1,3 do Send("body_scale", "ProportionScale", data.ProportionScale * 100) task.wait(0.1) end end
-
-                    WearBtn.Text = "Worn!"
-                    task.wait(1.5)
-                    WearBtn.Text = "Wear"
-                end)
-            end
-        end)
-
-        -- Rename Logic
-        RenameBtn.MouseButton1Click:Connect(function()
-            NameBox:CaptureFocus()
-        end)
-        NameBox.FocusLost:Connect(function()
-            local newName = NameBox.Text:gsub("%s+", "")
-            if newName ~= "" and newName ~= name then
-                local oldPath = folderName .. "/" .. name .. ".json"
-                local newPath = folderName .. "/" .. newName .. ".json"
-                if not isfile(newPath) then
-                    pcall(function()
-                        writefile(newPath, HttpService:JSONEncode(data))
-                        if isfile(oldPath) then delfile(oldPath) end
-                    end)
-                end
-            end
-            populateSavedOutfits()
-        end)
-
-        -- Delete Logic
-        DeleteBtn.MouseButton1Click:Connect(function()
-            pcall(function()
-                if isfile(file) then delfile(file) end
-            end)
-            populateSavedOutfits()
+        
+        -- Opens the detailed view!
+        Entry.MouseButton1Click:Connect(function()
+            openSavedOutfitDetail(outfitInfo)
         end)
     end
 end
