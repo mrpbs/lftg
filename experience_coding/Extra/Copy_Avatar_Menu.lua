@@ -5120,10 +5120,22 @@ openSavedOutfitDetail = function(outfitInfo)
 
     local worldModel = Instance.new("WorldModel", bigViewport)
 
-       task.spawn(function()
+        task.spawn(function()
         local desc = Instance.new("HumanoidDescription")
         desc.Shirt, desc.Pants, desc.GraphicTShirt = data.Shirt or 0, data.Pants or 0, data.GraphicTShirt or 0
         desc.Face, desc.Head = data.Face or 0, data.Head or 0
+        
+        -- 🔥 FIX 1: INJECT BODY BUNDLE PARTS (Removes Blocky Body)
+        desc.Torso, desc.LeftArm, desc.RightArm = data.Torso or 0, data.LeftArm or 0, data.RightArm or 0
+        desc.LeftLeg, desc.RightLeg = data.LeftLeg or 0, data.RightLeg or 0
+
+        -- 🔥 FIX 2: INJECT SCALES (Fixes Tall/Short/Wide Proportions)
+        if data.HeightScale then desc.HeightScale = data.HeightScale end
+        if data.WidthScale then desc.WidthScale = data.WidthScale end
+        if data.DepthScale then desc.DepthScale = data.DepthScale end
+        if data.HeadScale then desc.HeadScale = data.HeadScale end
+        if data.BodyTypeScale then desc.BodyTypeScale = data.BodyTypeScale end
+        if data.ProportionScale then desc.ProportionScale = data.ProportionScale end
         
         if data.SkinTone then
             local c = Color3.new(data.SkinTone[1], data.SkinTone[2], data.SkinTone[3])
@@ -5155,7 +5167,6 @@ openSavedOutfitDetail = function(outfitInfo)
         
         if dummy then
             for _, v in pairs(dummy:GetDescendants()) do if v:IsA("Script") or v:IsA("LocalScript") then v:Destroy() end end
-            -- EXACT COPY FROM DEEP SCAN: Centers the model to fix Layered Clothing offsets!
             dummy:PivotTo(CFrame.new(0, 0, 0))
             dummy.Parent = worldModel
             local camera = Instance.new("Camera", bigViewport)
