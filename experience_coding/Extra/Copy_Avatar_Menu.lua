@@ -729,93 +729,54 @@ local AssetScroll, AssetListLayout = createTabScroll("AssetScroll", false)
 local SavedScroll, SavedListLayout = createTabScroll("SavedScroll", false)
 local ToolsScroll, ToolsListLayout = createTabScroll("ToolsScroll", false)
 -- ==========================================
--- 🔍 SEARCH BARS & GRID TOGGLES
+-- 🔍 SEARCH BARS & GRID TOGGLES (MEMORY LIMIT BYPASS)
 -- ==========================================
--- PLAYER SEARCH
-local PlayerSearchBar = Instance.new("Frame")
-PlayerSearchBar.Size = UDim2.new(1, -16, 0, 30)
-PlayerSearchBar.Position = UDim2.new(0, 8, 0, 0)
-PlayerSearchBar.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
-PlayerSearchBar.BorderSizePixel = 0
-PlayerSearchBar.Parent = ContentContainer
+-- (No 'local' tags used here to bypass Delta's 200 Variable Crash limit)
+
+PlayerSearchBar = Instance.new("Frame", ContentContainer)
+PlayerSearchBar.Size, PlayerSearchBar.Position = UDim2.new(1, -16, 0, 30), UDim2.new(0, 8, 0, 0)
+PlayerSearchBar.BackgroundColor3, PlayerSearchBar.BorderSizePixel = Color3.fromRGB(20, 20, 25), 0
 Instance.new("UICorner", PlayerSearchBar).CornerRadius = UDim.new(0, 6)
 
-local SearchBox = Instance.new("TextBox")
-SearchBox.Size = UDim2.new(1, -40, 1, 0)
-SearchBox.Position = UDim2.new(0, 10, 0, 0)
-SearchBox.BackgroundTransparency = 1
-SearchBox.PlaceholderText = "🔍 Search Players..."
-SearchBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-SearchBox.Font = Enum.Font.SourceSansBold
-SearchBox.TextSize = 14
-SearchBox.TextXAlignment = Enum.TextXAlignment.Left
-SearchBox.ClearTextOnFocus = false
-SearchBox.Parent = PlayerSearchBar
+SearchBox = Instance.new("TextBox", PlayerSearchBar)
+SearchBox.Size, SearchBox.Position = UDim2.new(1, -40, 1, 0), UDim2.new(0, 10, 0, 0)
+SearchBox.BackgroundTransparency, SearchBox.ClearTextOnFocus = 1, false
+SearchBox.PlaceholderText, SearchBox.TextColor3 = "🔍 Search Players...", Color3.fromRGB(255, 255, 255)
+SearchBox.Font, SearchBox.TextSize, SearchBox.TextXAlignment = Enum.Font.SourceSansBold, 14, Enum.TextXAlignment.Left
 
-local ViewToggleBtn = Instance.new("TextButton")
-ViewToggleBtn.Size = UDim2.new(0, 30, 0, 30)
-ViewToggleBtn.Position = UDim2.new(1, -30, 0, 0)
-ViewToggleBtn.BackgroundTransparency = 1
-ViewToggleBtn.Text = "▦"
-ViewToggleBtn.TextColor3 = Color3.fromRGB(0, 255, 200)
-ViewToggleBtn.Font = Enum.Font.SourceSansBold
-ViewToggleBtn.TextSize = 18
-ViewToggleBtn.Parent = PlayerSearchBar
+ViewToggleBtn = Instance.new("TextButton", PlayerSearchBar)
+ViewToggleBtn.Size, ViewToggleBtn.Position = UDim2.new(0, 30, 0, 30), UDim2.new(1, -30, 0, 0)
+ViewToggleBtn.BackgroundTransparency, ViewToggleBtn.Text = 1, "▦"
+ViewToggleBtn.TextColor3, ViewToggleBtn.Font, ViewToggleBtn.TextSize = Color3.fromRGB(0, 255, 200), Enum.Font.SourceSansBold, 18
 
-PlayerScroll.Position = UDim2.new(0, 8, 0, 35)
-PlayerScroll.Size = UDim2.new(1, -16, 1, -45)
+PlayerScroll.Position, PlayerScroll.Size = UDim2.new(0, 8, 0, 35), UDim2.new(1, -16, 1, -45)
+if PlayerListLayout then PlayerListLayout:Destroy() end
 
-PlayerListLayout:Destroy()
-local PlayerGrid = Instance.new("UIGridLayout")
-PlayerGrid.SortOrder = Enum.SortOrder.LayoutOrder
-PlayerGrid.CellPadding = UDim2.new(0.02, 0, 0.02, 0)
+PlayerGrid = Instance.new("UIGridLayout", PlayerScroll)
+PlayerGrid.SortOrder, PlayerGrid.CellPadding = Enum.SortOrder.LayoutOrder, UDim2.new(0.02, 0, 0.02, 0)
 PlayerGrid.CellSize = UDim2.new(0.235, 0, 0, 105) 
-PlayerGrid.Parent = PlayerScroll
-
 PlayerGrid:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
     PlayerScroll.CanvasSize = UDim2.new(0, 0, 0, PlayerGrid.AbsoluteContentSize.Y + 10)
 end)
 
-local isGridMode = true
+isGridMode = true
 ViewToggleBtn.MouseButton1Click:Connect(function()
     isGridMode = not isGridMode
-    if isGridMode then
-        ViewToggleBtn.Text = "▦"
-        PlayerGrid.CellSize = UDim2.new(0.235, 0, 0, 105)
-        for _, btn in ipairs(PlayerScroll:GetChildren()) do
-            if btn:IsA("TextButton") then
-                local vp = btn:FindFirstChild("ViewportFrame")
-                local dn = btn:FindFirstChild("DisplayName")
-                local un = btn:FindFirstChild("Username")
-                if vp and dn and un then
-                    vp.Size = UDim2.new(0, 60, 0, 60)
-                    vp.Position = UDim2.new(0.5, -30, 0, 5)
-                    dn.Size = UDim2.new(1, -4, 0, 15)
-                    dn.Position = UDim2.new(0, 2, 0, 70)
-                    dn.TextXAlignment = Enum.TextXAlignment.Center
-                    un.Size = UDim2.new(1, -4, 0, 15)
-                    un.Position = UDim2.new(0, 2, 0, 85)
-                    un.TextXAlignment = Enum.TextXAlignment.Center
-                end
-            end
-        end
-    else
-        ViewToggleBtn.Text = "☰"
-        PlayerGrid.CellSize = UDim2.new(1, -10, 0, 50)
-        for _, btn in ipairs(PlayerScroll:GetChildren()) do
-            if btn:IsA("TextButton") then
-                local vp = btn:FindFirstChild("ViewportFrame")
-                local dn = btn:FindFirstChild("DisplayName")
-                local un = btn:FindFirstChild("Username")
-                if vp and dn and un then
-                    vp.Size = UDim2.new(0, 40, 0, 40)
-                    vp.Position = UDim2.new(0, 5, 0, 5)
-                    dn.Size = UDim2.new(1, -60, 0, 20)
-                    dn.Position = UDim2.new(0, 55, 0, 5)
-                    dn.TextXAlignment = Enum.TextXAlignment.Left
-                    un.Size = UDim2.new(1, -60, 0, 20)
-                    un.Position = UDim2.new(0, 55, 0, 25)
-                    un.TextXAlignment = Enum.TextXAlignment.Left
+    ViewToggleBtn.Text = isGridMode and "▦" or "☰"
+    PlayerGrid.CellSize = isGridMode and UDim2.new(0.235, 0, 0, 105) or UDim2.new(1, -10, 0, 50)
+    
+    for _, btn in ipairs(PlayerScroll:GetChildren()) do
+        if btn:IsA("TextButton") then
+            local vp, dn, un = btn:FindFirstChild("ViewportFrame"), btn:FindFirstChild("DisplayName"), btn:FindFirstChild("Username")
+            if vp and dn and un then
+                if isGridMode then
+                    vp.Size, vp.Position = UDim2.new(0, 60, 0, 60), UDim2.new(0.5, -30, 0, 5)
+                    dn.Size, dn.Position, dn.TextXAlignment = UDim2.new(1, -4, 0, 15), UDim2.new(0, 2, 0, 70), Enum.TextXAlignment.Center
+                    un.Size, un.Position, un.TextXAlignment = UDim2.new(1, -4, 0, 15), UDim2.new(0, 2, 0, 85), Enum.TextXAlignment.Center
+                else
+                    vp.Size, vp.Position = UDim2.new(0, 40, 0, 40), UDim2.new(0, 5, 0, 5)
+                    dn.Size, dn.Position, dn.TextXAlignment = UDim2.new(1, -60, 0, 20), UDim2.new(0, 55, 0, 5), Enum.TextXAlignment.Left
+                    un.Size, un.Position, un.TextXAlignment = UDim2.new(1, -60, 0, 20), UDim2.new(0, 55, 0, 25), Enum.TextXAlignment.Left
                 end
             end
         end
@@ -826,94 +787,57 @@ SearchBox:GetPropertyChangedSignal("Text"):Connect(function()
     local query = string.lower(SearchBox.Text)
     for _, child in ipairs(PlayerScroll:GetChildren()) do
         if child:IsA("TextButton") then
-            local dn = child:FindFirstChild("DisplayName")
-            local un = child:FindFirstChild("Username")
+            local dn, un = child:FindFirstChild("DisplayName"), child:FindFirstChild("Username")
             if dn and un then
-                local match = string.find(string.lower(dn.Text), query) or string.find(string.lower(un.Text), query)
-                child.Visible = (match ~= nil)
+                child.Visible = (string.find(string.lower(dn.Text), query) or string.find(string.lower(un.Text), query)) ~= nil
             end
         end
     end
 end)
 
 -- SAVED OUTFITS SEARCH
-local SavedSearchBar = Instance.new("Frame")
-SavedSearchBar.Size = UDim2.new(1, -16, 0, 30)
-SavedSearchBar.Position = UDim2.new(0, 8, 0, 0)
-SavedSearchBar.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
-SavedSearchBar.BorderSizePixel = 0
-SavedSearchBar.Visible = false
-SavedSearchBar.Parent = ContentContainer
+SavedSearchBar = Instance.new("Frame", ContentContainer)
+SavedSearchBar.Size, SavedSearchBar.Position = UDim2.new(1, -16, 0, 30), UDim2.new(0, 8, 0, 0)
+SavedSearchBar.BackgroundColor3, SavedSearchBar.BorderSizePixel, SavedSearchBar.Visible = Color3.fromRGB(20, 20, 25), 0, false
 Instance.new("UICorner", SavedSearchBar).CornerRadius = UDim.new(0, 6)
 
-local SavedSearchBox = Instance.new("TextBox")
-SavedSearchBox.Size = UDim2.new(1, -40, 1, 0)
-SavedSearchBox.Position = UDim2.new(0, 10, 0, 0)
-SavedSearchBox.BackgroundTransparency = 1
-SavedSearchBox.PlaceholderText = "🔍 Search Saved Outfits..."
-SavedSearchBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-SavedSearchBox.Font = Enum.Font.SourceSansBold
-SavedSearchBox.TextSize = 14
-SavedSearchBox.TextXAlignment = Enum.TextXAlignment.Left
-SavedSearchBox.ClearTextOnFocus = false
-SavedSearchBox.Parent = SavedSearchBar
+SavedSearchBox = Instance.new("TextBox", SavedSearchBar)
+SavedSearchBox.Size, SavedSearchBox.Position = UDim2.new(1, -40, 1, 0), UDim2.new(0, 10, 0, 0)
+SavedSearchBox.BackgroundTransparency, SavedSearchBox.ClearTextOnFocus = 1, false
+SavedSearchBox.PlaceholderText, SavedSearchBox.TextColor3 = "🔍 Search Saved Outfits...", Color3.fromRGB(255, 255, 255)
+SavedSearchBox.Font, SavedSearchBox.TextSize, SavedSearchBox.TextXAlignment = Enum.Font.SourceSansBold, 14, Enum.TextXAlignment.Left
 
-local SavedViewToggleBtn = Instance.new("TextButton")
-SavedViewToggleBtn.Size = UDim2.new(0, 30, 0, 30)
-SavedViewToggleBtn.Position = UDim2.new(1, -30, 0, 0)
-SavedViewToggleBtn.BackgroundTransparency = 1
-SavedViewToggleBtn.Text = "▦"
-SavedViewToggleBtn.TextColor3 = Color3.fromRGB(0, 255, 200)
-SavedViewToggleBtn.Font = Enum.Font.SourceSansBold
-SavedViewToggleBtn.TextSize = 18
-SavedViewToggleBtn.Parent = SavedSearchBar
+SavedViewToggleBtn = Instance.new("TextButton", SavedSearchBar)
+SavedViewToggleBtn.Size, SavedViewToggleBtn.Position = UDim2.new(0, 30, 0, 30), UDim2.new(1, -30, 0, 0)
+SavedViewToggleBtn.BackgroundTransparency, SavedViewToggleBtn.Text = 1, "▦"
+SavedViewToggleBtn.TextColor3, SavedViewToggleBtn.Font, SavedViewToggleBtn.TextSize = Color3.fromRGB(0, 255, 200), Enum.Font.SourceSansBold, 18
 
-SavedScroll.Position = UDim2.new(0, 8, 0, 35)
-SavedScroll.Size = UDim2.new(1, -16, 1, -45)
+SavedScroll.Position, SavedScroll.Size = UDim2.new(0, 8, 0, 35), UDim2.new(1, -16, 1, -45)
+if SavedListLayout then SavedListLayout:Destroy() end
 
-SavedListLayout:Destroy()
-local SavedGrid = Instance.new("UIGridLayout")
-SavedGrid.SortOrder = Enum.SortOrder.LayoutOrder
-SavedGrid.CellPadding = UDim2.new(0.02, 0, 0.02, 0)
+SavedGrid = Instance.new("UIGridLayout", SavedScroll)
+SavedGrid.SortOrder, SavedGrid.CellPadding = Enum.SortOrder.LayoutOrder, UDim2.new(0.02, 0, 0.02, 0)
 SavedGrid.CellSize = UDim2.new(0.235, 0, 0, 105)
-SavedGrid.Parent = SavedScroll
-
 SavedGrid:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
     SavedScroll.CanvasSize = UDim2.new(0, 0, 0, SavedGrid.AbsoluteContentSize.Y + 10)
 end)
 
-local isSavedGridMode = true
+isSavedGridMode = true
 SavedViewToggleBtn.MouseButton1Click:Connect(function()
     isSavedGridMode = not isSavedGridMode
-    if isSavedGridMode then
-        SavedViewToggleBtn.Text = "▦"
-        SavedGrid.CellSize = UDim2.new(0.235, 0, 0, 105)
-        for _, btn in ipairs(SavedScroll:GetChildren()) do
-            if btn:IsA("TextButton") then
-                local vp = btn:FindFirstChild("ViewportFrame")
-                local nb = btn:FindFirstChild("NameBox")
-                if vp and nb then
-                    vp.Size = UDim2.new(0, 60, 0, 60)
-                    vp.Position = UDim2.new(0.5, -30, 0, 5)
-                    nb.Size = UDim2.new(1, -4, 0, 15)
-                    nb.Position = UDim2.new(0, 2, 0, 75)
-                    nb.TextXAlignment = Enum.TextXAlignment.Center
-                end
-            end
-        end
-    else
-        SavedViewToggleBtn.Text = "☰"
-        SavedGrid.CellSize = UDim2.new(1, -10, 0, 50)
-        for _, btn in ipairs(SavedScroll:GetChildren()) do
-            if btn:IsA("TextButton") then
-                local vp = btn:FindFirstChild("ViewportFrame")
-                local nb = btn:FindFirstChild("NameBox")
-                if vp and nb then
-                    vp.Size = UDim2.new(0, 40, 0, 40)
-                    vp.Position = UDim2.new(0, 5, 0, 5)
-                    nb.Size = UDim2.new(1, -60, 0, 40)
-                    nb.Position = UDim2.new(0, 55, 0, 0)
-                    nb.TextXAlignment = Enum.TextXAlignment.Left
+    SavedViewToggleBtn.Text = isSavedGridMode and "▦" or "☰"
+    SavedGrid.CellSize = isSavedGridMode and UDim2.new(0.235, 0, 0, 105) or UDim2.new(1, -10, 0, 50)
+    
+    for _, btn in ipairs(SavedScroll:GetChildren()) do
+        if btn:IsA("TextButton") then
+            local vp, nb = btn:FindFirstChild("ViewportFrame"), btn:FindFirstChild("NameBox")
+            if vp and nb then
+                if isSavedGridMode then
+                    vp.Size, vp.Position = UDim2.new(0, 60, 0, 60), UDim2.new(0.5, -30, 0, 5)
+                    nb.Size, nb.Position, nb.TextXAlignment = UDim2.new(1, -4, 0, 15), UDim2.new(0, 2, 0, 75), Enum.TextXAlignment.Center
+                else
+                    vp.Size, vp.Position = UDim2.new(0, 40, 0, 40), UDim2.new(0, 5, 0, 5)
+                    nb.Size, nb.Position, nb.TextXAlignment = UDim2.new(1, -60, 0, 40), UDim2.new(0, 55, 0, 0), Enum.TextXAlignment.Left
                 end
             end
         end
@@ -925,10 +849,7 @@ SavedSearchBox:GetPropertyChangedSignal("Text"):Connect(function()
     for _, child in ipairs(SavedScroll:GetChildren()) do
         if child:IsA("TextButton") then
             local nb = child:FindFirstChild("NameBox")
-            if nb then
-                local match = string.find(string.lower(nb.Text), query)
-                child.Visible = (match ~= nil)
-            end
+            if nb then child.Visible = (string.find(string.lower(nb.Text), query) ~= nil) end
         end
     end
 end)
@@ -3813,54 +3734,28 @@ end)
 -- ==========================================
 -- TAB NAVIGATION LOGIC
 -- ==========================================
-local populateSavedOutfits
-
 BackBtn.MouseButton1Click:Connect(function()
-    AssetScroll.Visible = false
-    SavedScroll.Visible = false
-    ToolsScroll.Visible = false
-    PlayerScroll.Visible = true
-    PlayerSearchBar.Visible = true 
-    SavedSearchBar.Visible = false
-    
-    BackBtn.Visible = false
-    RefreshBtn.Visible = true
-    SavedTabBtn.Visible = true
-    ToolsTabBtn.Visible = true
+    AssetScroll.Visible, SavedScroll.Visible, ToolsScroll.Visible = false, false, false
+    PlayerScroll.Visible, PlayerSearchBar.Visible, SavedSearchBar.Visible = true, true, false
+    BackBtn.Visible, RefreshBtn.Visible, SavedTabBtn.Visible, ToolsTabBtn.Visible = false, true, true, true
     Title.Text = "🧬 Deep Live Outfit Scanner"
 end)
 
 SavedTabBtn.MouseButton1Click:Connect(function()
-    AssetScroll.Visible = false
-    PlayerScroll.Visible = false
-    ToolsScroll.Visible = false
-    SavedScroll.Visible = true
-    PlayerSearchBar.Visible = false 
-    SavedSearchBar.Visible = true
-    
-    BackBtn.Visible = true
-    RefreshBtn.Visible = false
-    SavedTabBtn.Visible = false
-    ToolsTabBtn.Visible = false
+    AssetScroll.Visible, PlayerScroll.Visible, ToolsScroll.Visible = false, false, false
+    SavedScroll.Visible, PlayerSearchBar.Visible, SavedSearchBar.Visible = true, false, true
+    BackBtn.Visible, RefreshBtn.Visible, SavedTabBtn.Visible, ToolsTabBtn.Visible = true, false, false, false
     Title.Text = "📁 Saved Outfits"
     if populateSavedOutfits then populateSavedOutfits() end
 end)
 
 ToolsTabBtn.MouseButton1Click:Connect(function()
-    AssetScroll.Visible = false
-    PlayerScroll.Visible = false
-    SavedScroll.Visible = false
-    ToolsScroll.Visible = true
-    PlayerSearchBar.Visible = false 
-    SavedSearchBar.Visible = false
-    
-    BackBtn.Visible = true
-    RefreshBtn.Visible = false
-    SavedTabBtn.Visible = false
-    ToolsTabBtn.Visible = false
+    AssetScroll.Visible, PlayerScroll.Visible, SavedScroll.Visible = false, false, false
+    ToolsScroll.Visible, PlayerSearchBar.Visible, SavedSearchBar.Visible = true, false, false
+    BackBtn.Visible, RefreshBtn.Visible, SavedTabBtn.Visible, ToolsTabBtn.Visible = true, false, false, false
     Title.Text = "🛠️ Utility Tools"
 end)
-
+---
 local function createDetailedAssetCard(categoryName, assetId, rawPropertySource)
     local numericId = tonumber(assetId)
     if not numericId then return end
@@ -5133,53 +5028,33 @@ end
 -- ==========================================
 -- SAVED OUTFIT DETAILED VIEW (OPENS WHEN CLICKED)
 -- ==========================================
-local function openSavedOutfitDetail(outfitInfo)
-    local data = outfitInfo.data
-    local name = outfitInfo.name
-    local file = outfitInfo.file
+openSavedOutfitDetail = function(outfitInfo)
+    local data, name, file = outfitInfo.data, outfitInfo.name, outfitInfo.file
     local folderName = "lifetogether_admin_savedoutfits"
 
-    for _, child in pairs(AssetScroll:GetChildren()) do
-        if child:IsA("Frame") then child:Destroy() end
-    end
+    for _, child in pairs(AssetScroll:GetChildren()) do if child:IsA("Frame") then child:Destroy() end end
     
     Title.Text = "📁 Viewing: " .. name
-    SavedScroll.Visible = false
-    SavedSearchBar.Visible = false
-    AssetScroll.Visible = true
-    RefreshBtn.Visible = false
-    BackBtn.Visible = true
+    SavedScroll.Visible, SavedSearchBar.Visible = false, false
+    AssetScroll.Visible, RefreshBtn.Visible, BackBtn.Visible = true, false, true
 
-    -- Big Avatar Viewport
-    local avatarFrame = Instance.new("Frame")
-    avatarFrame.Size = UDim2.new(1, -5, 0, 250)
-    avatarFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
-    avatarFrame.BorderSizePixel = 1
-    avatarFrame.BorderColor3 = Color3.fromRGB(0, 255, 150)
-    avatarFrame.LayoutOrder = 1
-    avatarFrame.Parent = AssetScroll
+    local avatarFrame = Instance.new("Frame", AssetScroll)
+    avatarFrame.Size, avatarFrame.BackgroundColor3, avatarFrame.BorderSizePixel = UDim2.new(1, -5, 0, 250), Color3.fromRGB(15, 15, 18), 1
+    avatarFrame.BorderColor3, avatarFrame.LayoutOrder = Color3.fromRGB(0, 255, 150), 1
 
-    local bigViewport = Instance.new("ViewportFrame")
-    bigViewport.Size = UDim2.new(1, 0, 1, 0)
-    bigViewport.BackgroundTransparency = 1
-    bigViewport.Parent = avatarFrame
+    local bigViewport = Instance.new("ViewportFrame", avatarFrame)
+    bigViewport.Size, bigViewport.BackgroundTransparency = UDim2.new(1, 0, 1, 0), 1
 
-    local worldModel = Instance.new("WorldModel")
-    worldModel.Parent = bigViewport
+    local worldModel = Instance.new("WorldModel", bigViewport)
 
-    -- Background logic to spawn the 3D model
     task.spawn(function()
         local desc = Instance.new("HumanoidDescription")
-        desc.Shirt = data.Shirt or 0
-        desc.Pants = data.Pants or 0
-        desc.GraphicTShirt = data.GraphicTShirt or 0
-        desc.Face = data.Face or 0
-        desc.Head = data.Head or 0
+        desc.Shirt, desc.Pants, desc.GraphicTShirt = data.Shirt or 0, data.Pants or 0, data.GraphicTShirt or 0
+        desc.Face, desc.Head = data.Face or 0, data.Head or 0
         
         if data.SkinTone then
             local c = Color3.new(data.SkinTone[1], data.SkinTone[2], data.SkinTone[3])
-            desc.HeadColor = c; desc.TorsoColor = c; desc.LeftArmColor = c
-            desc.RightArmColor = c; desc.LeftLegColor = c; desc.RightLegColor = c
+            desc.HeadColor, desc.TorsoColor, desc.LeftArmColor, desc.RightArmColor, desc.LeftLegColor, desc.RightLegColor = c, c, c, c, c, c
         end
         if data.Accessories then
             local accGroups = {}
@@ -5208,8 +5083,7 @@ local function openSavedOutfitDetail(outfitInfo)
             for _, v in pairs(dummy:GetDescendants()) do if v:IsA("Script") or v:IsA("LocalScript") then v:Destroy() end end
             dummy:PivotTo(CFrame.new(0, 0, 0))
             dummy.Parent = worldModel
-            local camera = Instance.new("Camera")
-            camera.Parent = bigViewport
+            local camera = Instance.new("Camera", bigViewport)
             local hrp = dummy:FindFirstChild("HumanoidRootPart") or dummy:FindFirstChild("UpperTorso") or dummy:FindFirstChild("Torso")
             if hrp then
                 camera.CFrame = hrp.CFrame * CFrame.new(0, 0.5, -6) * CFrame.Angles(0, math.pi, 0)
@@ -5219,83 +5093,42 @@ local function openSavedOutfitDetail(outfitInfo)
         end
     end)
 
-    -- Action & Edit Panel
-    local actionFrame = Instance.new("Frame")
-    actionFrame.Size = UDim2.new(1, -5, 0, 95)
-    actionFrame.BackgroundTransparency = 1
-    actionFrame.LayoutOrder = 2
-    actionFrame.Parent = AssetScroll
+    local actionFrame = Instance.new("Frame", AssetScroll)
+    actionFrame.Size, actionFrame.BackgroundTransparency, actionFrame.LayoutOrder = UDim2.new(1, -5, 0, 95), 1, 2
 
-    local RenameBox = Instance.new("TextBox")
-    RenameBox.Size = UDim2.new(1, -10, 0, 30)
-    RenameBox.Position = UDim2.new(0, 5, 0, 0)
-    RenameBox.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
-    RenameBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-    RenameBox.Font = Enum.Font.SourceSansBold
-    RenameBox.TextSize = 14
-    RenameBox.Text = name
-    RenameBox.ClearTextOnFocus = false
-    RenameBox.Parent = actionFrame
+    local RenameBox = Instance.new("TextBox", actionFrame)
+    RenameBox.Size, RenameBox.Position = UDim2.new(1, -10, 0, 30), UDim2.new(0, 5, 0, 0)
+    RenameBox.BackgroundColor3, RenameBox.TextColor3 = Color3.fromRGB(15, 15, 18), Color3.fromRGB(255, 255, 255)
+    RenameBox.Font, RenameBox.TextSize, RenameBox.Text, RenameBox.ClearTextOnFocus = Enum.Font.SourceSansBold, 14, name, false
     Instance.new("UICorner", RenameBox).CornerRadius = UDim.new(0, 6)
 
-    local actionLayout = Instance.new("Frame")
-    actionLayout.Size = UDim2.new(1, -10, 0, 60)
-    actionLayout.Position = UDim2.new(0, 5, 0, 35)
-    actionLayout.BackgroundTransparency = 1
-    actionLayout.Parent = actionFrame
+    local actionLayout = Instance.new("Frame", actionFrame)
+    actionLayout.Size, actionLayout.Position, actionLayout.BackgroundTransparency = UDim2.new(1, -10, 0, 60), UDim2.new(0, 5, 0, 35), 1
 
-    local uigrid = Instance.new("UIGridLayout")
-    uigrid.CellSize = UDim2.new(0.235, 0, 0, 26) 
-    uigrid.CellPadding = UDim2.new(0.02, 0, 0.08, 0)
-    uigrid.SortOrder = Enum.SortOrder.LayoutOrder
-    uigrid.FillDirectionMaxCells = 4
-    uigrid.Parent = actionLayout
+    local uigrid = Instance.new("UIGridLayout", actionLayout)
+    uigrid.CellSize, uigrid.CellPadding = UDim2.new(0.235, 0, 0, 26), UDim2.new(0.02, 0, 0.08, 0)
+    uigrid.SortOrder, uigrid.FillDirectionMaxCells = Enum.SortOrder.LayoutOrder, 4
 
-    local WearBtn = Instance.new("TextButton")
-    WearBtn.Text = "Wear"
-    WearBtn.BackgroundColor3 = Color3.fromRGB(249, 180, 0)
-    WearBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
-    WearBtn.Font = Enum.Font.SourceSansBold
-    WearBtn.TextSize = 11
-    WearBtn.BorderSizePixel = 0
-    WearBtn.LayoutOrder = 1
-    WearBtn.Parent = actionLayout
+    local WearBtn = Instance.new("TextButton", actionLayout)
+    WearBtn.Text, WearBtn.BackgroundColor3, WearBtn.TextColor3 = "Wear", Color3.fromRGB(249, 180, 0), Color3.fromRGB(0, 0, 0)
+    WearBtn.Font, WearBtn.TextSize, WearBtn.BorderSizePixel, WearBtn.LayoutOrder = Enum.Font.SourceSansBold, 11, 0, 1
 
-    local RenameBtn = Instance.new("TextButton")
-    RenameBtn.Text = "Rename"
-    RenameBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 150)
-    RenameBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    RenameBtn.Font = Enum.Font.SourceSansBold
-    RenameBtn.TextSize = 11
-    RenameBtn.BorderSizePixel = 0
-    RenameBtn.LayoutOrder = 2
-    RenameBtn.Parent = actionLayout
+    local RenameBtn = Instance.new("TextButton", actionLayout)
+    RenameBtn.Text, RenameBtn.BackgroundColor3, RenameBtn.TextColor3 = "Rename", Color3.fromRGB(80, 80, 150), Color3.fromRGB(255, 255, 255)
+    RenameBtn.Font, RenameBtn.TextSize, RenameBtn.BorderSizePixel, RenameBtn.LayoutOrder = Enum.Font.SourceSansBold, 11, 0, 2
 
-    local DeleteBtn = Instance.new("TextButton")
-    DeleteBtn.Text = "Delete"
-    DeleteBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-    DeleteBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    DeleteBtn.Font = Enum.Font.SourceSansBold
-    DeleteBtn.TextSize = 11
-    DeleteBtn.BorderSizePixel = 0
-    DeleteBtn.LayoutOrder = 3
-    DeleteBtn.Parent = actionLayout
+    local DeleteBtn = Instance.new("TextButton", actionLayout)
+    DeleteBtn.Text, DeleteBtn.BackgroundColor3, DeleteBtn.TextColor3 = "Delete", Color3.fromRGB(200, 50, 50), Color3.fromRGB(255, 255, 255)
+    DeleteBtn.Font, DeleteBtn.TextSize, DeleteBtn.BorderSizePixel, DeleteBtn.LayoutOrder = Enum.Font.SourceSansBold, 11, 0, 3
 
-    local ShareBtn = Instance.new("TextButton")
-    ShareBtn.Text = "Share All"
-    ShareBtn.BackgroundColor3 = Color3.fromRGB(200, 100, 200)
-    ShareBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    ShareBtn.Font = Enum.Font.SourceSansBold
-    ShareBtn.TextSize = 11
-    ShareBtn.BorderSizePixel = 0
-    ShareBtn.LayoutOrder = 4
-    ShareBtn.Parent = actionLayout
+    local ShareBtn = Instance.new("TextButton", actionLayout)
+    ShareBtn.Text, ShareBtn.BackgroundColor3, ShareBtn.TextColor3 = "Share All", Color3.fromRGB(200, 100, 200), Color3.fromRGB(255, 255, 255)
+    ShareBtn.Font, ShareBtn.TextSize, ShareBtn.BorderSizePixel, ShareBtn.LayoutOrder = Enum.Font.SourceSansBold, 11, 0, 4
 
-    -- 🖲️ Action Button Functions
     WearBtn.MouseButton1Click:Connect(function()
         WearBtn.Text = "..."
         local payload = buildBatchPayload(data)
-        local Send = getgenv().Send or (getgenv().g and getgenv().g.Send)
+        local Send, Get = getgenv().Send or (getgenv().g and getgenv().g.Send), getgenv().Get or (getgenv().g and getgenv().g.Get)
         if Send then
             task.spawn(function()
                 for i = 1, 3 do Send("wear_outfit_from_desc", payload) task.wait(0.1) end
@@ -5313,17 +5146,12 @@ local function openSavedOutfitDetail(outfitInfo)
     end)
 
     RenameBtn.MouseButton1Click:Connect(function() RenameBox:CaptureFocus() end)
-    
     RenameBox.FocusLost:Connect(function()
         local newName = RenameBox.Text:gsub("%s+", "")
         if newName ~= "" and newName ~= name then
-            local oldPath = folderName .. "/" .. name .. ".json"
-            local newPath = folderName .. "/" .. newName .. ".json"
+            local oldPath, newPath = folderName .. "/" .. name .. ".json", folderName .. "/" .. newName .. ".json"
             if not isfile(newPath) then
-                pcall(function()
-                    writefile(newPath, HttpService:JSONEncode(data))
-                    if isfile(oldPath) then delfile(oldPath) end
-                end)
+                pcall(function() writefile(newPath, HttpService:JSONEncode(data)) if isfile(oldPath) then delfile(oldPath) end end)
                 name = newName
                 Title.Text = "📁 Saved: " .. name
                 populateSavedOutfits()
@@ -5339,35 +5167,22 @@ local function openSavedOutfitDetail(outfitInfo)
 
     ShareBtn.MouseButton1Click:Connect(function()
         local excludedTarget = nil
-        for _, p in ipairs(Players:GetPlayers()) do
-            if string.find(name, p.Name) then excludedTarget = p break end
-        end
+        for _, p in ipairs(Players:GetPlayers()) do if string.find(name, p.Name) then excludedTarget = p break end end
         shareOutfitToAll(data, ShareBtn, "Share All", Color3.fromRGB(200, 100, 200), excludedTarget)
     end)
 
-    -- 📦 Populate the Individual Asset Items for the Detail View
     if data.Shirt and data.Shirt ~= 0 then createDetailedAssetCard("Classic Shirt", data.Shirt, "Saved.Shirt") end
     if data.Pants and data.Pants ~= 0 then createDetailedAssetCard("Classic Pants", data.Pants, "Saved.Pants") end
     if data.GraphicTShirt and data.GraphicTShirt ~= 0 then createDetailedAssetCard("T-Shirt Graphic", data.GraphicTShirt, "Saved.GraphicTShirt") end
     if data.Face and data.Face ~= 0 then createDetailedAssetCard("Face Texture", data.Face, "Saved.Face") end
-
     local bodyParts = {"Head", "Torso", "LeftArm", "RightArm", "LeftLeg", "RightLeg"}
-    for _, part in ipairs(bodyParts) do
-        local partId = tonumber(data[part]) or 0
-        if partId ~= 0 then createDetailedAssetCard("Body: " .. part, partId, "Saved." .. part) end
-    end
-
+    for _, part in ipairs(bodyParts) do local partId = tonumber(data[part]) or 0 if partId ~= 0 then createDetailedAssetCard("Body: " .. part, partId, "Saved." .. part) end end
     local animations = {"IdleAnimation", "RunAnimation", "WalkAnimation", "JumpAnimation", "ClimbAnimation", "FallAnimation", "SwimAnimation"}
-    for _, anim in ipairs(animations) do
-        local animId = tonumber(data[anim]) or 0
-        if animId ~= 0 then createDetailedAssetCard("Anim: " .. anim:gsub("Animation", ""), animId, "Saved." .. anim) end
-    end
-
+    for _, anim in ipairs(animations) do local animId = tonumber(data[anim]) or 0 if animId ~= 0 then createDetailedAssetCard("Anim: " .. anim:gsub("Animation", ""), animId, "Saved." .. anim) end end
     if data.Accessories then
         for _, acc in pairs(data.Accessories) do
             local accType = tostring(acc.AccessoryType):gsub("Enum.AccessoryType.", "")
-            local label = acc.IsLayered and ("Layered " .. accType) or accType
-            createDetailedAssetCard(label, acc.AssetId, "Saved." .. accType)
+            createDetailedAssetCard(acc.IsLayered and ("Layered " .. accType) or accType, acc.AssetId, "Saved." .. accType)
         end
     end
 end
@@ -5376,10 +5191,7 @@ end
 -- SAVED OUTFITS LIST BUILDER
 -- ==========================================
 populateSavedOutfits = function()
-    -- Clear current list
-    for _, child in pairs(SavedScroll:GetChildren()) do
-        if child:IsA("TextButton") then child:Destroy() end
-    end
+    for _, child in pairs(SavedScroll:GetChildren()) do if child:IsA("TextButton") then child:Destroy() end end
 
     local folderName = "lifetogether_admin_savedoutfits"
     if not isfolder or not isfolder(folderName) then return end
@@ -5389,62 +5201,42 @@ populateSavedOutfits = function()
         if file:match("%.json$") then
             local name = file:match("([^/\\]+)%.json$")
             local ok, content = pcall(readfile, file)
-            
             if ok and content and #content > 0 then
                 local success, data = pcall(function() return HttpService:JSONDecode(content) end)
                 if success and type(data) == "table" then
-                    local isScanned = string.find(name, "_Scanned") ~= nil
-                    local savedTime = tonumber(data.SavedAtTime) or 0
-                    table.insert(outfitsList, {name = name, data = data, file = file, isScanned = isScanned, time = savedTime})
+                    table.insert(outfitsList, {name = name, data = data, file = file, isScanned = (string.find(name, "_Scanned") ~= nil), time = tonumber(data.SavedAtTime) or 0})
                 end
             end
         end
     end
 
     table.sort(outfitsList, function(a, b)
-        if a.isScanned and not b.isScanned then return true
-        elseif not a.isScanned and b.isScanned then return false
-        else
-            if a.time ~= b.time then return a.time > b.time
-            else return string.lower(a.name) < string.lower(b.name) end
+        if a.isScanned and not b.isScanned then return true elseif not a.isScanned and b.isScanned then return false else
+            if a.time ~= b.time then return a.time > b.time else return string.lower(a.name) < string.lower(b.name) end
         end
     end)
 
     for _, outfitInfo in ipairs(outfitsList) do
-        local name = outfitInfo.name
-        local data = outfitInfo.data
+        local name, data = outfitInfo.name, outfitInfo.data
 
-        -- Rebuilt as a Profile Card Button exactly like the Players tab!
-        local Entry = Instance.new("TextButton")
-        Entry.BackgroundColor3 = Color3.fromRGB(24, 24, 30)
-        Entry.BorderSizePixel = 0
-        Entry.Text = ""
-        Entry.Parent = SavedScroll
+        local Entry = Instance.new("TextButton", SavedScroll)
+        Entry.BackgroundColor3, Entry.BorderSizePixel, Entry.Text = Color3.fromRGB(24, 24, 30), 0, ""
         Instance.new("UICorner", Entry).CornerRadius = UDim.new(0, 8)
 
-        local SmallViewport = Instance.new("ViewportFrame")
-        SmallViewport.Name = "ViewportFrame"
-        SmallViewport.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
-        SmallViewport.BorderSizePixel = 0
-        SmallViewport.Parent = Entry
+        local SmallViewport = Instance.new("ViewportFrame", Entry)
+        SmallViewport.Name, SmallViewport.BackgroundColor3, SmallViewport.BorderSizePixel = "ViewportFrame", Color3.fromRGB(15, 15, 18), 0
         Instance.new("UICorner", SmallViewport).CornerRadius = UDim.new(0, 6)
 
-        local smallWorldModel = Instance.new("WorldModel")
-        smallWorldModel.Parent = SmallViewport
+        local smallWorldModel = Instance.new("WorldModel", SmallViewport)
 
         task.spawn(function()
             local desc = Instance.new("HumanoidDescription")
-            desc.Shirt = data.Shirt or 0
-            desc.Pants = data.Pants or 0
-            desc.GraphicTShirt = data.GraphicTShirt or 0
-            desc.Face = data.Face or 0
-            desc.Head = data.Head or 0
-            
+            desc.Shirt, desc.Pants, desc.GraphicTShirt = data.Shirt or 0, data.Pants or 0, data.GraphicTShirt or 0
+            desc.Face, desc.Head = data.Face or 0, data.Head or 0
             if data.SkinTone then
                 local c = Color3.new(data.SkinTone[1], data.SkinTone[2], data.SkinTone[3])
-                desc.HeadColor = c; desc.TorsoColor = c; desc.LeftArmColor = c; desc.RightArmColor = c; desc.LeftLegColor = c; desc.RightLegColor = c
+                desc.HeadColor, desc.TorsoColor, desc.LeftArmColor, desc.RightArmColor, desc.LeftLegColor, desc.RightLegColor = c, c, c, c, c, c
             end
-            
             if data.Accessories then
                 local accGroups = {}
                 for _, acc in pairs(data.Accessories) do
@@ -5473,8 +5265,7 @@ populateSavedOutfits = function()
                 for _, v in pairs(dummy:GetDescendants()) do if v:IsA("Script") or v:IsA("LocalScript") then v:Destroy() end end
                 dummy:PivotTo(CFrame.new(0, 0, 0))
                 dummy.Parent = smallWorldModel
-                local camera = Instance.new("Camera")
-                camera.Parent = SmallViewport
+                local camera = Instance.new("Camera", SmallViewport)
                 local hrp = dummy:FindFirstChild("HumanoidRootPart") or dummy:FindFirstChild("UpperTorso") or dummy:FindFirstChild("Torso")
                 if hrp then
                     camera.CFrame = hrp.CFrame * CFrame.new(0, 0.5, -5.5) * CFrame.Angles(0, math.pi, 0)
@@ -5484,35 +5275,20 @@ populateSavedOutfits = function()
             end
         end)
 
-        local NameBox = Instance.new("TextLabel")
-        NameBox.Name = "NameBox"
-        NameBox.BackgroundTransparency = 1
-        NameBox.Text = name
+        local NameBox = Instance.new("TextLabel", Entry)
+        NameBox.Name, NameBox.BackgroundTransparency, NameBox.Text = "NameBox", 1, name
         NameBox.TextColor3 = outfitInfo.isScanned and Color3.fromRGB(0, 255, 200) or Color3.fromRGB(255, 255, 255)
-        NameBox.Font = Enum.Font.SourceSansBold
-        NameBox.TextSize = 12
-        NameBox.TextTruncate = Enum.TextTruncate.AtEnd
-        NameBox.Parent = Entry
+        NameBox.Font, NameBox.TextSize, NameBox.TextTruncate = Enum.Font.SourceSansBold, 12, Enum.TextTruncate.AtEnd
         
-        -- Adapt to Grid vs Compact Mode smoothly!
         if isSavedGridMode then
-            SmallViewport.Size = UDim2.new(0, 60, 0, 60)
-            SmallViewport.Position = UDim2.new(0.5, -30, 0, 5)
-            NameBox.Size = UDim2.new(1, -4, 0, 15)
-            NameBox.Position = UDim2.new(0, 2, 0, 75)
-            NameBox.TextXAlignment = Enum.TextXAlignment.Center
+            SmallViewport.Size, SmallViewport.Position = UDim2.new(0, 60, 0, 60), UDim2.new(0.5, -30, 0, 5)
+            NameBox.Size, NameBox.Position, NameBox.TextXAlignment = UDim2.new(1, -4, 0, 15), UDim2.new(0, 2, 0, 75), Enum.TextXAlignment.Center
         else
-            SmallViewport.Size = UDim2.new(0, 40, 0, 40)
-            SmallViewport.Position = UDim2.new(0, 5, 0, 5)
-            NameBox.Size = UDim2.new(1, -60, 0, 40)
-            NameBox.Position = UDim2.new(0, 55, 0, 0)
-            NameBox.TextXAlignment = Enum.TextXAlignment.Left
+            SmallViewport.Size, SmallViewport.Position = UDim2.new(0, 40, 0, 40), UDim2.new(0, 5, 0, 5)
+            NameBox.Size, NameBox.Position, NameBox.TextXAlignment = UDim2.new(1, -60, 0, 40), UDim2.new(0, 55, 0, 0), Enum.TextXAlignment.Left
         end
         
-        -- Opens the detailed view instead of triggering messy buttons
-        Entry.MouseButton1Click:Connect(function()
-            openSavedOutfitDetail(outfitInfo)
-        end)
+        Entry.MouseButton1Click:Connect(function() openSavedOutfitDetail(outfitInfo) end)
     end
 end
 
