@@ -5290,6 +5290,13 @@ populateSavedOutfits = function()
         
         Entry.MouseButton1Click:Connect(function() openSavedOutfitDetail(outfitInfo) end)
     end
+    
+    -- 🔥 SCROLL FIX: Forces the scroll bar to expand perfectly after loading
+    task.delay(0.2, function()
+        if SavedGrid and SavedScroll then
+            SavedScroll.CanvasSize = UDim2.new(0, 0, 0, SavedGrid.AbsoluteContentSize.Y + 50)
+        end
+    end)
 end
 
 -- ==========================================
@@ -5301,68 +5308,36 @@ local function populatePlayerList()
     end
 
     for _, player in pairs(Players:GetPlayers()) do
-        local PlayerBtn = Instance.new("TextButton")
-        PlayerBtn.BackgroundColor3 = Color3.fromRGB(24, 24, 30)
-        PlayerBtn.BorderSizePixel = 0
-        PlayerBtn.Text = ""
-        PlayerBtn.Parent = PlayerScroll
+        local PlayerBtn = Instance.new("TextButton", PlayerScroll)
+        PlayerBtn.BackgroundColor3, PlayerBtn.BorderSizePixel, PlayerBtn.Text = Color3.fromRGB(24, 24, 30), 0, ""
         Instance.new("UICorner", PlayerBtn).CornerRadius = UDim.new(0, 8)
 
-        local SmallViewport = Instance.new("ViewportFrame")
-        SmallViewport.Name = "ViewportFrame"
-        SmallViewport.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
-        SmallViewport.BorderSizePixel = 0
-        SmallViewport.Parent = PlayerBtn
+        local SmallViewport = Instance.new("ViewportFrame", PlayerBtn)
+        SmallViewport.Name, SmallViewport.BackgroundColor3, SmallViewport.BorderSizePixel = "ViewportFrame", Color3.fromRGB(15, 15, 18), 0
         Instance.new("UICorner", SmallViewport).CornerRadius = UDim.new(0, 6)
 
-        local DisplayName = Instance.new("TextLabel")
-        DisplayName.Name = "DisplayName"
-        DisplayName.Text = player.DisplayName
-        DisplayName.TextColor3 = Color3.fromRGB(255, 255, 255)
-        DisplayName.Font = Enum.Font.SourceSansBold
-        DisplayName.TextSize = 12
-        DisplayName.TextTruncate = Enum.TextTruncate.AtEnd
-        DisplayName.BackgroundTransparency = 1
-        DisplayName.Parent = PlayerBtn
+        local DisplayName = Instance.new("TextLabel", PlayerBtn)
+        DisplayName.Name, DisplayName.Text, DisplayName.TextColor3 = "DisplayName", player.DisplayName, Color3.fromRGB(255, 255, 255)
+        DisplayName.Font, DisplayName.TextSize, DisplayName.TextTruncate, DisplayName.BackgroundTransparency = Enum.Font.SourceSansBold, 12, Enum.TextTruncate.AtEnd, 1
 
-        local Username = Instance.new("TextLabel")
-        Username.Name = "Username"
-        Username.Text = "@" .. player.Name
-        Username.TextColor3 = Color3.fromRGB(150, 150, 150)
-        Username.Font = Enum.Font.SourceSans
-        Username.TextSize = 11
-        Username.TextTruncate = Enum.TextTruncate.AtEnd
-        Username.BackgroundTransparency = 1
-        Username.Parent = PlayerBtn
+        local Username = Instance.new("TextLabel", PlayerBtn)
+        Username.Name, Username.Text, Username.TextColor3 = "Username", "@" .. player.Name, Color3.fromRGB(150, 150, 150)
+        Username.Font, Username.TextSize, Username.TextTruncate, Username.BackgroundTransparency = Enum.Font.SourceSans, 11, Enum.TextTruncate.AtEnd, 1
         
-        -- Adapt to Grid vs Compact Mode smoothly!
         if isGridMode then
-            SmallViewport.Size = UDim2.new(0, 60, 0, 60)
-            SmallViewport.Position = UDim2.new(0.5, -30, 0, 5)
-            DisplayName.Size = UDim2.new(1, -4, 0, 15)
-            DisplayName.Position = UDim2.new(0, 2, 0, 70)
-            DisplayName.TextXAlignment = Enum.TextXAlignment.Center
-            Username.Size = UDim2.new(1, -4, 0, 15)
-            Username.Position = UDim2.new(0, 2, 0, 85)
-            Username.TextXAlignment = Enum.TextXAlignment.Center
+            SmallViewport.Size, SmallViewport.Position = UDim2.new(0, 60, 0, 60), UDim2.new(0.5, -30, 0, 5)
+            DisplayName.Size, DisplayName.Position, DisplayName.TextXAlignment = UDim2.new(1, -4, 0, 15), UDim2.new(0, 2, 0, 70), Enum.TextXAlignment.Center
+            Username.Size, Username.Position, Username.TextXAlignment = UDim2.new(1, -4, 0, 15), UDim2.new(0, 2, 0, 85), Enum.TextXAlignment.Center
         else
-            SmallViewport.Size = UDim2.new(0, 40, 0, 40)
-            SmallViewport.Position = UDim2.new(0, 5, 0, 5)
-            DisplayName.Size = UDim2.new(1, -60, 0, 20)
-            DisplayName.Position = UDim2.new(0, 55, 0, 5)
-            DisplayName.TextXAlignment = Enum.TextXAlignment.Left
-            Username.Size = UDim2.new(1, -60, 0, 20)
-            Username.Position = UDim2.new(0, 55, 0, 25)
-            Username.TextXAlignment = Enum.TextXAlignment.Left
+            SmallViewport.Size, SmallViewport.Position = UDim2.new(0, 40, 0, 40), UDim2.new(0, 5, 0, 5)
+            DisplayName.Size, DisplayName.Position, DisplayName.TextXAlignment = UDim2.new(1, -60, 0, 20), UDim2.new(0, 55, 0, 5), Enum.TextXAlignment.Left
+            Username.Size, Username.Position, Username.TextXAlignment = UDim2.new(1, -60, 0, 20), UDim2.new(0, 55, 0, 25), Enum.TextXAlignment.Left
         end
 
         local cachedDescription = nil
-        
         task.spawn(function()
             local char = player.Character or player.CharacterAdded:Wait()
-            if not player:HasAppearanceLoaded() then
-                player.CharacterAppearanceLoaded:Wait()
-            end
+            if not player:HasAppearanceLoaded() then player.CharacterAppearanceLoaded:Wait() end
 
             local hum = char:WaitForChild("Humanoid", 5)
             if hum then pcall(function() cachedDescription = hum:GetAppliedDescription() end) end
@@ -5374,9 +5349,7 @@ local function populatePlayerList()
 
             if headClone then
                 headClone.Parent = SmallViewport
-                local camera = Instance.new("Camera")
-                camera.Parent = SmallViewport
-                
+                local camera = Instance.new("Camera", SmallViewport)
                 local head = headClone:FindFirstChild("Head")
                 if head then
                     camera.CFrame = head.CFrame * CFrame.new(0, 0, -2.5) * CFrame.Angles(0, math.pi, 0)
@@ -5386,10 +5359,15 @@ local function populatePlayerList()
             end
         end)
         
-        PlayerBtn.MouseButton1Click:Connect(function()
-            deepScanPlayerOutfit(player, cachedDescription)
-        end)
+        PlayerBtn.MouseButton1Click:Connect(function() deepScanPlayerOutfit(player, cachedDescription) end)
     end
+    
+    -- 🔥 SCROLL FIX: Forces the scroll bar to expand perfectly after loading
+    task.delay(0.2, function()
+        if PlayerGrid and PlayerScroll then
+            PlayerScroll.CanvasSize = UDim2.new(0, 0, 0, PlayerGrid.AbsoluteContentSize.Y + 50)
+        end
+    end)
 end
 
 -- Initialize
