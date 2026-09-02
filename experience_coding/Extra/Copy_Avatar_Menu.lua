@@ -3738,7 +3738,7 @@ CloseBtn.MouseButton1Click:Connect(function()
 end)
 
 -- ==========================================
--- TAB NAVIGATION LOGIC (ZERO LOCAL VARIABLES)
+-- TAB NAVIGATION LOGIC (MULTI-LAYER BACK FIX)
 -- ==========================================
 isViewingSaved = false
 searchQuery = ""
@@ -3778,40 +3778,53 @@ BtnLast = createPagBtn("»", 6, 24)
 -- Shrink the list to make room for pagination
 SavedScroll.Size = UDim2.new(1, -16, 1, -75)
 
+-- PERFECTED BACK BUTTON LOGIC
 BackBtn.MouseButton1Click:Connect(function()
-    AssetScroll.Visible, ToolsScroll.Visible = false, false
-    BackBtn.Visible = false
-    
-    if isViewingSaved then
+    if isViewingSaved and AssetScroll.Visible then
+        -- Step 1: Return from 3D Detail View back to the Saved Outfits List Grid
+        AssetScroll.Visible, ToolsScroll.Visible = false, false
         SavedScroll.Visible, SavedSearchBar.Visible, SavedPaginationBar.Visible = true, true, true
         PlayerScroll.Visible, PlayerSearchBar.Visible = false, false
-        RefreshBtn.Visible, SavedTabBtn.Visible, ToolsTabBtn.Visible = false, true, true
+        
+        BackBtn.Visible = true -- Keep the back button so we can go home!
+        RefreshBtn.Visible, SavedTabBtn.Visible, ToolsTabBtn.Visible = false, false, false
         Title.Text = "📁 Saved Outfits"
+        isViewingSaved = false 
     else
-        SavedScroll.Visible, SavedSearchBar.Visible, SavedPaginationBar.Visible = false, false, false
+        -- Step 2: Return from Tools, Saved List, or Live Player to the MAIN Menu
+        AssetScroll.Visible, ToolsScroll.Visible, SavedScroll.Visible = false, false, false
+        SavedSearchBar.Visible, SavedPaginationBar.Visible = false, false
         PlayerScroll.Visible, PlayerSearchBar.Visible = true, true
+        
+        BackBtn.Visible = false -- Hide the back button, we are home
         RefreshBtn.Visible, SavedTabBtn.Visible, ToolsTabBtn.Visible = true, true, true
         Title.Text = "🧬 Deep Live Outfit Scanner"
+        isViewingSaved = false
     end
 end)
 
 SavedTabBtn.MouseButton1Click:Connect(function()
+    isViewingSaved = false
     AssetScroll.Visible, PlayerScroll.Visible, ToolsScroll.Visible = false, false, false
-    SavedScroll.Visible, SavedSearchBar.Visible, SavedPaginationBar.Visible = true, true, true
     PlayerSearchBar.Visible = false 
-    BackBtn.Visible, RefreshBtn.Visible, SavedTabBtn.Visible, ToolsTabBtn.Visible = false, false, true, true
+    SavedScroll.Visible, SavedSearchBar.Visible, SavedPaginationBar.Visible = true, true, true
+    
+    BackBtn.Visible = true
+    RefreshBtn.Visible, SavedTabBtn.Visible, ToolsTabBtn.Visible = false, false, false
     Title.Text = "📁 Saved Outfits"
     if populateSavedOutfits then populateSavedOutfits() end
 end)
 
 ToolsTabBtn.MouseButton1Click:Connect(function()
+    isViewingSaved = false
     AssetScroll.Visible, PlayerScroll.Visible, SavedScroll.Visible = false, false, false
-    ToolsScroll.Visible = true
     PlayerSearchBar.Visible, SavedSearchBar.Visible, SavedPaginationBar.Visible = false, false, false
-    BackBtn.Visible, RefreshBtn.Visible, SavedTabBtn.Visible, ToolsTabBtn.Visible = false, false, true, true
+    ToolsScroll.Visible = true
+    
+    BackBtn.Visible = true
+    RefreshBtn.Visible, SavedTabBtn.Visible, ToolsTabBtn.Visible = false, false, false
     Title.Text = "🛠️ Utility Tools"
 end)
-
 
 ---
 local function createDetailedAssetCard(categoryName, assetId, rawPropertySource)
