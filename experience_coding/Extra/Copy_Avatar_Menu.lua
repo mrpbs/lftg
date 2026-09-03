@@ -5407,7 +5407,7 @@ renderSavedPage = function()
                 
                 local hrp = dummy:FindFirstChild("HumanoidRootPart") or dummy:FindFirstChild("UpperTorso") or dummy:FindFirstChild("Torso")
                 if hrp then
-                    camera.CFrame = hrp.CFrame * CFrame.new(0, 0.5, -7.5) * CFrame.Angles(0, math.pi, 0)
+                    camera.CFrame = hrp.CFrame * CFrame.new(0, 0.5, -6.5) * CFrame.Angles(0, math.pi, 0)
                     camera.Focus = hrp.CFrame
                 end
                 SmallViewport.CurrentCamera = camera
@@ -5437,7 +5437,7 @@ renderSavedPage = function()
 end
 
 -- ==========================================
--- SAVED OUTFITS LIST BUILDER (DATA FETCHING)
+-- SAVED OUTFITS LIST BUILDER (DATA FETCHING & HEIGHT FILTER)
 -- ==========================================
 populateSavedOutfits = function()
     allSavedOutfits = {}
@@ -5449,16 +5449,31 @@ populateSavedOutfits = function()
             local name = file:match("([^/\\]+)%.json$")
             local isScanned = (string.find(name, "_Scanned") ~= nil)
             
-            if customOnly and isScanned then continue end
-            if searchQuery ~= "" and not string.find(string.lower(name), searchQuery) then continue end
-            
             local ok, content = pcall(readfile, file)
             if ok and content and #content > 0 then
                 local success, data = pcall(function() return HttpService:JSONDecode(content) end)
                 if success and type(data) == "table" then
-                    table.insert(allSavedOutfits, {
-                        name = name, data = data, file = file, isScanned = isScanned, time = tonumber(data.SavedAtTime) or 0
-                    })
+                    -- 🔥 ADVANCED SEARCH LOGIC
+                    if customOnly and isScanned then continue end
+                    
+                    local passSearch = true
+                    if searchQuery ~= "" then
+                        if string.sub(searchQuery, 1, 7) == "height:" then
+                            -- Height Filter mode
+                            local targetHeight = tonumber(string.sub(searchQuery, 8)) or 0
+                            local fitHeight = tonumber(data.HeightScale) or 1
+                            if fitHeight < targetHeight then passSearch = false end
+                        else
+                            -- Normal Name Search mode
+                            if not string.find(string.lower(name), searchQuery) then passSearch = false end
+                        end
+                    end
+                    
+                    if passSearch then
+                        table.insert(allSavedOutfits, {
+                            name = name, data = data, file = file, isScanned = isScanned, time = tonumber(data.SavedAtTime) or 0
+                        })
+                    end
                 end
             end
         end
