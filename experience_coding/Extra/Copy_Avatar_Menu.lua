@@ -5120,12 +5120,10 @@ openSavedOutfitDetail = function(outfitInfo)
 
     local worldModel = Instance.new("WorldModel", bigViewport)
 
-        task.spawn(function()
+       task.spawn(function()
         local desc = Instance.new("HumanoidDescription")
         desc.Shirt, desc.Pants, desc.GraphicTShirt = data.Shirt or 0, data.Pants or 0, data.GraphicTShirt or 0
         desc.Face, desc.Head = data.Face or 0, data.Head or 0
-        
-        -- INJECT BODY PARTS & SCALES
         desc.Torso, desc.LeftArm, desc.RightArm = data.Torso or 0, data.LeftArm or 0, data.RightArm or 0
         desc.LeftLeg, desc.RightLeg = data.LeftLeg or 0, data.RightLeg or 0
 
@@ -5140,56 +5138,47 @@ openSavedOutfitDetail = function(outfitInfo)
             local c = Color3.new(data.SkinTone[1], data.SkinTone[2], data.SkinTone[3])
             desc.HeadColor, desc.TorsoColor, desc.LeftArmColor, desc.RightArmColor, desc.LeftLegColor, desc.RightLegColor = c, c, c, c, c, c
         end
+
+        -- 🔥 FIX: Use Native Accessory Arrays to preserve Layered Wrap & Puffiness
         if data.Accessories then
-            local accGroups = {}
+            local vAccs = {}
             for _, acc in pairs(data.Accessories) do
-                local typeName = acc.AccessoryType
-                if not string.find(typeName, "Accessory") then typeName = typeName .. "Accessory" end
-                accGroups[typeName] = accGroups[typeName] and (accGroups[typeName] .. "," .. tostring(acc.AssetId)) or tostring(acc.AssetId)
+                pcall(function()
+                    local t = tostring(acc.AccessoryType):gsub("Enum.AccessoryType.", ""):gsub("Accessory", "")
+                    table.insert(vAccs, {
+                        AssetId = tonumber(acc.AssetId) or 0,
+                        AccessoryType = Enum.AccessoryType[t],
+                        IsLayered = acc.IsLayered == true,
+                        Order = tonumber(acc.Order) or 1,
+                        Puffiness = tonumber(acc.Puffiness) or 0
+                    })
+                end)
             end
-            for prop, val in pairs(accGroups) do pcall(function() desc[prop] = val end) end
+            pcall(function() desc:SetAccessories(vAccs, false) end)
         end
 
-    local dummy = nil
-
--- 🔥 FORCE the clone method (guaranteed to preserve Layered Clothing)
-pcall(function()
-    local myChar = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-    if myChar then
-        local oldArch = myChar.Archivable
-        myChar.Archivable = true
-        dummy = myChar:Clone()
-        myChar.Archivable = oldArch
-        
-        -- Remove scripts to prevent UI errors
-        for _, v in pairs(dummy:GetDescendants()) do
-            if v:IsA("Script") or v:IsA("LocalScript") then
-                v:Destroy()
-            end
+        local dummy
+        pcall(function() dummy = Players:CreateHumanoidModelFromDescription(desc, Enum.HumanoidRigType.R15) end)
+        if not dummy then
+            pcall(function()
+                local myChar = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+                local oldArch = myChar.Archivable
+                myChar.Archivable = true
+                dummy = myChar:Clone()
+                myChar.Archivable = oldArch
+            end)
         end
-        
-        local hum = dummy:FindFirstChildOfClass("Humanoid")
-        if hum then
-            hum:ApplyDescription(desc) -- Injects the saved outfit data
-        end
-    end
-end)
-
--- Fallback (only runs if the clone method fails for some reason)
-if not dummy then
-    pcall(function() 
-        dummy = Players:CreateHumanoidModelFromDescription(desc, Enum.HumanoidRigType.R15) 
-    end)
-end
         
         if dummy then
-            for _, v in pairs(dummy:GetDescendants()) do if v:IsA("Script") or v:IsA("LocalScript") then v:Destroy() end end
-            
-            -- 🔥 LAYERED CLOTHING FIX: Touch Workspace for 1 frame to calculate 3D Wraps!
-            dummy:PivotTo(CFrame.new(0, 0, 0))
+            -- 🔥 FIX: Put in workspace and Force Apply to trigger 3D Wrap Physics
+            dummy:PivotTo(CFrame.new(0, 50000, 0))
             dummy.Parent = workspace
-            task.wait(0.05) 
+            local hum = dummy:FindFirstChildOfClass("Humanoid")
+            if hum then pcall(function() hum:ApplyDescription(desc) end) end
             
+            task.wait(0.2) -- Give engine exactly 1/5th second to wrap the clothes!
+            
+            for _, v in pairs(dummy:GetDescendants()) do if v:IsA("Script") or v:IsA("LocalScript") then v:Destroy() end end
             dummy:PivotTo(CFrame.new(0, 0, 0))
             dummy.Parent = worldModel
             local camera = Instance.new("Camera", bigViewport)
