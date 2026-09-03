@@ -5119,13 +5119,10 @@ openSavedOutfitDetail = function(outfitInfo)
     bigViewport.Size, bigViewport.BackgroundTransparency = UDim2.new(1, 0, 1, 0), 1
 
     local worldModel = Instance.new("WorldModel", bigViewport)
-   
-task.spawn(function()
+       task.spawn(function()
         local desc = Instance.new("HumanoidDescription")
         desc.Shirt, desc.Pants, desc.GraphicTShirt = data.Shirt or 0, data.Pants or 0, data.GraphicTShirt or 0
         desc.Face, desc.Head = data.Face or 0, data.Head or 0
-        
-        -- INJECT BODY PARTS & SCALES
         desc.Torso, desc.LeftArm, desc.RightArm = data.Torso or 0, data.LeftArm or 0, data.RightArm or 0
         desc.LeftLeg, desc.RightLeg = data.LeftLeg or 0, data.RightLeg or 0
 
@@ -5140,16 +5137,24 @@ task.spawn(function()
             local c = Color3.new(data.SkinTone[1], data.SkinTone[2], data.SkinTone[3])
             desc.HeadColor, desc.TorsoColor, desc.LeftArmColor, desc.RightArmColor, desc.LeftLegColor, desc.RightLegColor = c, c, c, c, c, c
         end
-        
-        -- 🔥 FIX: Uses 100% reliable string grouping for ALL accessories (Hats, Hair, Layered)
+
+        -- 🔥 FIX: The "true" argument correctly loads BOTH Layered AND Rigid (Hats/Hair)
         if data.Accessories then
-            local accGroups = {}
+            local accList = {}
             for _, acc in pairs(data.Accessories) do
-                local typeName = tostring(acc.AccessoryType)
-                if not string.find(typeName, "Accessory") then typeName = typeName .. "Accessory" end
-                accGroups[typeName] = accGroups[typeName] and (accGroups[typeName] .. "," .. tostring(acc.AssetId)) or tostring(acc.AssetId)
+                pcall(function()
+                    local tName = tostring(acc.AccessoryType):gsub("Enum.AccessoryType.", ""):gsub("Accessory", "")
+                    local enumType = Enum.AccessoryType[tName] or Enum.AccessoryType.Unknown
+                    table.insert(accList, {
+                        AssetId = tonumber(acc.AssetId) or 0,
+                        AccessoryType = enumType,
+                        IsLayered = acc.IsLayered == true,
+                        Order = tonumber(acc.Order) or 1,
+                        Puffiness = tonumber(acc.Puffiness) or 0
+                    })
+                end)
             end
-            for prop, val in pairs(accGroups) do pcall(function() desc[prop] = val end) end
+            pcall(function() desc:SetAccessories(accList, true) end)
         end
 
         local dummy
@@ -5165,13 +5170,12 @@ task.spawn(function()
         end
         
         if dummy then
-            -- 🔥 FIX: Force Dummy into Workspace so Layered Clothing wraps correctly!
-            dummy:PivotTo(CFrame.new(0, 0, 0))
+            dummy:PivotTo(CFrame.new(0, 50000, 0))
             dummy.Parent = workspace
             local hum = dummy:FindFirstChildOfClass("Humanoid")
             if hum then pcall(function() hum:ApplyDescription(desc) end) end
             
-            task.wait(0.2) -- Let the engine calculate the 3D clothes for a split second
+            task.wait(0.2) 
             
             for _, v in pairs(dummy:GetDescendants()) do if v:IsA("Script") or v:IsA("LocalScript") then v:Destroy() end end
             dummy:PivotTo(CFrame.new(0, 0, 0))
@@ -5304,13 +5308,12 @@ renderSavedPage = function()
 
         local smallWorldModel = Instance.new("WorldModel", SmallViewport)
 
-              task.spawn(function()
+             task.spawn(function()
             local desc = Instance.new("HumanoidDescription")
             local d = info.data
             desc.Shirt, desc.Pants, desc.GraphicTShirt = d.Shirt or 0, d.Pants or 0, d.GraphicTShirt or 0
             desc.Face, desc.Head = d.Face or 0, d.Head or 0
             
-            -- INJECT BODY PARTS & SCALES
             desc.Torso, desc.LeftArm, desc.RightArm = d.Torso or 0, d.LeftArm or 0, d.RightArm or 0
             desc.LeftLeg, desc.RightLeg = d.LeftLeg or 0, d.RightLeg or 0
 
@@ -5326,15 +5329,23 @@ renderSavedPage = function()
                 desc.HeadColor, desc.TorsoColor, desc.LeftArmColor, desc.RightArmColor, desc.LeftLegColor, desc.RightLegColor = c, c, c, c, c, c
             end
             
-            -- 🔥 FIX: String grouping for ALL accessories
+            -- 🔥 FIX: The "true" argument correctly loads BOTH Layered AND Rigid (Hats/Hair)
             if d.Accessories then
-                local accGroups = {}
+                local accList = {}
                 for _, acc in pairs(d.Accessories) do
-                    local tName = tostring(acc.AccessoryType)
-                    if not string.find(tName, "Accessory") then tName = tName .. "Accessory" end
-                    accGroups[tName] = accGroups[tName] and (accGroups[tName] .. "," .. tostring(acc.AssetId)) or tostring(acc.AssetId)
+                    pcall(function()
+                        local tName = tostring(acc.AccessoryType):gsub("Enum.AccessoryType.", ""):gsub("Accessory", "")
+                        local enumType = Enum.AccessoryType[tName] or Enum.AccessoryType.Unknown
+                        table.insert(accList, {
+                            AssetId = tonumber(acc.AssetId) or 0,
+                            AccessoryType = enumType,
+                            IsLayered = acc.IsLayered == true,
+                            Order = tonumber(acc.Order) or 1,
+                            Puffiness = tonumber(acc.Puffiness) or 0
+                        })
+                    end)
                 end
-                for prop, val in pairs(accGroups) do pcall(function() desc[prop] = val end) end
+                pcall(function() desc:SetAccessories(accList, true) end)
             end
 
             local dummy
@@ -5350,8 +5361,7 @@ renderSavedPage = function()
             end
             
             if dummy then
-                -- 🔥 FIX: Force Dummy into Workspace so Layered Clothing wraps correctly!
-                dummy:PivotTo(CFrame.new(0, 0, 0))
+                dummy:PivotTo(CFrame.new(0, 50000, 0))
                 dummy.Parent = workspace
                 local hum = dummy:FindFirstChildOfClass("Humanoid")
                 if hum then pcall(function() hum:ApplyDescription(desc) end) end
@@ -5362,10 +5372,12 @@ renderSavedPage = function()
                 dummy:PivotTo(CFrame.new(0, 0, 0))
                 dummy.Parent = smallWorldModel
                 local camera = Instance.new("Camera", SmallViewport)
-                local head = dummy:FindFirstChild("Head")
-                if head then
-                    camera.CFrame = head.CFrame * CFrame.new(0, 0, -2.5) * CFrame.Angles(0, math.pi, 0)
-                    camera.Focus = head.CFrame
+                
+                -- 🔥 THUMBNAIL FIX: Targets the Body, pulls camera back to see the whole outfit!
+                local hrp = dummy:FindFirstChild("HumanoidRootPart") or dummy:FindFirstChild("UpperTorso") or dummy:FindFirstChild("Torso")
+                if hrp then
+                    camera.CFrame = hrp.CFrame * CFrame.new(0, 0.5, -6) * CFrame.Angles(0, math.pi, 0)
+                    camera.Focus = hrp.CFrame
                 end
                 SmallViewport.CurrentCamera = camera
             end
