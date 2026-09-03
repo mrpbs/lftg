@@ -742,7 +742,7 @@ SearchBox = Instance.new("TextBox", PlayerSearchBar)
 SearchBox.Size, SearchBox.Position = UDim2.new(1, -40, 1, 0), UDim2.new(0, 10, 0, 0)
 SearchBox.BackgroundTransparency, SearchBox.ClearTextOnFocus = 1, false
 SearchBox.PlaceholderText, SearchBox.TextColor3 = "🔍 Search Players...", Color3.fromRGB(255, 255, 255)
-SearchBox.Font, SearchBox.TextSize, SearchBox.TextXAlignment = Enum.Font.SourceSansBold, 14, Enum.TextXAlignment.Left
+SearchBox.Font, SearchBox.TextSize, SearchBox.TextXAlignment = Enum.Font.SourceSansBold, 14, Enum.TextXAlignment.Left, ""
 
 ViewToggleBtn = Instance.new("TextButton", PlayerSearchBar)
 ViewToggleBtn.Size, ViewToggleBtn.Position = UDim2.new(0, 30, 0, 30), UDim2.new(1, -30, 0, 0)
@@ -805,7 +805,7 @@ SavedSearchBox = Instance.new("TextBox", SavedSearchBar)
 SavedSearchBox.Size, SavedSearchBox.Position = UDim2.new(1, -40, 1, 0), UDim2.new(0, 10, 0, 0)
 SavedSearchBox.BackgroundTransparency, SavedSearchBox.ClearTextOnFocus = 1, false
 SavedSearchBox.PlaceholderText, SavedSearchBox.TextColor3 = "🔍 Search Saved Outfits...", Color3.fromRGB(255, 255, 255)
-SavedSearchBox.Font, SavedSearchBox.TextSize, SavedSearchBox.TextXAlignment = Enum.Font.SourceSansBold, 14, Enum.TextXAlignment.Left
+SavedSearchBox.Font, SavedSearchBox.TextSize, SavedSearchBox.TextXAlignment = Enum.Font.SourceSansBold, 14, Enum.TextXAlignment.Left, ""
 
 SavedViewToggleBtn = Instance.new("TextButton", SavedSearchBar)
 SavedViewToggleBtn.Size, SavedViewToggleBtn.Position = UDim2.new(0, 30, 0, 30), UDim2.new(1, -30, 0, 0)
@@ -3744,7 +3744,7 @@ isViewingSaved = false
 searchQuery = ""
 customOnly = false
 currentPage = 1
-itemsPerPage = 16
+itemsPerPage = 8
 totalPages = 1
 allSavedOutfits = {}
 
@@ -5389,7 +5389,7 @@ renderSavedPage = function()
                 end)
             end
             
-            if dummy then
+                   if dummy then
                 local root = dummy:FindFirstChild("HumanoidRootPart") or dummy:FindFirstChild("Torso")
                 if root then root.Anchored = true end 
                 
@@ -5405,14 +5405,15 @@ renderSavedPage = function()
                 dummy.Parent = smallWorldModel
                 local camera = Instance.new("Camera", SmallViewport)
                 
-                local hrp = dummy:FindFirstChild("HumanoidRootPart") or dummy:FindFirstChild("UpperTorso") or dummy:FindFirstChild("Torso")
-                if hrp then
-                    camera.CFrame = hrp.CFrame * CFrame.new(0, 0.5, -7.5) * CFrame.Angles(0, math.pi, 0)
-                    camera.Focus = hrp.CFrame
+                -- 🔥 FIXED: Target the Head and zoom in for the thumbnail
+                local head = dummy:FindFirstChild("Head")
+                if head then
+                    camera.CFrame = head.CFrame * CFrame.new(0, 0, -2.5) * CFrame.Angles(0, math.pi, 0)
+                    camera.Focus = head.CFrame
                 end
                 SmallViewport.CurrentCamera = camera
             end
-        end)
+
 
 
         local NameBox = Instance.new("TextLabel", Entry)
@@ -5437,7 +5438,7 @@ renderSavedPage = function()
 end
 
 -- ==========================================
--- SAVED OUTFITS LIST BUILDER (DATA FETCHING)
+-- SAVED OUTFITS LIST BUILDER (DATA FETCHING & HEIGHT FILTER)
 -- ==========================================
 populateSavedOutfits = function()
     allSavedOutfits = {}
@@ -5449,16 +5450,31 @@ populateSavedOutfits = function()
             local name = file:match("([^/\\]+)%.json$")
             local isScanned = (string.find(name, "_Scanned") ~= nil)
             
-            if customOnly and isScanned then continue end
-            if searchQuery ~= "" and not string.find(string.lower(name), searchQuery) then continue end
-            
             local ok, content = pcall(readfile, file)
             if ok and content and #content > 0 then
                 local success, data = pcall(function() return HttpService:JSONDecode(content) end)
                 if success and type(data) == "table" then
-                    table.insert(allSavedOutfits, {
-                        name = name, data = data, file = file, isScanned = isScanned, time = tonumber(data.SavedAtTime) or 0
-                    })
+                    -- 🔥 ADVANCED SEARCH LOGIC
+                    if customOnly and isScanned then continue end
+                    
+                    local passSearch = true
+                    if searchQuery ~= "" then
+                        if string.sub(searchQuery, 1, 7) == "height:" then
+                            -- Height Filter mode
+                            local targetHeight = tonumber(string.sub(searchQuery, 8)) or 0
+                            local fitHeight = tonumber(data.HeightScale) or 1
+                            if fitHeight < targetHeight then passSearch = false end
+                        else
+                            -- Normal Name Search mode
+                            if not string.find(string.lower(name), searchQuery) then passSearch = false end
+                        end
+                    end
+                    
+                    if passSearch then
+                        table.insert(allSavedOutfits, {
+                            name = name, data = data, file = file, isScanned = isScanned, time = tonumber(data.SavedAtTime) or 0
+                        })
+                    end
                 end
             end
         end
@@ -5474,6 +5490,7 @@ populateSavedOutfits = function()
     
     renderSavedPage()
 end
+
 
 -- ==========================================
 -- 🎛️ PAGINATION LOGIC CONTROLS
