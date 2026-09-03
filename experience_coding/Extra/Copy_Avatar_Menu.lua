@@ -742,7 +742,8 @@ SearchBox = Instance.new("TextBox", PlayerSearchBar)
 SearchBox.Size, SearchBox.Position = UDim2.new(1, -40, 1, 0), UDim2.new(0, 10, 0, 0)
 SearchBox.BackgroundTransparency, SearchBox.ClearTextOnFocus = 1, false
 SearchBox.PlaceholderText, SearchBox.TextColor3 = "🔍 Search Players...", Color3.fromRGB(255, 255, 255)
-SearchBox.Font, SearchBox.TextSize, SearchBox.TextXAlignment = Enum.Font.SourceSansBold, 14, Enum.TextXAlignment.Left, ""
+SearchBox.Font, SearchBox.TextSize, SearchBox.TextXAlignment, SearchBox.Text = Enum.Font.SourceSansBold, 14, Enum.TextXAlignment.Left, ""
+
 
 ViewToggleBtn = Instance.new("TextButton", PlayerSearchBar)
 ViewToggleBtn.Size, ViewToggleBtn.Position = UDim2.new(0, 30, 0, 30), UDim2.new(1, -30, 0, 0)
@@ -805,7 +806,8 @@ SavedSearchBox = Instance.new("TextBox", SavedSearchBar)
 SavedSearchBox.Size, SavedSearchBox.Position = UDim2.new(1, -40, 1, 0), UDim2.new(0, 10, 0, 0)
 SavedSearchBox.BackgroundTransparency, SavedSearchBox.ClearTextOnFocus = 1, false
 SavedSearchBox.PlaceholderText, SavedSearchBox.TextColor3 = "🔍 Search Saved Outfits...", Color3.fromRGB(255, 255, 255)
-SavedSearchBox.Font, SavedSearchBox.TextSize, SavedSearchBox.TextXAlignment = Enum.Font.SourceSansBold, 14, Enum.TextXAlignment.Left, ""
+SavedSearchBox.Font, SavedSearchBox.TextSize, SavedSearchBox.TextXAlignment, SavedSearchBox.Text = Enum.Font.SourceSansBold, 14, Enum.TextXAlignment.Left, ""
+
 
 SavedViewToggleBtn = Instance.new("TextButton", SavedSearchBar)
 SavedViewToggleBtn.Size, SavedViewToggleBtn.Position = UDim2.new(0, 30, 0, 30), UDim2.new(1, -30, 0, 0)
