@@ -4263,18 +4263,21 @@ outfitData.WalkAnimation = getVal("WalkAnimation")
         outfitData.IdleAnimation = getVal("IdleAnimation")
         outfitData.Accessories = {}
 
-        pcall(function()
+            pcall(function()
             local accs = description:GetAccessories(true)
             if accs and type(accs) == "table" then
                 for _, a in pairs(accs) do
                     table.insert(outfitData.Accessories, {
                         AssetId = a.AssetId,
                         IsLayered = a.IsLayered,
-                        AccessoryType = a.AccessoryType and tostring(a.AccessoryType):gsub("Enum.AccessoryType.", "") or a.AccessoryType
+                        AccessoryType = a.AccessoryType and tostring(a.AccessoryType):gsub("Enum.AccessoryType.", "") or a.AccessoryType,
+                        Order = a.Order,          -- 🔥 ADDED: Saves the exact wrapping layer
+                        Puffiness = a.Puffiness   -- 🔥 ADDED: Saves the exact jacket puffiness
                     })
                 end
             end
         end)
+
 
         outfitData.LeftArm = getVal("LeftArm")
         outfitData.RightLeg = getVal("RightLeg")
