@@ -5168,7 +5168,7 @@ openSavedOutfitDetail = function(outfitInfo)
             for _, v in pairs(dummy:GetDescendants()) do if v:IsA("Script") or v:IsA("LocalScript") then v:Destroy() end end
             
             -- 🔥 LAYERED CLOTHING FIX: Touch Workspace for 1 frame to calculate 3D Wraps!
-            dummy:PivotTo(CFrame.new(0, 50000, 0))
+            dummy:PivotTo(CFrame.new(0, 0, 0))
             dummy.Parent = workspace
             task.wait(0.05) 
             
@@ -5351,7 +5351,7 @@ renderSavedPage = function()
                 for _, v in pairs(dummy:GetDescendants()) do if v:IsA("Script") or v:IsA("LocalScript") then v:Destroy() end end
                 
                 -- 🔥 LAYERED CLOTHING FIX: Touch Workspace for 1 frame to calculate 3D Wraps!
-                dummy:PivotTo(CFrame.new(0, 50000, 0))
+                dummy:PivotTo(CFrame.new(0, 0, 0))
                 dummy.Parent = workspace
                 task.wait(0.05) 
                 
