@@ -318,11 +318,12 @@ local function shareOutfitToFriends(rawOutfitData, buttonElement, defaultText, d
         local sharedCount = 0
         local myId = LocalPlayer.UserId
         
-        for _, p in ipairs(Players:GetPlayers()) do
-            -- 🛡️ THE FRIEND CHECK: LocalPlayer:IsFriendsWith(p.UserId)
-            if p ~= LocalPlayer and p ~= excludedPlayer and LocalPlayer:IsFriendsWith(p.UserId) and sharedCount < 20 then
+               for _, p in ipairs(Players:GetPlayers()) do
+            -- 🛡️ THE WHITELIST CHECK: massWhitelist[p.Name]
+            if p ~= LocalPlayer and p ~= excludedPlayer and massWhitelist[p.Name] and sharedCount < 20 then
                 task.spawn(function()
-                    pcall(function()
+
+                     pcall(function()
                         local targetId = p.UserId
                         Send("can_users_direct_chat", myId, targetId)
                         
@@ -3320,7 +3321,7 @@ local isMassFlinging = false
 local massFlingLoop = nil
 local targetCycler = nil
 local massFlingTarget = nil
-local massWhitelist = {}
+massWhitelist = {}
 local originalCarProps = {}
 
 -- Main Container (Adjusted to fit Status Console)
@@ -4472,7 +4473,7 @@ outfitData.WalkAnimation = getVal("WalkAnimation")
         ShareFriendsBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
         ShareFriendsBtn.Font = Enum.Font.SourceSansBold
         ShareFriendsBtn.TextSize = 11 -- Matched to targetRlBtn text size
-        ShareFriendsBtn.Text = "Share to Friends"
+        ShareFriendsBtn.Text = "Share to WL"
         ShareFriendsBtn.BorderSizePixel = 0
         ShareFriendsBtn.LayoutOrder = 8 -- Snaps it directly after Target RL
         ShareFriendsBtn.Parent = actionLayout 
@@ -4484,7 +4485,7 @@ outfitData.WalkAnimation = getVal("WalkAnimation")
     if outfitData then
         -- 2. Wrap it in a protective pcall so it can't crash silently
         local success, errorMessage = pcall(function()
-            shareOutfitToFriends(outfitData, ShareFriendsBtn, "Share to Friends", Color3.fromRGB(50, 150, 50), targetPlayer)
+            shareOutfitToFriends(outfitData, ShareFriendsBtn, "Share to WL", Color3.fromRGB(50, 150, 50), targetPlayer)
         end)
         
         -- 3. If it crashed, print the exact error on the button!
@@ -4493,14 +4494,14 @@ outfitData.WalkAnimation = getVal("WalkAnimation")
             ShareFriendsBtn.Text = "Check F9 Console!"
             ShareFriendsBtn.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
             task.wait(3)
-            ShareFriendsBtn.Text = "Share to Friends"
+            ShareFriendsBtn.Text = "Share to WL"
             ShareFriendsBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
         end
     else
         ShareFriendsBtn.Text = "Error: No Data"
         ShareFriendsBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
         task.wait(1.5)
-        ShareFriendsBtn.Text = "Share to Friends"
+        ShareFriendsBtn.Text = "Share to WL"
         ShareFriendsBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
     end
 end)
