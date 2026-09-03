@@ -5125,11 +5125,10 @@ openSavedOutfitDetail = function(outfitInfo)
         desc.Shirt, desc.Pants, desc.GraphicTShirt = data.Shirt or 0, data.Pants or 0, data.GraphicTShirt or 0
         desc.Face, desc.Head = data.Face or 0, data.Head or 0
         
-        -- 🔥 FIX 1: INJECT BODY BUNDLE PARTS (Removes Blocky Body)
+        -- INJECT BODY PARTS & SCALES
         desc.Torso, desc.LeftArm, desc.RightArm = data.Torso or 0, data.LeftArm or 0, data.RightArm or 0
         desc.LeftLeg, desc.RightLeg = data.LeftLeg or 0, data.RightLeg or 0
 
-        -- 🔥 FIX 2: INJECT SCALES (Fixes Tall/Short/Wide Proportions)
         if data.HeightScale then desc.HeightScale = data.HeightScale end
         if data.WidthScale then desc.WidthScale = data.WidthScale end
         if data.DepthScale then desc.DepthScale = data.DepthScale end
@@ -5167,6 +5166,12 @@ openSavedOutfitDetail = function(outfitInfo)
         
         if dummy then
             for _, v in pairs(dummy:GetDescendants()) do if v:IsA("Script") or v:IsA("LocalScript") then v:Destroy() end end
+            
+            -- 🔥 LAYERED CLOTHING FIX: Touch Workspace for 1 frame to calculate 3D Wraps!
+            dummy:PivotTo(CFrame.new(0, 50000, 0))
+            dummy.Parent = workspace
+            task.wait(0.05) 
+            
             dummy:PivotTo(CFrame.new(0, 0, 0))
             dummy.Parent = worldModel
             local camera = Instance.new("Camera", bigViewport)
@@ -5297,11 +5302,23 @@ renderSavedPage = function()
 
         local smallWorldModel = Instance.new("WorldModel", SmallViewport)
 
-           task.spawn(function()
+        task.spawn(function()
             local desc = Instance.new("HumanoidDescription")
             local d = info.data
             desc.Shirt, desc.Pants, desc.GraphicTShirt = d.Shirt or 0, d.Pants or 0, d.GraphicTShirt or 0
             desc.Face, desc.Head = d.Face or 0, d.Head or 0
+            
+            -- INJECT BODY PARTS & SCALES
+            desc.Torso, desc.LeftArm, desc.RightArm = d.Torso or 0, d.LeftArm or 0, d.RightArm or 0
+            desc.LeftLeg, desc.RightLeg = d.LeftLeg or 0, d.RightLeg or 0
+
+            if d.HeightScale then desc.HeightScale = d.HeightScale end
+            if d.WidthScale then desc.WidthScale = d.WidthScale end
+            if d.DepthScale then desc.DepthScale = d.DepthScale end
+            if d.HeadScale then desc.HeadScale = d.HeadScale end
+            if d.BodyTypeScale then desc.BodyTypeScale = d.BodyTypeScale end
+            if d.ProportionScale then desc.ProportionScale = d.ProportionScale end
+
             if d.SkinTone then
                 local c = Color3.new(d.SkinTone[1], d.SkinTone[2], d.SkinTone[3])
                 desc.HeadColor, desc.TorsoColor, desc.LeftArmColor, desc.RightArmColor, desc.LeftLegColor, desc.RightLegColor = c, c, c, c, c, c
@@ -5318,14 +5335,29 @@ renderSavedPage = function()
 
             local dummy
             pcall(function() dummy = Players:CreateHumanoidModelFromDescription(desc, Enum.HumanoidRigType.R15) end)
+            if not dummy then
+                pcall(function()
+                    local myChar = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+                    local oldArch = myChar.Archivable
+                    myChar.Archivable = true
+                    dummy = myChar:Clone()
+                    myChar.Archivable = oldArch
+                    local hum = dummy:FindFirstChildOfClass("Humanoid")
+                    if hum then hum:ApplyDescription(desc) end
+                end)
+            end
+            
             if dummy then
                 for _, v in pairs(dummy:GetDescendants()) do if v:IsA("Script") or v:IsA("LocalScript") then v:Destroy() end end
-                -- EXACT COPY FROM DEEP SCAN: Centers the model
+                
+                -- 🔥 LAYERED CLOTHING FIX: Touch Workspace for 1 frame to calculate 3D Wraps!
+                dummy:PivotTo(CFrame.new(0, 50000, 0))
+                dummy.Parent = workspace
+                task.wait(0.05) 
+                
                 dummy:PivotTo(CFrame.new(0, 0, 0))
                 dummy.Parent = smallWorldModel
                 local camera = Instance.new("Camera", SmallViewport)
-                
-                -- Targets the HEAD directly with the correct -2.5 offset for the Grid Thumbnail
                 local head = dummy:FindFirstChild("Head")
                 if head then
                     camera.CFrame = head.CFrame * CFrame.new(0, 0, -2.5) * CFrame.Angles(0, math.pi, 0)
