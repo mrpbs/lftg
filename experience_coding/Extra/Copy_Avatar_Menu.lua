@@ -5119,10 +5119,12 @@ openSavedOutfitDetail = function(outfitInfo)
     bigViewport.Size, bigViewport.BackgroundTransparency = UDim2.new(1, 0, 1, 0), 1
 
     local worldModel = Instance.new("WorldModel", bigViewport)
-       task.spawn(function()
+     task.spawn(function()
         local desc = Instance.new("HumanoidDescription")
         desc.Shirt, desc.Pants, desc.GraphicTShirt = data.Shirt or 0, data.Pants or 0, data.GraphicTShirt or 0
         desc.Face, desc.Head = data.Face or 0, data.Head or 0
+        
+        -- INJECT BODY PARTS & SCALES
         desc.Torso, desc.LeftArm, desc.RightArm = data.Torso or 0, data.LeftArm or 0, data.RightArm or 0
         desc.LeftLeg, desc.RightLeg = data.LeftLeg or 0, data.RightLeg or 0
 
@@ -5138,23 +5140,30 @@ openSavedOutfitDetail = function(outfitInfo)
             desc.HeadColor, desc.TorsoColor, desc.LeftArmColor, desc.RightArmColor, desc.LeftLegColor, desc.RightLegColor = c, c, c, c, c, c
         end
 
-        -- 🔥 FIX: The "true" argument correctly loads BOTH Layered AND Rigid (Hats/Hair)
+        -- 🔥 HYBRID ACCESSORY INJECTOR (Perfectly loads BOTH Rigid & Layered)
         if data.Accessories then
-            local accList = {}
+            local layeredList, rigidGroups = {}, {}
             for _, acc in pairs(data.Accessories) do
-                pcall(function()
-                    local tName = tostring(acc.AccessoryType):gsub("Enum.AccessoryType.", ""):gsub("Accessory", "")
-                    local enumType = Enum.AccessoryType[tName] or Enum.AccessoryType.Unknown
-                    table.insert(accList, {
-                        AssetId = tonumber(acc.AssetId) or 0,
-                        AccessoryType = enumType,
-                        IsLayered = acc.IsLayered == true,
-                        Order = tonumber(acc.Order) or 1,
-                        Puffiness = tonumber(acc.Puffiness) or 0
-                    })
-                end)
+                if acc.IsLayered then
+                    pcall(function()
+                        local tName = tostring(acc.AccessoryType):gsub("Enum.AccessoryType.", ""):gsub("Accessory", "")
+                        table.insert(layeredList, {
+                            AssetId = tonumber(acc.AssetId) or 0, AccessoryType = Enum.AccessoryType[tName] or Enum.AccessoryType.Unknown,
+                            IsLayered = true, Order = tonumber(acc.Order) or 1, Puffiness = tonumber(acc.Puffiness) or 0
+                        })
+                    end)
+                else
+                    local tName = tostring(acc.AccessoryType):gsub("Enum.AccessoryType.", "")
+                    if not string.find(tName, "Accessory") then tName = tName .. "Accessory" end
+                    rigidGroups[tName] = rigidGroups[tName] and (rigidGroups[tName] .. "," .. tostring(acc.AssetId)) or tostring(acc.AssetId)
+                end
             end
-            pcall(function() desc:SetAccessories(accList, true) end)
+            
+            -- 1. Apply Hats, Hair, Face, Waist (100% reliable method)
+            for prop, val in pairs(rigidGroups) do pcall(function() desc[prop] = val end) end
+            
+            -- 2. Apply Layered Clothing (Preserves 3D wrap without deleting Hats)
+            pcall(function() if #layeredList > 0 then desc:SetAccessories(layeredList, false) end end)
         end
 
         local dummy
@@ -5181,15 +5190,16 @@ openSavedOutfitDetail = function(outfitInfo)
             dummy:PivotTo(CFrame.new(0, 0, 0))
             dummy.Parent = worldModel
             local camera = Instance.new("Camera", bigViewport)
+            
+            -- 🔥 CAMERA FIX: -7.5 Z-Offset shows the full tall body!
             local hrp = dummy:FindFirstChild("HumanoidRootPart") or dummy:FindFirstChild("UpperTorso") or dummy:FindFirstChild("Torso")
             if hrp then
-                camera.CFrame = hrp.CFrame * CFrame.new(0, 0.5, -6) * CFrame.Angles(0, math.pi, 0)
+                camera.CFrame = hrp.CFrame * CFrame.new(0, 0.5, -7.5) * CFrame.Angles(0, math.pi, 0)
                 camera.Focus = hrp.CFrame
             end
             bigViewport.CurrentCamera = camera
         end
     end)
-
 
     local actionFrame = Instance.new("Frame", AssetScroll)
     actionFrame.Size, actionFrame.BackgroundTransparency, actionFrame.LayoutOrder = UDim2.new(1, -5, 0, 95), 1, 2
