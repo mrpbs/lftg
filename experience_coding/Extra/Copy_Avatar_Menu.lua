@@ -5166,7 +5166,7 @@ task.spawn(function()
         
         if dummy then
             -- 🔥 FIX: Force Dummy into Workspace so Layered Clothing wraps correctly!
-            dummy:PivotTo(CFrame.new(0, 50000, 0))
+            dummy:PivotTo(CFrame.new(0, 0, 0))
             dummy.Parent = workspace
             local hum = dummy:FindFirstChildOfClass("Humanoid")
             if hum then pcall(function() hum:ApplyDescription(desc) end) end
@@ -5351,7 +5351,7 @@ renderSavedPage = function()
             
             if dummy then
                 -- 🔥 FIX: Force Dummy into Workspace so Layered Clothing wraps correctly!
-                dummy:PivotTo(CFrame.new(0, 50000, 0))
+                dummy:PivotTo(CFrame.new(0, 0, 0))
                 dummy.Parent = workspace
                 local hum = dummy:FindFirstChildOfClass("Humanoid")
                 if hum then pcall(function() hum:ApplyDescription(desc) end) end
