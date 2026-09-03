@@ -5150,19 +5150,37 @@ openSavedOutfitDetail = function(outfitInfo)
             for prop, val in pairs(accGroups) do pcall(function() desc[prop] = val end) end
         end
 
-        local dummy
-        pcall(function() dummy = Players:CreateHumanoidModelFromDescription(desc, Enum.HumanoidRigType.R15) end)
-        if not dummy then
-            pcall(function()
-                local myChar = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-                local oldArch = myChar.Archivable
-                myChar.Archivable = true
-                dummy = myChar:Clone()
-                myChar.Archivable = oldArch
-                local hum = dummy:FindFirstChildOfClass("Humanoid")
-                if hum then hum:ApplyDescription(desc) end
-            end)
+    local dummy = nil
+
+-- 🔥 FORCE the clone method (guaranteed to preserve Layered Clothing)
+pcall(function()
+    local myChar = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+    if myChar then
+        local oldArch = myChar.Archivable
+        myChar.Archivable = true
+        dummy = myChar:Clone()
+        myChar.Archivable = oldArch
+        
+        -- Remove scripts to prevent UI errors
+        for _, v in pairs(dummy:GetDescendants()) do
+            if v:IsA("Script") or v:IsA("LocalScript") then
+                v:Destroy()
+            end
         end
+        
+        local hum = dummy:FindFirstChildOfClass("Humanoid")
+        if hum then
+            hum:ApplyDescription(desc) -- Injects the saved outfit data
+        end
+    end
+end)
+
+-- Fallback (only runs if the clone method fails for some reason)
+if not dummy then
+    pcall(function() 
+        dummy = Players:CreateHumanoidModelFromDescription(desc, Enum.HumanoidRigType.R15) 
+    end)
+end
         
         if dummy then
             for _, v in pairs(dummy:GetDescendants()) do if v:IsA("Script") or v:IsA("LocalScript") then v:Destroy() end end
