@@ -5389,7 +5389,7 @@ renderSavedPage = function()
                 end)
             end
             
-                   if dummy then
+            if dummy then
                 local root = dummy:FindFirstChild("HumanoidRootPart") or dummy:FindFirstChild("Torso")
                 if root then root.Anchored = true end 
                 
@@ -5405,15 +5405,14 @@ renderSavedPage = function()
                 dummy.Parent = smallWorldModel
                 local camera = Instance.new("Camera", SmallViewport)
                 
-                -- 🔥 FIXED: Target the Head and zoom in for the thumbnail
-                local head = dummy:FindFirstChild("Head")
-                if head then
-                    camera.CFrame = head.CFrame * CFrame.new(0, 0, -2.5) * CFrame.Angles(0, math.pi, 0)
-                    camera.Focus = head.CFrame
+                local hrp = dummy:FindFirstChild("HumanoidRootPart") or dummy:FindFirstChild("UpperTorso") or dummy:FindFirstChild("Torso")
+                if hrp then
+                    camera.CFrame = hrp.CFrame * CFrame.new(0, 0.5, -7.5) * CFrame.Angles(0, math.pi, 0)
+                    camera.Focus = hrp.CFrame
                 end
                 SmallViewport.CurrentCamera = camera
             end
-
+        end)
 
 
         local NameBox = Instance.new("TextLabel", Entry)
