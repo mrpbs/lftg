@@ -5119,12 +5119,12 @@ openSavedOutfitDetail = function(outfitInfo)
     bigViewport.Size, bigViewport.BackgroundTransparency = UDim2.new(1, 0, 1, 0), 1
 
     local worldModel = Instance.new("WorldModel", bigViewport)
-     task.spawn(function()
+    
+    task.spawn(function()
         local desc = Instance.new("HumanoidDescription")
         desc.Shirt, desc.Pants, desc.GraphicTShirt = data.Shirt or 0, data.Pants or 0, data.GraphicTShirt or 0
         desc.Face, desc.Head = data.Face or 0, data.Head or 0
         
-        -- INJECT BODY PARTS & SCALES
         desc.Torso, desc.LeftArm, desc.RightArm = data.Torso or 0, data.LeftArm or 0, data.RightArm or 0
         desc.LeftLeg, desc.RightLeg = data.LeftLeg or 0, data.RightLeg or 0
 
@@ -5140,16 +5140,21 @@ openSavedOutfitDetail = function(outfitInfo)
             desc.HeadColor, desc.TorsoColor, desc.LeftArmColor, desc.RightArmColor, desc.LeftLegColor, desc.RightLegColor = c, c, c, c, c, c
         end
 
-        -- 🔥 HYBRID ACCESSORY INJECTOR (Perfectly loads BOTH Rigid & Layered)
+        -- 🔥 FIX 1: Auto-sorts existing saved outfits so Layered Clothing wraps correctly!
+        local layerOrderMap = { TShirt=1, Shirt=2, Pants=3, Shorts=4, DressSkirt=5, Sweater=6, Jacket=7, Hair=8, LeftShoe=9, RightShoe=10 }
+
         if data.Accessories then
             local layeredList, rigidGroups = {}, {}
             for _, acc in pairs(data.Accessories) do
                 if acc.IsLayered then
                     pcall(function()
                         local tName = tostring(acc.AccessoryType):gsub("Enum.AccessoryType.", ""):gsub("Accessory", "")
+                        local assignedOrder = tonumber(acc.Order)
+                        if not assignedOrder or assignedOrder == 0 or assignedOrder == 1 then assignedOrder = layerOrderMap[tName] or 5 end
+                        
                         table.insert(layeredList, {
                             AssetId = tonumber(acc.AssetId) or 0, AccessoryType = Enum.AccessoryType[tName] or Enum.AccessoryType.Unknown,
-                            IsLayered = true, Order = tonumber(acc.Order) or 1, Puffiness = tonumber(acc.Puffiness) or 0
+                            IsLayered = true, Order = assignedOrder, Puffiness = tonumber(acc.Puffiness) or 0
                         })
                     end)
                 else
@@ -5159,10 +5164,7 @@ openSavedOutfitDetail = function(outfitInfo)
                 end
             end
             
-            -- 1. Apply Hats, Hair, Face, Waist (100% reliable method)
             for prop, val in pairs(rigidGroups) do pcall(function() desc[prop] = val end) end
-            
-            -- 2. Apply Layered Clothing (Preserves 3D wrap without deleting Hats)
             pcall(function() if #layeredList > 0 then desc:SetAccessories(layeredList, false) end end)
         end
 
@@ -5179,19 +5181,22 @@ openSavedOutfitDetail = function(outfitInfo)
         end
         
         if dummy then
+            -- 🔥 FIX 2: Anchor the dummy so it doesn't fall while wrapping the 3D clothes!
+            local root = dummy:FindFirstChild("HumanoidRootPart") or dummy:FindFirstChild("Torso")
+            if root then root.Anchored = true end
+            
             dummy:PivotTo(CFrame.new(0, 50000, 0))
             dummy.Parent = workspace
             local hum = dummy:FindFirstChildOfClass("Humanoid")
             if hum then pcall(function() hum:ApplyDescription(desc) end) end
             
-            task.wait(0.2) 
+            task.wait(0.3) -- Give the engine time to perfectly wrap the meshes
             
             for _, v in pairs(dummy:GetDescendants()) do if v:IsA("Script") or v:IsA("LocalScript") then v:Destroy() end end
             dummy:PivotTo(CFrame.new(0, 0, 0))
             dummy.Parent = worldModel
             local camera = Instance.new("Camera", bigViewport)
             
-            -- 🔥 CAMERA FIX: -7.5 Z-Offset shows the full tall body!
             local hrp = dummy:FindFirstChild("HumanoidRootPart") or dummy:FindFirstChild("UpperTorso") or dummy:FindFirstChild("Torso")
             if hrp then
                 camera.CFrame = hrp.CFrame * CFrame.new(0, 0.5, -7.5) * CFrame.Angles(0, math.pi, 0)
@@ -5200,6 +5205,8 @@ openSavedOutfitDetail = function(outfitInfo)
             bigViewport.CurrentCamera = camera
         end
     end)
+
+
 
     local actionFrame = Instance.new("Frame", AssetScroll)
     actionFrame.Size, actionFrame.BackgroundTransparency, actionFrame.LayoutOrder = UDim2.new(1, -5, 0, 95), 1, 2
@@ -5318,7 +5325,8 @@ renderSavedPage = function()
 
         local smallWorldModel = Instance.new("WorldModel", SmallViewport)
 
-             task.spawn(function()
+   
+           task.spawn(function()
             local desc = Instance.new("HumanoidDescription")
             local d = info.data
             desc.Shirt, desc.Pants, desc.GraphicTShirt = d.Shirt or 0, d.Pants or 0, d.GraphicTShirt or 0
@@ -5339,23 +5347,31 @@ renderSavedPage = function()
                 desc.HeadColor, desc.TorsoColor, desc.LeftArmColor, desc.RightArmColor, desc.LeftLegColor, desc.RightLegColor = c, c, c, c, c, c
             end
             
-            -- 🔥 FIX: The "true" argument correctly loads BOTH Layered AND Rigid (Hats/Hair)
+            local layerOrderMap = { TShirt=1, Shirt=2, Pants=3, Shorts=4, DressSkirt=5, Sweater=6, Jacket=7, Hair=8, LeftShoe=9, RightShoe=10 }
+
             if d.Accessories then
-                local accList = {}
+                local layeredList, rigidGroups = {}, {}
                 for _, acc in pairs(d.Accessories) do
-                    pcall(function()
-                        local tName = tostring(acc.AccessoryType):gsub("Enum.AccessoryType.", ""):gsub("Accessory", "")
-                        local enumType = Enum.AccessoryType[tName] or Enum.AccessoryType.Unknown
-                        table.insert(accList, {
-                            AssetId = tonumber(acc.AssetId) or 0,
-                            AccessoryType = enumType,
-                            IsLayered = acc.IsLayered == true,
-                            Order = tonumber(acc.Order) or 1,
-                            Puffiness = tonumber(acc.Puffiness) or 0
-                        })
-                    end)
+                    if acc.IsLayered then
+                        pcall(function()
+                            local tName = tostring(acc.AccessoryType):gsub("Enum.AccessoryType.", ""):gsub("Accessory", "")
+                            local assignedOrder = tonumber(acc.Order)
+                            if not assignedOrder or assignedOrder == 0 or assignedOrder == 1 then assignedOrder = layerOrderMap[tName] or 5 end
+                            
+                            table.insert(layeredList, {
+                                AssetId = tonumber(acc.AssetId) or 0, AccessoryType = Enum.AccessoryType[tName] or Enum.AccessoryType.Unknown,
+                                IsLayered = true, Order = assignedOrder, Puffiness = tonumber(acc.Puffiness) or 0
+                            })
+                        end)
+                    else
+                        local tName = tostring(acc.AccessoryType):gsub("Enum.AccessoryType.", "")
+                        if not string.find(tName, "Accessory") then tName = tName .. "Accessory" end
+                        rigidGroups[tName] = rigidGroups[tName] and (rigidGroups[tName] .. "," .. tostring(acc.AssetId)) or tostring(acc.AssetId)
+                    end
                 end
-                pcall(function() desc:SetAccessories(accList, true) end)
+                
+                for prop, val in pairs(rigidGroups) do pcall(function() desc[prop] = val end) end
+                pcall(function() if #layeredList > 0 then desc:SetAccessories(layeredList, false) end end)
             end
 
             local dummy
@@ -5371,27 +5387,30 @@ renderSavedPage = function()
             end
             
             if dummy then
+                local root = dummy:FindFirstChild("HumanoidRootPart") or dummy:FindFirstChild("Torso")
+                if root then root.Anchored = true end 
+                
                 dummy:PivotTo(CFrame.new(0, 50000, 0))
                 dummy.Parent = workspace
                 local hum = dummy:FindFirstChildOfClass("Humanoid")
                 if hum then pcall(function() hum:ApplyDescription(desc) end) end
                 
-                task.wait(0.2)
+                task.wait(0.3)
                 
                 for _, v in pairs(dummy:GetDescendants()) do if v:IsA("Script") or v:IsA("LocalScript") then v:Destroy() end end
                 dummy:PivotTo(CFrame.new(0, 0, 0))
                 dummy.Parent = smallWorldModel
                 local camera = Instance.new("Camera", SmallViewport)
                 
-                -- 🔥 THUMBNAIL FIX: Targets the Body, pulls camera back to see the whole outfit!
                 local hrp = dummy:FindFirstChild("HumanoidRootPart") or dummy:FindFirstChild("UpperTorso") or dummy:FindFirstChild("Torso")
                 if hrp then
-                    camera.CFrame = hrp.CFrame * CFrame.new(0, 0.5, -6) * CFrame.Angles(0, math.pi, 0)
+                    camera.CFrame = hrp.CFrame * CFrame.new(0, 0.5, -7.5) * CFrame.Angles(0, math.pi, 0)
                     camera.Focus = hrp.CFrame
                 end
                 SmallViewport.CurrentCamera = camera
             end
         end)
+
 
         local NameBox = Instance.new("TextLabel", Entry)
         NameBox.Name, NameBox.BackgroundTransparency, NameBox.Text = "NameBox", 1, info.name
