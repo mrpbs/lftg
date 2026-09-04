@@ -147,14 +147,22 @@ getgenv().ToggleAntiFire = function(state)
     AntiFire.toggle(state)
 end
 -- ============================================================
-
 -- Life Together RP Payload Formatter
+local layerOrderMap = { TShirt=1, Shirt=2, Pants=3, Shorts=4, DressSkirt=5, Sweater=6, Jacket=7, Hair=8, LeftShoe=9, RightShoe=10 }
+
 local function buildBatchPayload(data)
     local accessories = {}
-    local order = 1
     if data.Accessories then
         for _, acc in ipairs(data.Accessories) do
             local isLayered = acc.IsLayered == true
+            
+            -- Smart Order Fallback (Fixes overlaps for older saved outfits)
+            local assignedOrder = tonumber(acc.Order)
+            if not assignedOrder or assignedOrder <= 1 then
+                local tName = tostring(acc.AccessoryType):gsub("Enum.AccessoryType.", ""):gsub("Accessory", "")
+                assignedOrder = layerOrderMap[tName] or 5
+            end
+
             table.insert(accessories, {
                 AssetId = acc.AssetId,
                 AccessoryType = acc.AccessoryType,
@@ -162,10 +170,9 @@ local function buildBatchPayload(data)
                 Rotation = "  ",
                 Position = "  ",
                 Scale = "1 1 1",
-                Order = isLayered and order or nil,
-                Puffiness = isLayered and 0 or nil
+                Order = isLayered and assignedOrder or nil,
+                Puffiness = isLayered and (tonumber(acc.Puffiness) or 0) or nil
             })
-            if isLayered then order = order + 1 end
         end
     end
 
@@ -217,6 +224,7 @@ local function buildBatchPayload(data)
         }
     }
 end
+
 
 -- Reusable Outfit Sharing Function
 -- Reusable Outfit Sharing Function (Now with an excluded target!)
