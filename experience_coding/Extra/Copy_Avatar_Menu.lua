@@ -3683,6 +3683,114 @@ MassFlingBtn.MouseButton1Click:Connect(function()
 end)
 
 -- 
+-- ========== 🌍 SPECIFIC SERVER JOINER (ZERO LOCAL VARIABLES) ==========
+ServerJoinFrame = Instance.new("Frame")
+ServerJoinFrame.Size = UDim2.new(1, -5, 0, 30)
+ServerJoinFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 38)
+ServerJoinFrame.BorderSizePixel = 0
+ServerJoinFrame.ClipsDescendants = true
+ServerJoinFrame.Parent = ToolsScroll
+
+ServerToggleBtn = Instance.new("TextButton")
+ServerToggleBtn.Size = UDim2.new(1, 0, 0, 30)
+ServerToggleBtn.Text = "  🌍 Specific Server Joiner [ ▼ ]"
+ServerToggleBtn.TextColor3 = Color3.fromRGB(100, 200, 255)
+ServerToggleBtn.Font = Enum.Font.SourceSansBold
+ServerToggleBtn.TextSize = 14
+ServerToggleBtn.TextXAlignment = Enum.TextXAlignment.Left
+ServerToggleBtn.BackgroundColor3 = Color3.fromRGB(25, 25, 32)
+ServerToggleBtn.BorderSizePixel = 0
+ServerToggleBtn.Parent = ServerJoinFrame
+
+ServerContent = Instance.new("Frame")
+ServerContent.Size = UDim2.new(1, 0, 1, -30)
+ServerContent.Position = UDim2.new(0, 0, 0, 30)
+ServerContent.BackgroundTransparency = 1
+ServerContent.Visible = false
+ServerContent.Parent = ServerJoinFrame
+
+PlaceInput = Instance.new("TextBox")
+PlaceInput.Size = UDim2.new(1, -20, 0, 30)
+PlaceInput.Position = UDim2.new(0, 10, 0, 10)
+PlaceInput.PlaceholderText = "Place ID (e.g. 13967668166)"
+PlaceInput.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
+PlaceInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+PlaceInput.Font = Enum.Font.SourceSansBold
+PlaceInput.TextSize = 13
+PlaceInput.Text = tostring(game.PlaceId) -- Auto-fills current game!
+PlaceInput.ClearTextOnFocus = false
+PlaceInput.Parent = ServerContent
+Instance.new("UICorner", PlaceInput).CornerRadius = UDim.new(0, 6)
+
+JobInput = Instance.new("TextBox")
+JobInput.Size = UDim2.new(1, -20, 0, 30)
+JobInput.Position = UDim2.new(0, 10, 0, 50)
+JobInput.PlaceholderText = "Paste Server Job ID Here"
+JobInput.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
+JobInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+JobInput.Font = Enum.Font.Code
+JobInput.TextSize = 11
+JobInput.Text = ""
+JobInput.ClearTextOnFocus = false
+JobInput.Parent = ServerContent
+Instance.new("UICorner", JobInput).CornerRadius = UDim.new(0, 6)
+
+TeleportBtn = Instance.new("TextButton")
+TeleportBtn.Size = UDim2.new(1, -20, 0, 35)
+TeleportBtn.Position = UDim2.new(0, 10, 0, 90)
+TeleportBtn.BackgroundColor3 = Color3.fromRGB(40, 100, 180)
+TeleportBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+TeleportBtn.Font = Enum.Font.SourceSansBold
+TeleportBtn.TextSize = 14
+TeleportBtn.Text = "Teleport to Server"
+TeleportBtn.BorderSizePixel = 0
+TeleportBtn.Parent = ServerContent
+Instance.new("UICorner", TeleportBtn).CornerRadius = UDim.new(0, 6)
+
+-- Dropdown Toggle Logic
+serverExpanded = false
+ServerToggleBtn.MouseButton1Click:Connect(function()
+    serverExpanded = not serverExpanded
+    if serverExpanded then
+        ServerJoinFrame.Size = UDim2.new(1, -5, 0, 140)
+        ServerContent.Visible = true
+        ServerToggleBtn.Text = "  🌍 Specific Server Joiner [ ▲ ]"
+    else
+        ServerJoinFrame.Size = UDim2.new(1, -5, 0, 30)
+        ServerContent.Visible = false
+        ServerToggleBtn.Text = "  🌍 Specific Server Joiner [ ▼ ]"
+    end
+end)
+
+-- Teleport Logic
+TeleportBtn.MouseButton1Click:Connect(function()
+    local tPlaceId = tonumber(PlaceInput.Text)
+    local tJobId = JobInput.Text:gsub("%s+", "") 
+    
+    if not tPlaceId or tJobId == "" then
+        TeleportBtn.Text = "Invalid Place or Server ID!"
+        TeleportBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+        task.wait(1.5)
+        TeleportBtn.Text = "Teleport to Server"
+        TeleportBtn.BackgroundColor3 = Color3.fromRGB(40, 100, 180)
+        return
+    end
+    
+    TeleportBtn.Text = "Teleporting..."
+    TeleportBtn.BackgroundColor3 = Color3.fromRGB(200, 150, 50)
+    
+    local success = pcall(function()
+        game:GetService("TeleportService"):TeleportToPlaceInstance(tPlaceId, tJobId, LocalPlayer)
+    end)
+    
+    if not success then
+        TeleportBtn.Text = "Teleport Failed"
+        TeleportBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+        task.wait(3)
+        TeleportBtn.Text = "Teleport to Server"
+        TeleportBtn.BackgroundColor3 = Color3.fromRGB(40, 100, 180)
+    end
+end)
 
 -- Resize Handle (Bottom Right Corner)
 local ResizeHandle = Instance.new("TextButton")
