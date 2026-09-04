@@ -14085,7 +14085,7 @@ if not g.FlamesHubPlayerEvents_Check then
     end))
 end
 
-local Atlas = loadstring(game:HttpGet("https://raw.githubusercontent.com/mrpbs/lftg/refs/heads/main/experience_coding/UIs/Atlas.lua?ref_type=heads", true))()
+local Atlas = loadstring(game:HttpGet("https://pastefy.app/ubpsfeFK/raw", true))()
 local UI = Atlas.new({
     Name = "Flames Hub | Life Together RP",
     ConfigFolder = "FlamesHub_Life_Together_RP_Menu_Configuration",
