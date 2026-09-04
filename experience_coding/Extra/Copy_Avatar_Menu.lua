@@ -3791,7 +3791,164 @@ TeleportBtn.MouseButton1Click:Connect(function()
         TeleportBtn.BackgroundColor3 = Color3.fromRGB(40, 100, 180)
     end
 end)
+-- ========== 🌐 REGION & PING SERVER BROWSER (ZERO LOCAL VARIABLES) ==========
+BrowserFrame = Instance.new("Frame")
+BrowserFrame.Size = UDim2.new(1, -5, 0, 30)
+BrowserFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 38)
+BrowserFrame.BorderSizePixel = 0
+BrowserFrame.ClipsDescendants = true
+BrowserFrame.Parent = ToolsScroll
 
+BrowserToggleBtn = Instance.new("TextButton")
+BrowserToggleBtn.Size = UDim2.new(1, 0, 0, 30)
+BrowserToggleBtn.Text = "  🌐 Live Region Browser [ ▼ ]"
+BrowserToggleBtn.TextColor3 = Color3.fromRGB(150, 100, 255)
+BrowserToggleBtn.Font = Enum.Font.SourceSansBold
+BrowserToggleBtn.TextSize = 14
+BrowserToggleBtn.TextXAlignment = Enum.TextXAlignment.Left
+BrowserToggleBtn.BackgroundColor3 = Color3.fromRGB(25, 25, 32)
+BrowserToggleBtn.BorderSizePixel = 0
+BrowserToggleBtn.Parent = BrowserFrame
+
+BrowserContent = Instance.new("Frame")
+BrowserContent.Size = UDim2.new(1, 0, 1, -30)
+BrowserContent.Position = UDim2.new(0, 0, 0, 30)
+BrowserContent.BackgroundTransparency = 1
+BrowserContent.Visible = false
+BrowserContent.Parent = BrowserFrame
+
+PingInput = Instance.new("TextBox")
+PingInput.Size = UDim2.new(1, -20, 0, 30)
+PingInput.Position = UDim2.new(0, 10, 0, 10)
+PingInput.PlaceholderText = "Max Ping (e.g. 80 for nearby country)"
+PingInput.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
+PingInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+PingInput.Font = Enum.Font.SourceSansBold
+PingInput.TextSize = 13
+PingInput.Text = ""
+PingInput.ClearTextOnFocus = false
+PingInput.Parent = BrowserContent
+Instance.new("UICorner", PingInput).CornerRadius = UDim.new(0, 6)
+
+FetchServersBtn = Instance.new("TextButton")
+FetchServersBtn.Size = UDim2.new(1, -20, 0, 35)
+FetchServersBtn.Position = UDim2.new(0, 10, 0, 50)
+FetchServersBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
+FetchServersBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+FetchServersBtn.Font = Enum.Font.SourceSansBold
+FetchServersBtn.TextSize = 14
+FetchServersBtn.Text = "Fetch Filtered Servers"
+FetchServersBtn.BorderSizePixel = 0
+FetchServersBtn.Parent = BrowserContent
+Instance.new("UICorner", FetchServersBtn).CornerRadius = UDim.new(0, 6)
+
+ServerListScroll = Instance.new("ScrollingFrame")
+ServerListScroll.Size = UDim2.new(1, -20, 0, 140)
+ServerListScroll.Position = UDim2.new(0, 10, 0, 95)
+ServerListScroll.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+ServerListScroll.BorderSizePixel = 0
+ServerListScroll.ScrollBarThickness = 3
+ServerListScroll.Parent = BrowserContent
+Instance.new("UICorner", ServerListScroll).CornerRadius = UDim.new(0, 6)
+
+Instance.new("UIPadding", ServerListScroll).PaddingTop = UDim.new(0, 5)
+
+ServerListLayout = Instance.new("UIListLayout")
+ServerListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+ServerListLayout.Padding = UDim.new(0, 5)
+ServerListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+ServerListLayout.Parent = ServerListScroll
+
+ServerListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    ServerListScroll.CanvasSize = UDim2.new(0, 0, 0, ServerListLayout.AbsoluteContentSize.Y + 10)
+end)
+
+browserExpanded = false
+BrowserToggleBtn.MouseButton1Click:Connect(function()
+    browserExpanded = not browserExpanded
+    if browserExpanded then
+        BrowserFrame.Size = UDim2.new(1, -5, 0, 280)
+        BrowserContent.Visible = true
+        BrowserToggleBtn.Text = "  🌐 Live Region Browser [ ▲ ]"
+    else
+        BrowserFrame.Size = UDim2.new(1, -5, 0, 30)
+        BrowserContent.Visible = false
+        BrowserToggleBtn.Text = "  🌐 Live Region Browser [ ▼ ]"
+    end
+end)
+
+FetchServersBtn.MouseButton1Click:Connect(function()
+    FetchServersBtn.Text = "Scanning Regions..."
+    FetchServersBtn.BackgroundColor3 = Color3.fromRGB(200, 150, 50)
+    
+    for _, child in pairs(ServerListScroll:GetChildren()) do
+        if child:IsA("TextButton") then child:Destroy() end
+    end
+    
+    local maxAllowedPing = tonumber(PingInput.Text) or 9999
+    
+    task.spawn(function()
+        local success, result = pcall(function()
+            -- Bumps limit to 100 so it can dig through to find local servers
+            return game:HttpGet("https://games.roblox.com/v1/games/" .. tostring(game.PlaceId) .. "/servers/Public?sortOrder=Desc&limit=100")
+        end)
+        
+        if success and result then
+            local parsed = game:GetService("HttpService"):JSONDecode(result)
+            if parsed and parsed.data then
+                local count = 0
+                for _, srv in ipairs(parsed.data) do
+                    -- Applies the Ping (Region) Filter!
+                    local srvPing = tonumber(srv.ping) or 9999
+                    
+                    if srv.id and srv.playing and srv.playing < srv.maxPlayers and srvPing <= maxAllowedPing then
+                        count = count + 1
+                        local srvBtn = Instance.new("TextButton")
+                        srvBtn.Size = UDim2.new(1, -10, 0, 30)
+                        srvBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+                        srvBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+                        srvBtn.Font = Enum.Font.SourceSansBold
+                        srvBtn.TextSize = 13
+                        
+                        srvBtn.Text = "👥 " .. tostring(srv.playing) .. "/" .. tostring(srv.maxPlayers) .. "  |  📶 Ping: " .. tostring(srvPing) .. "ms"
+                        
+                        srvBtn.BorderSizePixel = 0
+                        srvBtn.LayoutOrder = count
+                        srvBtn.Parent = ServerListScroll
+                        Instance.new("UICorner", srvBtn).CornerRadius = UDim.new(0, 4)
+                        
+                        srvBtn.MouseButton1Click:Connect(function()
+                            srvBtn.Text = "Teleporting..."
+                            srvBtn.BackgroundColor3 = Color3.fromRGB(200, 100, 50)
+                            pcall(function()
+                                game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, srv.id, game:GetService("Players").LocalPlayer)
+                            end)
+                        end)
+                    end
+                end
+                
+                if count > 0 then
+                    FetchServersBtn.Text = "Found " .. tostring(count) .. " Servers!"
+                    FetchServersBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
+                else
+                    FetchServersBtn.Text = "No servers found under " .. tostring(maxAllowedPing) .. "ms!"
+                    FetchServersBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+                end
+            else
+                FetchServersBtn.Text = "Parse Error"
+                FetchServersBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+            end
+        else
+            FetchServersBtn.Text = "Network Error"
+            FetchServersBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+        end
+        
+        task.wait(2.5)
+        FetchServersBtn.Text = "Fetch Filtered Servers"
+        FetchServersBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
+    end)
+end)
+-----
 -- Resize Handle (Bottom Right Corner)
 local ResizeHandle = Instance.new("TextButton")
 ResizeHandle.Name = "ResizeHandle"
