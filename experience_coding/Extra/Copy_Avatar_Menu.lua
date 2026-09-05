@@ -146,6 +146,28 @@ getgenv().AntiFire = AntiFire
 getgenv().ToggleAntiFire = function(state)
     AntiFire.toggle(state)
 end
+
+-- ==========================================
+-- AUTO ANTI-VOID (ZERO LOCALS)
+-- ==========================================
+if antiVoidLoop then pcall(function() antiVoidLoop:Disconnect() end) antiVoidLoop = nil end
+
+antiVoidLoop = game:GetService("RunService").Heartbeat:Connect(function()
+    local plr = game:GetService("Players").LocalPlayer
+    local char = plr.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    
+    -- Triggers if your character drops below -200 on the Y axis
+    if hrp and hrp.Position.Y < -200 then
+        -- Snaps you back up into the sky directly above where you fell
+        hrp.CFrame = CFrame.new(hrp.Position.X, 150, hrp.Position.Z)
+        
+        -- Kills downward momentum so you don't instantly slam into the ground and die
+        hrp.AssemblyLinearVelocity = Vector3.zero
+        hrp.AssemblyAngularVelocity = Vector3.zero
+    end
+end)
+
 -- ============================================================
 -- Life Together RP Payload Formatter
 local layerOrderMap = { TShirt=1, Shirt=2, Pants=3, Shorts=4, DressSkirt=5, Sweater=6, Jacket=7, Hair=8, LeftShoe=9, RightShoe=10 }
