@@ -3948,6 +3948,181 @@ FetchServersBtn.MouseButton1Click:Connect(function()
         FetchServersBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
     end)
 end)
+-- ========== 🎯 PLAYER SERVER SNIPER (ZERO LOCAL VARIABLES) ==========
+SniperFrame = Instance.new("Frame")
+SniperFrame.Size = UDim2.new(1, -5, 0, 30)
+SniperFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 38)
+SniperFrame.BorderSizePixel = 0
+SniperFrame.ClipsDescendants = true
+SniperFrame.Parent = ToolsScroll
+
+SniperToggleBtn = Instance.new("TextButton")
+SniperToggleBtn.Size = UDim2.new(1, 0, 0, 30)
+SniperToggleBtn.Text = "  🎯 Player Server Sniper [ ▼ ]"
+SniperToggleBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
+SniperToggleBtn.Font = Enum.Font.SourceSansBold
+SniperToggleBtn.TextSize = 14
+SniperToggleBtn.TextXAlignment = Enum.TextXAlignment.Left
+SniperToggleBtn.BackgroundColor3 = Color3.fromRGB(25, 25, 32)
+SniperToggleBtn.BorderSizePixel = 0
+SniperToggleBtn.Parent = SniperFrame
+
+SniperContent = Instance.new("Frame")
+SniperContent.Size = UDim2.new(1, 0, 1, -30)
+SniperContent.Position = UDim2.new(0, 0, 0, 30)
+SniperContent.BackgroundTransparency = 1
+SniperContent.Visible = false
+SniperContent.Parent = SniperFrame
+
+SniperInput = Instance.new("TextBox")
+SniperInput.Size = UDim2.new(1, -20, 0, 30)
+SniperInput.Position = UDim2.new(0, 10, 0, 10)
+SniperInput.PlaceholderText = "Target Username (Not Display Name)"
+SniperInput.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
+SniperInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+SniperInput.Font = Enum.Font.SourceSansBold
+SniperInput.TextSize = 13
+SniperInput.Text = ""
+SniperInput.ClearTextOnFocus = false
+SniperInput.Parent = SniperContent
+Instance.new("UICorner", SniperInput).CornerRadius = UDim.new(0, 6)
+
+SniperBtn = Instance.new("TextButton")
+SniperBtn.Size = UDim2.new(1, -20, 0, 35)
+SniperBtn.Position = UDim2.new(0, 10, 0, 50)
+SniperBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+SniperBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+SniperBtn.Font = Enum.Font.SourceSansBold
+SniperBtn.TextSize = 14
+SniperBtn.Text = "Hunt Player"
+SniperBtn.BorderSizePixel = 0
+SniperBtn.Parent = SniperContent
+Instance.new("UICorner", SniperBtn).CornerRadius = UDim.new(0, 6)
+
+SniperStatus = Instance.new("TextLabel")
+SniperStatus.Size = UDim2.new(1, -20, 0, 20)
+SniperStatus.Position = UDim2.new(0, 10, 0, 90)
+SniperStatus.BackgroundTransparency = 1
+SniperStatus.Text = "Status: Idle"
+SniperStatus.TextColor3 = Color3.fromRGB(150, 150, 150)
+SniperStatus.Font = Enum.Font.SourceSansBold
+SniperStatus.TextSize = 13
+SniperStatus.Parent = SniperContent
+
+sniperExpanded = false
+SniperToggleBtn.MouseButton1Click:Connect(function()
+    sniperExpanded = not sniperExpanded
+    if sniperExpanded then
+        SniperFrame.Size = UDim2.new(1, -5, 0, 130)
+        SniperContent.Visible = true
+        SniperToggleBtn.Text = "  🎯 Player Server Sniper [ ▲ ]"
+    else
+        SniperFrame.Size = UDim2.new(1, -5, 0, 30)
+        SniperContent.Visible = false
+        SniperToggleBtn.Text = "  🎯 Player Server Sniper [ ▼ ]"
+    end
+end)
+
+SniperBtn.MouseButton1Click:Connect(function()
+    if SniperInput.Text == "" then return end
+    
+    local req = request or http_request or (syn and syn.request)
+    if not req then
+        SniperStatus.Text = "Error: Executor doesn't support requests."
+        return
+    end
+
+    SniperBtn.Text = "Hunting..."
+    SniperBtn.BackgroundColor3 = Color3.fromRGB(200, 150, 50)
+    SniperStatus.Text = "Getting Target Data..."
+    
+    task.spawn(function()
+        local tName = SniperInput.Text
+        local tId = nil
+        pcall(function() tId = game:GetService("Players"):GetUserIdFromNameAsync(tName) end)
+        
+        if not tId then
+            SniperStatus.Text = "Error: Invalid Username!"
+            SniperBtn.Text = "Hunt Player"
+            SniperBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+            return
+        end
+
+        local HttpService = game:GetService("HttpService")
+        local thumbRes = game:HttpGet("https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds="..tId.."&size=150x150&format=Png&isCircular=false")
+        local tImageUrl = HttpService:JSONDecode(thumbRes).data[1].imageUrl
+
+        local cursor = ""
+        local foundServer = nil
+        local serversChecked = 0
+
+        while cursor ~= nil and not foundServer do
+            local serverUrl = "https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Desc&limit=100"
+            if cursor ~= "" then serverUrl = serverUrl .. "&cursor=" .. cursor end
+
+            local srvSuccess, srvResult = pcall(function() return game:HttpGet(serverUrl) end)
+            if not srvSuccess then
+                SniperStatus.Text = "Rate Limited! Waiting 3s..."
+                task.wait(3)
+                continue
+            end
+
+            local srvData = HttpService:JSONDecode(srvResult)
+            cursor = srvData.nextPageCursor
+
+            if srvData.data then
+                for _, srv in ipairs(srvData.data) do
+                    serversChecked = serversChecked + 1
+                    SniperStatus.Text = "Scanning Server #" .. serversChecked .. "..."
+
+                    if srv.playerTokens and #srv.playerTokens > 0 then
+                        local bodyData = {}
+                        for _, token in ipairs(srv.playerTokens) do
+                            table.insert(bodyData, {
+                                requestId = token, targetId = 0, token = token,
+                                type = "AvatarHeadShot", size = "150x150", format = "png", isCircular = false
+                            })
+                        end
+
+                        local reqSuccess, reqResult = pcall(function()
+                            return req({
+                                Url = "https://thumbnails.roblox.com/v1/batch",
+                                Method = "POST",
+                                Headers = { ["Content-Type"] = "application/json", ["Accept"] = "application/json" },
+                                Body = HttpService:JSONEncode(bodyData)
+                            })
+                        end)
+
+                        if reqSuccess and reqResult and reqResult.Body then
+                            local batchData = HttpService:JSONDecode(reqResult.Body)
+                            if batchData.data then
+                                for _, pData in ipairs(batchData.data) do
+                                    if pData.imageUrl == tImageUrl then
+                                        foundServer = srv.id
+                                        break
+                                    end
+                                end
+                            end
+                        end
+                    end
+                    if foundServer then break end
+                    task.wait(0.05) -- Keeps Delta from crashing while scanning
+                end
+            end
+        end
+
+        if foundServer then
+            SniperStatus.Text = "Found them! Teleporting..."
+            SniperBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
+            game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, foundServer, game:GetService("Players").LocalPlayer)
+        else
+            SniperStatus.Text = "Player is not in a Public Server."
+            SniperBtn.Text = "Hunt Player"
+            SniperBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+        end
+    end)
+end)
+
 -----
 -- Resize Handle (Bottom Right Corner)
 local ResizeHandle = Instance.new("TextButton")
