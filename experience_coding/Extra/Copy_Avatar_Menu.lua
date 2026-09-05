@@ -3948,7 +3948,9 @@ FetchServersBtn.MouseButton1Click:Connect(function()
         FetchServersBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
     end)
 end)
--- ========== 🎯 ULTRA-FAST SERVER SNIPER (ZERO LAG BATCHING) ==========
+-- ========== 🎯 FAST PLAYER SERVER SNIPER (WITH STOP BUTTON & ZERO LOCALS) ==========
+sniperSearching = false
+
 SniperFrame = Instance.new("Frame")
 SniperFrame.Size = UDim2.new(1, -5, 0, 30)
 SniperFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 38)
@@ -3975,9 +3977,9 @@ SniperContent.Visible = false
 SniperContent.Parent = SniperFrame
 
 SniperInput = Instance.new("TextBox")
-SniperInput.Size = UDim2.new(1, -20, 0, 35) -- Increased Height
+SniperInput.Size = UDim2.new(1, -20, 0, 32)
 SniperInput.Position = UDim2.new(0, 10, 0, 10)
-SniperInput.PlaceholderText = "Target Username (Not Display Name)"
+SniperInput.PlaceholderText = "Target Username (e.g. Builderman)"
 SniperInput.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
 SniperInput.TextColor3 = Color3.fromRGB(255, 255, 255)
 SniperInput.Font = Enum.Font.SourceSansBold
@@ -3987,10 +3989,11 @@ SniperInput.ClearTextOnFocus = false
 SniperInput.Parent = SniperContent
 Instance.new("UICorner", SniperInput).CornerRadius = UDim.new(0, 6)
 
+-- Side-by-Side Hunt and Stop Buttons
 SniperBtn = Instance.new("TextButton")
-SniperBtn.Size = UDim2.new(1, -20, 0, 40) -- Increased Height
-SniperBtn.Position = UDim2.new(0, 10, 0, 55) -- Adjusted Position
-SniperBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+SniperBtn.Size = UDim2.new(0.5, -12, 0, 35)
+SniperBtn.Position = UDim2.new(0, 10, 0, 48)
+SniperBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
 SniperBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 SniperBtn.Font = Enum.Font.SourceSansBold
 SniperBtn.TextSize = 14
@@ -3999,14 +4002,26 @@ SniperBtn.BorderSizePixel = 0
 SniperBtn.Parent = SniperContent
 Instance.new("UICorner", SniperBtn).CornerRadius = UDim.new(0, 6)
 
+SniperStopBtn = Instance.new("TextButton")
+SniperStopBtn.Size = UDim2.new(0.5, -12, 0, 35)
+SniperStopBtn.Position = UDim2.new(0.5, 2, 0, 48)
+SniperStopBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+SniperStopBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+SniperStopBtn.Font = Enum.Font.SourceSansBold
+SniperStopBtn.TextSize = 14
+SniperStopBtn.Text = "Stop"
+SniperStopBtn.BorderSizePixel = 0
+SniperStopBtn.Parent = SniperContent
+Instance.new("UICorner", SniperStopBtn).CornerRadius = UDim.new(0, 6)
+
 SniperStatus = Instance.new("TextLabel")
 SniperStatus.Size = UDim2.new(1, -20, 0, 25)
-SniperStatus.Position = UDim2.new(0, 10, 0, 100) -- Adjusted Position
+SniperStatus.Position = UDim2.new(0, 10, 0, 88)
 SniperStatus.BackgroundTransparency = 1
 SniperStatus.Text = "Status: Idle"
 SniperStatus.TextColor3 = Color3.fromRGB(150, 150, 150)
 SniperStatus.Font = Enum.Font.SourceSansBold
-SniperStatus.TextSize = 13
+SniperStatus.TextSize = 12
 SniperStatus.TextWrapped = true
 SniperStatus.Parent = SniperContent
 
@@ -4014,7 +4029,7 @@ sniperExpanded = false
 SniperToggleBtn.MouseButton1Click:Connect(function()
     sniperExpanded = not sniperExpanded
     if sniperExpanded then
-        SniperFrame.Size = UDim2.new(1, -5, 0, 160) -- 🔥 Increased overall UI size to prevent clipping!
+        SniperFrame.Size = UDim2.new(1, -5, 0, 150)
         SniperContent.Visible = true
         SniperToggleBtn.Text = "  🎯 Fast Player Server Sniper [ ▲ ]"
     else
@@ -4024,28 +4039,41 @@ SniperToggleBtn.MouseButton1Click:Connect(function()
     end
 end)
 
+SniperStopBtn.MouseButton1Click:Connect(function()
+    if sniperSearching then
+        sniperSearching = false
+        SniperStatus.Text = "Status: Cancelled by user."
+        SniperBtn.Text = "Hunt Player"
+        SniperBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
+    end
+end)
+
 SniperBtn.MouseButton1Click:Connect(function()
-    if SniperInput.Text == "" then return end
+    if sniperSearching then return end
+    
+    local rawName = SniperInput.Text:gsub("^@", ""):gsub("%s+", "")
+    if rawName == "" then return end
     
     local req = request or http_request or (syn and syn.request)
     if not req then
-        SniperStatus.Text = "Error: Executor doesn't support requests."
+        SniperStatus.Text = "Error: Executor missing HTTP request support."
         return
     end
 
+    sniperSearching = true
     SniperBtn.Text = "Hunting..."
     SniperBtn.BackgroundColor3 = Color3.fromRGB(200, 150, 50)
-    SniperStatus.Text = "Getting Target Data..."
+    SniperStatus.Text = "Fetching avatar profile..."
     
     task.spawn(function()
-        local tName = SniperInput.Text
         local tId = nil
-        pcall(function() tId = game:GetService("Players"):GetUserIdFromNameAsync(tName) end)
+        pcall(function() tId = game:GetService("Players"):GetUserIdFromNameAsync(rawName) end)
         
         if not tId then
             SniperStatus.Text = "Error: Invalid Username!"
             SniperBtn.Text = "Hunt Player"
-            SniperBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+            SniperBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
+            sniperSearching = false
             return
         end
 
@@ -4057,15 +4085,14 @@ SniperBtn.MouseButton1Click:Connect(function()
         local foundServer = nil
         local serversChecked = 0
 
-        while cursor ~= nil and not foundServer do
-            -- Fetches Closest Servers First
+        while cursor ~= nil and not foundServer and sniperSearching do
             local serverUrl = "https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?limit=100"
             if cursor ~= "" then serverUrl = serverUrl .. "&cursor=" .. cursor end
 
             local srvSuccess, srvResult = pcall(function() return game:HttpGet(serverUrl) end)
             if not srvSuccess then
-                SniperStatus.Text = "Rate Limited! Waiting 3s..."
-                task.wait(3)
+                SniperStatus.Text = "Rate limited. Waiting 2s..."
+                task.wait(2)
                 continue
             end
 
@@ -4073,12 +4100,21 @@ SniperBtn.MouseButton1Click:Connect(function()
             cursor = srvData.nextPageCursor
 
             if srvData.data then
+                -- Sort closest servers (lowest ping) first; break ties with player count descending
+                table.sort(srvData.data, function(a, b)
+                    local pingA = tonumber(a.ping) or 9999
+                    local pingB = tonumber(b.ping) or 9999
+                    if pingA ~= pingB then
+                        return pingA < pingB
+                    end
+                    return (tonumber(a.playing) or 0) > (tonumber(b.playing) or 0)
+                end)
+
                 local batchTokens = {}
                 local tokenToServerMap = {}
                 
-                -- 🔥 THE FIX: Helper function checks up to 100 players at the EXACT same time
                 local function flushBatch()
-                    if #batchTokens == 0 then return false end
+                    if #batchTokens == 0 or not sniperSearching then return false end
                     
                     local reqSuccess, reqResult = pcall(function()
                         return req({
@@ -4102,14 +4138,17 @@ SniperBtn.MouseButton1Click:Connect(function()
                     end
                     table.clear(batchTokens)
                     table.clear(tokenToServerMap)
-                    task.wait(0.1) -- Gentle yield to keep game running at 60 FPS
+                    task.wait(0.05)
                     return false
                 end
 
                 for _, srv in ipairs(srvData.data) do
+                    if not sniperSearching or foundServer then break end
                     serversChecked = serversChecked + 1
-                    if serversChecked % 10 == 0 then
-                        SniperStatus.Text = "Scanned " .. serversChecked .. " servers instantly..."
+                    
+                    if serversChecked % 5 == 0 then
+                        local pDisplay = srv.ping and (tostring(srv.ping) .. "ms") or "nearby"
+                        SniperStatus.Text = "Scanned " .. serversChecked .. " servers (Ping: " .. pDisplay .. ")..."
                     end
 
                     if srv.playerTokens then
@@ -4120,31 +4159,32 @@ SniperBtn.MouseButton1Click:Connect(function()
                             })
                             tokenToServerMap[token] = srv.id
                             
-                            -- Send network request ONLY when we hit 100 players!
                             if #batchTokens >= 100 then
                                 if flushBatch() then break end
                             end
                         end
                     end
-                    if foundServer then break end
                 end
                 
-                -- Flush any remaining players at the end of the page
-                if not foundServer and #batchTokens > 0 then
+                if not foundServer and #batchTokens > 0 and sniperSearching then
                     flushBatch()
                 end
             end
         end
 
         if foundServer then
-            SniperStatus.Text = "Found them! Teleporting..."
-            SniperBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
+            SniperStatus.Text = "Target found! Teleporting..."
+            SniperBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
             game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, foundServer, game:GetService("Players").LocalPlayer)
+        elseif not sniperSearching then
+            SniperStatus.Text = "Hunt stopped."
         else
-            SniperStatus.Text = "Player is not in a Public Server."
-            SniperBtn.Text = "Hunt Player"
-            SniperBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+            SniperStatus.Text = "Player not found in public servers."
         end
+
+        sniperSearching = false
+        SniperBtn.Text = "Hunt Player"
+        SniperBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
     end)
 end)
 
