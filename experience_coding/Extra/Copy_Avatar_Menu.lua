@@ -2040,28 +2040,39 @@ function startVehAttack()
         local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
         if not car or not base.Parent or not hrp then stopVehAttack() return end
         
-        -- 🛑 HIJACK PREVENTION: Server-Side Despawn, Spawn & Lock!
+        -- 🛑 HIJACK PREVENTION: Server-Side Despawn, Spawn & Lock (NO HARDCODED NUMBERS)
         local seat = car:FindFirstChildOfClass("VehicleSeat") or car:FindFirstChildWhichIsA("Seat", true)
         if seat and seat.Occupant and seat.Occupant.Parent ~= LocalPlayer.Character then
             vehIsRespawning = true
             task.spawn(function()
                 local GetRemote = game:GetService("ReplicatedStorage"):FindFirstChild("Remotes") and game:GetService("ReplicatedStorage").Remotes:FindFirstChild("Get")
+                local GlobalGet = getgenv().Get or (getgenv().g and getgenv().g.Get)
                 
-                if GetRemote then
-                    -- 1. Despawn the compromised vehicle
-                    pcall(function() GetRemote:InvokeServer(159, "despawn_vehicle") end)
+                if GlobalGet then
+                    pcall(function() GlobalGet("despawn_vehicle") end)
+                    task.wait(0.5)
+                    pcall(function() GlobalGet("spawn_vehicle", carName) end)
+                    task.wait(1.5)
+                    local vehiclesFolder = workspace:FindFirstChild("Vehicles")
+                    if vehiclesFolder then
+                        local newCar = vehiclesFolder:FindFirstChild(carName)
+                        if newCar then pcall(function() GlobalGet("lock_vehicle", newCar) end) end
+                    end
+                elseif GetRemote then
+                    -- 1. Despawn the compromised vehicle without the hardcoded '159'
+                    pcall(function() GetRemote:InvokeServer("despawn_vehicle") end)
                     task.wait(0.5)
                     
-                    -- 2. Spawn a fresh one
-                    pcall(function() GetRemote:InvokeServer(158, "spawn_vehicle", carName) end)
+                    -- 2. Spawn a fresh one without the hardcoded '158'
+                    pcall(function() GetRemote:InvokeServer("spawn_vehicle", carName) end)
                     task.wait(1.5) -- Give server time to place it
                     
-                    -- 3. Lock it securely
+                    -- 3. Lock it securely without the hardcoded '380'
                     local vehiclesFolder = workspace:FindFirstChild("Vehicles")
                     if vehiclesFolder then
                         local newCar = vehiclesFolder:FindFirstChild(carName)
                         if newCar then
-                            pcall(function() GetRemote:InvokeServer(380, "lock_vehicle", newCar) end)
+                            pcall(function() GetRemote:InvokeServer("lock_vehicle", newCar) end)
                         end
                     end
                 end
