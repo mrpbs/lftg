@@ -2073,17 +2073,17 @@ function startVehAttack()
                     if newCar then
                         if GlobalGet then
                             pcall(function() GlobalGet("lock_vehicle", newCar) end)
-                            pcall(function() GlobalGet("add_trailer", newCar, "Trailer") end)
+                            pcall(function() GlobalGet("add_trailer", newCar, "WaterSkies") end)
                         elseif GetRemote then
                             pcall(function() GetRemote:InvokeServer("lock_vehicle", newCar) end)
-                            pcall(function() GetRemote:InvokeServer("add_trailer", newCar, "Trailer") end)
+                            pcall(function() GetRemote:InvokeServer("add_trailer", newCar, "WaterSkies") end)
                         end
                     end
                 end
                 
                 executeFastRespawn()
                 
-                task.wait(0.5)
+                task.wait(0.1)
                 stopVehAttack()
                 vehAttackEnabled = true
                 startVehAttack()
