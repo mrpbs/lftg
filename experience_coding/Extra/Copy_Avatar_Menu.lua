@@ -2038,7 +2038,7 @@ function startVehAttack()
         if not car or not base.Parent or not hrp then stopVehAttack() return end
         
         local potentialTarget = nil
-        local closestDist = 50 -- Strict 50 radius limit for targeting
+        local closestDist = 40 -- Strict 50 radius limit for targeting
         
         -- Find closest non-whitelisted target inside 50 studs that is NOT ignored
         for _, p in ipairs(Players:GetPlayers()) do
@@ -2060,10 +2060,10 @@ function startVehAttack()
         if potentialTarget then
             if vehAttackTarget ~= potentialTarget then
                 vehAttackTarget = potentialTarget
-                vehAttackTimer = tick() + 4 -- Give it 4 seconds to fling them
+                vehAttackTimer = tick() + 1 -- Give it 4 seconds to fling them
             elseif tick() > vehAttackTimer then
                 -- They didn't get flung (Anti-fling or glitched). Ignore for 10 seconds!
-                vehIgnoreList[potentialTarget.Name] = tick() + 10
+                vehIgnoreList[potentialTarget.Name] = tick() + 2
                 vehAttackTarget = nil
                 potentialTarget = nil
             end
@@ -2074,27 +2074,27 @@ function startVehAttack()
         -- DISTANCE CHECKS & FAILSAFES
         local distFromPlayer = (base.Position - hrp.Position).Magnitude
 
-        if potentialTarget and distFromPlayer <= 45 then
+        if potentialTarget and distFromPlayer <= 40 then
             -- ATTACK MODE: Chase and Fling
             local tRoot = potentialTarget.Character.HumanoidRootPart
             local moveDir = (tRoot.Position - base.Position)
             
             if moveDir.Magnitude < 5 then
                 -- UPPERCUT! Tied directly to your Speed Slider
-                local flingPower = localFlySpeed * 5000 
+                local flingPower = localFlySpeed * 100 
                 bv.Velocity = Vector3.new(math.random(-flingPower, flingPower), flingPower, math.random(-flingPower, flingPower))
                 base.AssemblyAngularVelocity = Vector3.new(flingPower, flingPower, flingPower)
             else
                 -- CHASE! Tied directly to your Speed Slider
-                bv.Velocity = moveDir.Unit * (localFlySpeed * 20)
+                bv.Velocity = moveDir.Unit * (localFlySpeed * 5)
                 bg.CFrame = CFrame.new(base.Position, tRoot.Position)
             end
         else
             -- IDLE MODE (Donut Roaming)
             -- Pick a random spot 20-45 studs away (Never directly above you)
-            if not vehRoamingPos or (vehRoamingPos - base.Position).Magnitude < 5 or (vehRoamingPos - hrp.Position).Magnitude > 45 then
+            if not vehRoamingPos or (vehRoamingPos - base.Position).Magnitude < 5 or (vehRoamingPos - hrp.Position).Magnitude > 40 then
                 local angle = math.random() * math.pi * 2
-                local radius = math.random(20, 45) 
+                local radius = math.random(20, 40) 
                 local heightOffset = math.random(-5, 10) 
                 vehRoamingPos = hrp.Position + Vector3.new(math.cos(angle) * radius, heightOffset, math.sin(angle) * radius)
             end
@@ -2108,13 +2108,13 @@ function startVehAttack()
         end
         
         -- ABSOLUTE 50-STUD RADIUS JAIL
-        if distFromPlayer > 45 then
+        if distFromPlayer > 40 then
             -- Violently pull the car back towards you if it tries to leave the 45 stud zone
             local pullBackDir = (hrp.Position - base.Position).Unit
-            bv.Velocity = pullBackDir * (localFlySpeed * 30)
+            bv.Velocity = pullBackDir * (localFlySpeed * 10)
             
             -- If a target teleports and drags the car 100+ studs away, snap it back instantly
-            if distFromPlayer > 100 then
+            if distFromPlayer > 40 then
                 base.CFrame = hrp.CFrame * CFrame.new(0, 15, -20)
                 base.AssemblyLinearVelocity = Vector3.zero
                 base.AssemblyAngularVelocity = Vector3.zero
