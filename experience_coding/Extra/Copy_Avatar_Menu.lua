@@ -3948,7 +3948,7 @@ FetchServersBtn.MouseButton1Click:Connect(function()
         FetchServersBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
     end)
 end)
--- ========== 🎯 FAST PLAYER SERVER SNIPER (ZERO LOCAL VARIABLES) ==========
+-- ========== 🎯 ULTRA-FAST SERVER SNIPER (ZERO LAG BATCHING) ==========
 SniperFrame = Instance.new("Frame")
 SniperFrame.Size = UDim2.new(1, -5, 0, 30)
 SniperFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 38)
@@ -3975,7 +3975,7 @@ SniperContent.Visible = false
 SniperContent.Parent = SniperFrame
 
 SniperInput = Instance.new("TextBox")
-SniperInput.Size = UDim2.new(1, -20, 0, 30)
+SniperInput.Size = UDim2.new(1, -20, 0, 35) -- Increased Height
 SniperInput.Position = UDim2.new(0, 10, 0, 10)
 SniperInput.PlaceholderText = "Target Username (Not Display Name)"
 SniperInput.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
@@ -3988,8 +3988,8 @@ SniperInput.Parent = SniperContent
 Instance.new("UICorner", SniperInput).CornerRadius = UDim.new(0, 6)
 
 SniperBtn = Instance.new("TextButton")
-SniperBtn.Size = UDim2.new(1, -20, 0, 35)
-SniperBtn.Position = UDim2.new(0, 10, 0, 50)
+SniperBtn.Size = UDim2.new(1, -20, 0, 40) -- Increased Height
+SniperBtn.Position = UDim2.new(0, 10, 0, 55) -- Adjusted Position
 SniperBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
 SniperBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 SniperBtn.Font = Enum.Font.SourceSansBold
@@ -4000,20 +4000,21 @@ SniperBtn.Parent = SniperContent
 Instance.new("UICorner", SniperBtn).CornerRadius = UDim.new(0, 6)
 
 SniperStatus = Instance.new("TextLabel")
-SniperStatus.Size = UDim2.new(1, -20, 0, 20)
-SniperStatus.Position = UDim2.new(0, 10, 0, 90)
+SniperStatus.Size = UDim2.new(1, -20, 0, 25)
+SniperStatus.Position = UDim2.new(0, 10, 0, 100) -- Adjusted Position
 SniperStatus.BackgroundTransparency = 1
 SniperStatus.Text = "Status: Idle"
 SniperStatus.TextColor3 = Color3.fromRGB(150, 150, 150)
 SniperStatus.Font = Enum.Font.SourceSansBold
 SniperStatus.TextSize = 13
+SniperStatus.TextWrapped = true
 SniperStatus.Parent = SniperContent
 
 sniperExpanded = false
 SniperToggleBtn.MouseButton1Click:Connect(function()
     sniperExpanded = not sniperExpanded
     if sniperExpanded then
-        SniperFrame.Size = UDim2.new(1, -5, 0, 130)
+        SniperFrame.Size = UDim2.new(1, -5, 0, 160) -- 🔥 Increased overall UI size to prevent clipping!
         SniperContent.Visible = true
         SniperToggleBtn.Text = "  🎯 Fast Player Server Sniper [ ▲ ]"
     else
@@ -4055,10 +4056,9 @@ SniperBtn.MouseButton1Click:Connect(function()
         local cursor = ""
         local foundServer = nil
         local serversChecked = 0
-        local activeThreads = 0 -- Limits concurrent requests to prevent rate-limiting
 
         while cursor ~= nil and not foundServer do
-            -- 🔥 FIX 1: Removed sortOrder=Desc so Roblox defaults to closest/best servers first!
+            -- Fetches Closest Servers First
             local serverUrl = "https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?limit=100"
             if cursor ~= "" then serverUrl = serverUrl .. "&cursor=" .. cursor end
 
@@ -4073,60 +4073,68 @@ SniperBtn.MouseButton1Click:Connect(function()
             cursor = srvData.nextPageCursor
 
             if srvData.data then
-                for _, srv in ipairs(srvData.data) do
-                    if foundServer then break end
-                    serversChecked = serversChecked + 1
+                local batchTokens = {}
+                local tokenToServerMap = {}
+                
+                -- 🔥 THE FIX: Helper function checks up to 100 players at the EXACT same time
+                local function flushBatch()
+                    if #batchTokens == 0 then return false end
                     
-                    if serversChecked % 5 == 0 then
-                        SniperStatus.Text = "Scanned " .. serversChecked .. " servers (Fast Mode)..."
-                    end
+                    local reqSuccess, reqResult = pcall(function()
+                        return req({
+                            Url = "https://thumbnails.roblox.com/v1/batch",
+                            Method = "POST",
+                            Headers = { ["Content-Type"] = "application/json", ["Accept"] = "application/json" },
+                            Body = HttpService:JSONEncode(batchTokens)
+                        })
+                    end)
 
-                    if srv.playerTokens and #srv.playerTokens > 0 then
-                        -- Wait if we have too many requests running at once
-                        while activeThreads >= 6 do task.wait() end
-                        
-                        activeThreads = activeThreads + 1
-                        
-                        -- 🔥 FIX 2: Async Threading! It checks 6 servers simultaneously without freezing your game
-                        task.spawn(function()
-                            local bodyData = {}
-                            for _, token in ipairs(srv.playerTokens) do
-                                table.insert(bodyData, {
-                                    requestId = token, targetId = 0, token = token,
-                                    type = "AvatarHeadShot", size = "150x150", format = "png", isCircular = false
-                                })
-                            end
-
-                            local reqSuccess, reqResult = pcall(function()
-                                return req({
-                                    Url = "https://thumbnails.roblox.com/v1/batch",
-                                    Method = "POST",
-                                    Headers = { ["Content-Type"] = "application/json", ["Accept"] = "application/json" },
-                                    Body = HttpService:JSONEncode(bodyData)
-                                })
-                            end)
-
-                            if reqSuccess and reqResult and reqResult.Body then
-                                local batchData = HttpService:JSONDecode(reqResult.Body)
-                                if batchData.data then
-                                    for _, pData in ipairs(batchData.data) do
-                                        if pData.imageUrl == tImageUrl then
-                                            foundServer = srv.id
-                                            break
-                                        end
-                                    end
+                    if reqSuccess and reqResult and reqResult.Body then
+                        local batchData = HttpService:JSONDecode(reqResult.Body)
+                        if batchData.data then
+                            for _, pData in ipairs(batchData.data) do
+                                if pData.imageUrl == tImageUrl then
+                                    foundServer = tokenToServerMap[pData.requestId]
+                                    return true
                                 end
                             end
-                            activeThreads = activeThreads - 1
-                        end)
+                        end
                     end
-                    task.wait() -- Micro-yield prevents Roblox from freezing
+                    table.clear(batchTokens)
+                    table.clear(tokenToServerMap)
+                    task.wait(0.1) -- Gentle yield to keep game running at 60 FPS
+                    return false
+                end
+
+                for _, srv in ipairs(srvData.data) do
+                    serversChecked = serversChecked + 1
+                    if serversChecked % 10 == 0 then
+                        SniperStatus.Text = "Scanned " .. serversChecked .. " servers instantly..."
+                    end
+
+                    if srv.playerTokens then
+                        for _, token in ipairs(srv.playerTokens) do
+                            table.insert(batchTokens, {
+                                requestId = token, targetId = 0, token = token,
+                                type = "AvatarHeadShot", size = "150x150", format = "png", isCircular = false
+                            })
+                            tokenToServerMap[token] = srv.id
+                            
+                            -- Send network request ONLY when we hit 100 players!
+                            if #batchTokens >= 100 then
+                                if flushBatch() then break end
+                            end
+                        end
+                    end
+                    if foundServer then break end
+                end
+                
+                -- Flush any remaining players at the end of the page
+                if not foundServer and #batchTokens > 0 then
+                    flushBatch()
                 end
             end
         end
-
-        -- Wait for remaining threads to finish
-        while activeThreads > 0 and not foundServer do task.wait(0.1) end
 
         if foundServer then
             SniperStatus.Text = "Found them! Teleporting..."
