@@ -5569,39 +5569,24 @@ end)
                 end)
             end
         end)
-         -- 6. 📱 SPAM NOTIF BUTTON
-        local NotifBtn = Instance.new("TextButton")
-        if g.activeNotifTarget == targetPlayer then
-            NotifBtn.Text = "Stop Notif"
-            NotifBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-        else
-            NotifBtn.Text = "Spam Notif"
-            NotifBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65) 
-        end
-        NotifBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-        NotifBtn.Font = Enum.Font.SourceSansBold
-        NotifBtn.TextSize = 11
-        NotifBtn.BorderSizePixel = 0
-        NotifBtn.LayoutOrder = 14
-        NotifBtn.Parent = actionLayout 
-        -- 6. 📱 MAX ANNOY BUTTON (Carry, Call, Group & Outfit Spam)
-        NotifBtn = Instance.new("TextButton")
+         -- 7. 🤬 MAX ANNOY BUTTON (Carry, Call, Group & Outfit Spam)
+        MaxAnnoyBtn = Instance.new("TextButton")
         
         if getgenv().activeAnnoyNotifTarget == targetPlayer then
-            NotifBtn.Text = "Stop Annoy"
-            NotifBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+            MaxAnnoyBtn.Text = "Stop Annoy"
+            MaxAnnoyBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
         else
-            NotifBtn.Text = "Max Annoy"
-            NotifBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65) 
+            MaxAnnoyBtn.Text = "Max Annoy"
+            MaxAnnoyBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65) 
         end
-        NotifBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-        NotifBtn.Font = Enum.Font.SourceSansBold
-        NotifBtn.TextSize = 11
-        NotifBtn.BorderSizePixel = 0
-        NotifBtn.LayoutOrder = 14
-        NotifBtn.Parent = actionLayout 
+        MaxAnnoyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        MaxAnnoyBtn.Font = Enum.Font.SourceSansBold
+        MaxAnnoyBtn.TextSize = 11
+        MaxAnnoyBtn.BorderSizePixel = 0
+        MaxAnnoyBtn.LayoutOrder = 15 -- Shifted to 15 to prevent UI overlapping
+        MaxAnnoyBtn.Parent = actionLayout 
 
-        NotifBtn.MouseButton1Click:Connect(function()
+        MaxAnnoyBtn.MouseButton1Click:Connect(function()
             local g = getgenv()
             local Send = g.Send or (g.g and g.g.Send)
             local Get = g.Get or (g.g and g.g.Get)
@@ -5611,17 +5596,21 @@ end)
             if g.activeAnnoyNotifTarget == targetPlayer then
                 -- Turn Off
                 g.activeAnnoyNotifTarget = nil
-                NotifBtn.Text = "Max Annoy"
-                NotifBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+                MaxAnnoyBtn.Text = "Max Annoy"
+                MaxAnnoyBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
             else
                 -- Turn On
                 g.activeAnnoyNotifTarget = targetPlayer
-                NotifBtn.Text = "Stop Annoy"
-                NotifBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+                MaxAnnoyBtn.Text = "Stop Annoy"
+                MaxAnnoyBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
                 
                 task.spawn(function()
-                    -- Pre-build a blank outfit payload for the spammer
-                    local blankPayload = buildBatchPayload({}) 
+                    -- Hardcoded blank outfit payload to prevent "buildBatchPayload is nil" errors
+                    local blankPayload = {
+                        accessories = {},
+                        properties = { Shirt = 0, Pants = 0, Head = 0, Face = 0, Torso = 0 }
+                    }
+                    
                     local embedData = {
                         outfit_id = -2,
                         app = "Avatar",
@@ -5641,7 +5630,7 @@ end)
                             pcall(function() Send("end_call", targetPlayer.Name) end)
                         end
                         
-                        -- 2. Group Chat Spam
+                        -- 2. Group Chat Spam[span_0](start_span)[span_0](end_span)
                         if Get then
                             pcall(function()
                                 local userIds = {targetId}
@@ -5652,7 +5641,7 @@ end)
                                     end
                                 end
                                 
-                                -- Shuffle and grab 3 randoms
+                                -- Shuffle and grab up to 3 random players[span_1](start_span)[span_1](end_span)
                                 for i = #others, 2, -1 do
                                     local j = math.random(i)
                                     others[i], others[j] = others[j], others[i]
@@ -5675,12 +5664,13 @@ end)
                             end)
                         end
                         
-                        task.wait(0.35)
+                        -- Set to 0.4 seconds to prevent getting rate-limited and chat-blocked by the server
+                        task.wait(0.4)
                     end
                 end)
             end
         end)
- 
+
       -- LOGIC CONNECTIONS
         -- ==========================================
    
