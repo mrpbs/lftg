@@ -1952,13 +1952,26 @@ VehAuraBtn.MouseButton1Click:Connect(function()
         stopVehAura()
     end
 end)
+-- 8. Vehicle Aura Attack Button (ZERO LOCALS)
+VehAttackBtn = Instance.new("TextButton")
+VehAttackBtn.Size = UDim2.new(1, -10, 0, 35)
+VehAttackBtn.Position = UDim2.new(0, 5, 0, 260)
+VehAttackBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+VehAttackBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+VehAttackBtn.Font = Enum.Font.SourceSansBold
+VehAttackBtn.TextSize = 15
+VehAttackBtn.Text = "⚔️ Veh Aura (Attack): OFF"
+VehAttackBtn.BorderSizePixel = 0
+VehAttackBtn.Parent = FlyContainer
+Instance.new("UICorner", VehAttackBtn).CornerRadius = UDim.new(0, 6)
+
 -- ==========================================
--- VEHICLE AURA (ATTACK LOGIC)
+-- VEHICLE AURA (ATTACK LOGIC) (ZERO LOCALS)
 -- ==========================================
-local vehAttackEnabled = false
-local vehAttackLoop = nil
-local vAttackCollisions = {}
-local originalAuraProps = {}
+vehAttackEnabled = false
+vehAttackLoop = nil
+vAttackCollisions = {}
+originalAuraProps = {}
 
 function stopVehAttack()
     vehAttackEnabled = false
