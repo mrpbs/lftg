@@ -5547,7 +5547,118 @@ end)
                 end)
             end
         end)
-  
+         -- 6. 📱 SPAM NOTIF BUTTON
+        local NotifBtn = Instance.new("TextButton")
+        if g.activeNotifTarget == targetPlayer then
+            NotifBtn.Text = "Stop Notif"
+            NotifBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+        else
+            NotifBtn.Text = "Spam Notif"
+            NotifBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65) 
+        end
+        NotifBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        NotifBtn.Font = Enum.Font.SourceSansBold
+        NotifBtn.TextSize = 11
+        NotifBtn.BorderSizePixel = 0
+        NotifBtn.LayoutOrder = 14
+        NotifBtn.Parent = actionLayout 
+        -- 6. 📱 MAX ANNOY BUTTON (Carry, Call, Group & Outfit Spam)
+        NotifBtn = Instance.new("TextButton")
+        
+        if getgenv().activeAnnoyNotifTarget == targetPlayer then
+            NotifBtn.Text = "Stop Annoy"
+            NotifBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+        else
+            NotifBtn.Text = "Max Annoy"
+            NotifBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65) 
+        end
+        NotifBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        NotifBtn.Font = Enum.Font.SourceSansBold
+        NotifBtn.TextSize = 11
+        NotifBtn.BorderSizePixel = 0
+        NotifBtn.LayoutOrder = 14
+        NotifBtn.Parent = actionLayout 
+
+        NotifBtn.MouseButton1Click:Connect(function()
+            local g = getgenv()
+            local Send = g.Send or (g.g and g.g.Send)
+            local Get = g.Get or (g.g and g.g.Get)
+            local myId = game:GetService("Players").LocalPlayer.UserId
+            local targetId = targetPlayer.UserId
+
+            if g.activeAnnoyNotifTarget == targetPlayer then
+                -- Turn Off
+                g.activeAnnoyNotifTarget = nil
+                NotifBtn.Text = "Max Annoy"
+                NotifBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+            else
+                -- Turn On
+                g.activeAnnoyNotifTarget = targetPlayer
+                NotifBtn.Text = "Stop Annoy"
+                NotifBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+                
+                task.spawn(function()
+                    -- Pre-build a blank outfit payload for the spammer
+                    local blankPayload = buildBatchPayload({}) 
+                    local embedData = {
+                        outfit_id = -2,
+                        app = "Avatar",
+                        accept = "View",
+                        content = "Custom Outfit",
+                        func = "view_outfit",
+                        desc = blankPayload
+                    }
+                    local embedJson = game:GetService("HttpService"):JSONEncode(embedData)
+                    local channelStr = (myId < targetId) and (myId .. " " .. targetId) or (targetId .. " " .. myId)
+                    
+                    while g.activeAnnoyNotifTarget == targetPlayer do
+                        -- 1. Call & Carry Spam
+                        if Send then
+                            pcall(function() Send("request_carry", targetPlayer.Name) end)
+                            pcall(function() Send("request_call", targetPlayer.Name) end)
+                            pcall(function() Send("end_call", targetPlayer.Name) end)
+                        end
+                        
+                        -- 2. Group Chat Spam
+                        if Get then
+                            pcall(function()
+                                local userIds = {targetId}
+                                local others = {}
+                                for _, other in ipairs(game:GetService("Players"):GetPlayers()) do
+                                    if other ~= targetPlayer and other ~= game:GetService("Players").LocalPlayer then
+                                        table.insert(others, other)
+                                    end
+                                end
+                                
+                                -- Shuffle and grab 3 randoms
+                                for i = #others, 2, -1 do
+                                    local j = math.random(i)
+                                    others[i], others[j] = others[j], others[i]
+                                end
+                                for i = 1, math.min(3, #others) do
+                                    table.insert(userIds, others[i].UserId)
+                                end
+                                
+                                if #userIds > 0 then
+                                    Get("new_group", userIds)
+                                end
+                            end)
+                        end
+
+                        -- 3. Outfit DM Spam
+                        if Send then
+                            pcall(function()
+                                Send("can_users_direct_chat", myId, targetId)
+                                Send("out_embed", channelStr, embedJson, "!EMBED")
+                            end)
+                        end
+                        
+                        task.wait(0.35)
+                    end
+                end)
+            end
+        end)
+ 
       -- LOGIC CONNECTIONS
         -- ==========================================
    
