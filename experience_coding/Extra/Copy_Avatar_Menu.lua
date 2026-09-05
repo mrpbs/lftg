@@ -1963,7 +1963,7 @@ vehAttackTarget = nil
 vehAttackTimer = 0
 vehIgnoreList = {}
 vehRoamingPos = nil
-vehIsRespawning = false -- Tracks anti-hijack status
+vehIsRespawning = false 
 
 function stopVehAttack()
     vehAttackEnabled = false
@@ -2040,17 +2040,33 @@ function startVehAttack()
         local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
         if not car or not base.Parent or not hrp then stopVehAttack() return end
         
-        -- 🛑 HIJACK PREVENTION: If someone sits in it, nuke it and respawn
+        -- 🛑 HIJACK PREVENTION: Server-Side Despawn, Spawn & Lock!
         local seat = car:FindFirstChildOfClass("VehicleSeat") or car:FindFirstChildWhichIsA("Seat", true)
         if seat and seat.Occupant and seat.Occupant.Parent ~= LocalPlayer.Character then
             vehIsRespawning = true
             task.spawn(function()
-                pcall(function() car:Destroy() end)
-                local Get = getgenv().Get or (getgenv().g and getgenv().g.Get)
-                if Get then pcall(function() Get("spawn_vehicle", carName) end) end
+                local GetRemote = game:GetService("ReplicatedStorage"):FindFirstChild("Remotes") and game:GetService("ReplicatedStorage").Remotes:FindFirstChild("Get")
                 
-                task.wait(2.5) -- Wait for the new car to load
+                if GetRemote then
+                    -- 1. Despawn the compromised vehicle
+                    pcall(function() GetRemote:InvokeServer(159, "despawn_vehicle") end)
+                    task.wait(0.5)
+                    
+                    -- 2. Spawn a fresh one
+                    pcall(function() GetRemote:InvokeServer(158, "spawn_vehicle", carName) end)
+                    task.wait(1.5) -- Give server time to place it
+                    
+                    -- 3. Lock it securely
+                    local vehiclesFolder = workspace:FindFirstChild("Vehicles")
+                    if vehiclesFolder then
+                        local newCar = vehiclesFolder:FindFirstChild(carName)
+                        if newCar then
+                            pcall(function() GetRemote:InvokeServer(380, "lock_vehicle", newCar) end)
+                        end
+                    end
+                end
                 
+                task.wait(1)
                 stopVehAttack()
                 vehAttackEnabled = true
                 startVehAttack()
@@ -2060,7 +2076,7 @@ function startVehAttack()
         end
         
         local potentialTarget = nil
-        local closestDist = 40 -- 🔥 Strict 40 radius limit
+        local closestDist = 40 -- Strict 40 radius limit
         
         for _, p in ipairs(Players:GetPlayers()) do
             if p ~= LocalPlayer and not massWhitelist[p.Name] and p.Character then
@@ -2077,12 +2093,14 @@ function startVehAttack()
             end
         end
 
+        -- ⏱️ RAPID CYCLING LOGIC
         if potentialTarget then
             if vehAttackTarget ~= potentialTarget then
                 vehAttackTarget = potentialTarget
-                vehAttackTimer = tick() + 1 -- 🔥 1-Second Fling Timeout
+                vehAttackTimer = tick() + 1 -- Try fling for exactly 1 second
             elseif tick() > vehAttackTimer then
-                vehIgnoreList[potentialTarget.Name] = tick() + 10
+                -- Skip them for 1.5 seconds so it instantly jumps to the next closest person
+                vehIgnoreList[potentialTarget.Name] = tick() + 1.5 
                 vehAttackTarget = nil
                 potentialTarget = nil
             end
