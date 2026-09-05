@@ -2040,7 +2040,7 @@ function startVehAttack()
         local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
         if not car or not base.Parent or not hrp then stopVehAttack() return end
         
-        -- 🛑 HIJACK PREVENTION: Server-Side Despawn, Spawn & Lock (NO HARDCODED NUMBERS)
+        -- 🛑 FAST HIJACK PREVENTION: Despawn, Spawn, Lock, and add Trailer!
         local seat = car:FindFirstChildOfClass("VehicleSeat") or car:FindFirstChildWhichIsA("Seat", true)
         if seat and seat.Occupant and seat.Occupant.Parent ~= LocalPlayer.Character then
             vehIsRespawning = true
@@ -2048,36 +2048,42 @@ function startVehAttack()
                 local GetRemote = game:GetService("ReplicatedStorage"):FindFirstChild("Remotes") and game:GetService("ReplicatedStorage").Remotes:FindFirstChild("Get")
                 local GlobalGet = getgenv().Get or (getgenv().g and getgenv().g.Get)
                 
-                if GlobalGet then
-                    pcall(function() GlobalGet("despawn_vehicle") end)
-                    task.wait(0.5)
-                    pcall(function() GlobalGet("spawn_vehicle", carName) end)
-                    task.wait(1.5)
-                    local vehiclesFolder = workspace:FindFirstChild("Vehicles")
-                    if vehiclesFolder then
-                        local newCar = vehiclesFolder:FindFirstChild(carName)
-                        if newCar then pcall(function() GlobalGet("lock_vehicle", newCar) end) end
+                local function executeFastRespawn()
+                    if GlobalGet then
+                        pcall(function() GlobalGet("despawn_vehicle") end)
+                        task.wait(0.1)
+                        pcall(function() GlobalGet("spawn_vehicle", carName) end)
+                    elseif GetRemote then
+                        pcall(function() GetRemote:InvokeServer("despawn_vehicle") end)
+                        task.wait(0.1)
+                        pcall(function() GetRemote:InvokeServer("spawn_vehicle", carName) end)
                     end
-                elseif GetRemote then
-                    -- 1. Despawn the compromised vehicle without the hardcoded '159'
-                    pcall(function() GetRemote:InvokeServer("despawn_vehicle") end)
-                    task.wait(0.5)
                     
-                    -- 2. Spawn a fresh one without the hardcoded '158'
-                    pcall(function() GetRemote:InvokeServer("spawn_vehicle", carName) end)
-                    task.wait(1.5) -- Give server time to place it
-                    
-                    -- 3. Lock it securely without the hardcoded '380'
+                    -- Fast-Poll to instantly grab the car the millisecond it spawns
                     local vehiclesFolder = workspace:FindFirstChild("Vehicles")
+                    local newCar = nil
                     if vehiclesFolder then
-                        local newCar = vehiclesFolder:FindFirstChild(carName)
-                        if newCar then
+                        for i = 1, 20 do 
+                            newCar = vehiclesFolder:FindFirstChild(carName)
+                            if newCar then break end
+                            task.wait(0.1)
+                        end
+                    end
+                    
+                    if newCar then
+                        if GlobalGet then
+                            pcall(function() GlobalGet("lock_vehicle", newCar) end)
+                            pcall(function() GlobalGet("add_trailer", newCar, "Trailer") end)
+                        elseif GetRemote then
                             pcall(function() GetRemote:InvokeServer("lock_vehicle", newCar) end)
+                            pcall(function() GetRemote:InvokeServer("add_trailer", newCar, "Trailer") end)
                         end
                     end
                 end
                 
-                task.wait(1)
+                executeFastRespawn()
+                
+                task.wait(0.5)
                 stopVehAttack()
                 vehAttackEnabled = true
                 startVehAttack()
@@ -2087,7 +2093,7 @@ function startVehAttack()
         end
         
         local potentialTarget = nil
-        local closestDist = 40 -- Strict 40 radius limit
+        local closestDist = 40 
         
         for _, p in ipairs(Players:GetPlayers()) do
             if p ~= LocalPlayer and not massWhitelist[p.Name] and p.Character then
@@ -2104,14 +2110,13 @@ function startVehAttack()
             end
         end
 
-        -- ⏱️ RAPID CYCLING LOGIC
+        -- ⏱️ 1-SECOND CYCLING LOGIC
         if potentialTarget then
             if vehAttackTarget ~= potentialTarget then
                 vehAttackTarget = potentialTarget
                 vehAttackTimer = tick() + 1 -- Try fling for exactly 1 second
             elseif tick() > vehAttackTimer then
-                -- Skip them for 1.5 seconds so it instantly jumps to the next closest person
-                vehIgnoreList[potentialTarget.Name] = tick() + 1.5 
+                vehIgnoreList[potentialTarget.Name] = tick() + 1 -- Ignore for 1 sec then move on
                 vehAttackTarget = nil
                 potentialTarget = nil
             end
@@ -2126,15 +2131,17 @@ function startVehAttack()
             local moveDir = (tRoot.Position - base.Position)
             
             if moveDir.Magnitude < 5 then
-                local flingPower = localFlySpeed * 5000 
+                local flingPower = localFlySpeed * 3000 
                 bv.Velocity = Vector3.new(math.random(-flingPower, flingPower), flingPower, math.random(-flingPower, flingPower))
                 base.AssemblyAngularVelocity = Vector3.new(flingPower, flingPower, flingPower)
+                
+                -- 🔥 ANTI-GLITCH FIX: Force the car to stay merged with the target so it doesn't fly off and freeze
+                base.CFrame = tRoot.CFrame * CFrame.new(0, -1, 0)
             else
                 bv.Velocity = moveDir.Unit * (localFlySpeed * 20)
                 bg.CFrame = CFrame.new(base.Position, tRoot.Position)
             end
         else
-            -- IDLE MODE: Stays tightly within 15 to 35 studs
             if not vehRoamingPos or (vehRoamingPos - base.Position).Magnitude < 5 or (vehRoamingPos - hrp.Position).Magnitude > 35 then
                 local angle = math.random() * math.pi * 2
                 local radius = math.random(15, 35) 
@@ -2150,7 +2157,6 @@ function startVehAttack()
             end
         end
         
-        -- BOUNDARY FAILSAFE
         if distFromPlayer > 35 then
             local pullBackDir = (hrp.Position - base.Position).Unit
             bv.Velocity = pullBackDir * (localFlySpeed * 30)
