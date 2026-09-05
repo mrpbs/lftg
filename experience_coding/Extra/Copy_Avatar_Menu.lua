@@ -1951,6 +1951,19 @@ VehAttackBtn.BorderSizePixel = 0
 VehAttackBtn.Parent = FlyContainer
 Instance.new("UICorner", VehAttackBtn).CornerRadius = UDim.new(0, 6)
 
+-- 8. Vehicle Aura Attack Button (ZERO LOCALS)
+VehAttackBtn = Instance.new("TextButton")
+VehAttackBtn.Size = UDim2.new(1, -10, 0, 35)
+VehAttackBtn.Position = UDim2.new(0, 5, 0, 260)
+VehAttackBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+VehAttackBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+VehAttackBtn.Font = Enum.Font.SourceSansBold
+VehAttackBtn.TextSize = 15
+VehAttackBtn.Text = "⚔️ Veh Aura (Attack): OFF"
+VehAttackBtn.BorderSizePixel = 0
+VehAttackBtn.Parent = FlyContainer
+Instance.new("UICorner", VehAttackBtn).CornerRadius = UDim.new(0, 6)
+
 -- ==========================================
 -- VEHICLE AURA (ATTACK LOGIC) (ZERO LOCALS)
 -- ==========================================
@@ -2038,26 +2051,31 @@ function startVehAttack()
         if vehIsRespawning then return end
         
         local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-        if not car or not base.Parent or not hrp then stopVehAttack() return end
+        if not hrp then stopVehAttack() return end
         
-        -- 🛑 FAST HIJACK PREVENTION: Despawn, Spawn, Lock, and add Trailer!
-        local seat = car:FindFirstChildOfClass("VehicleSeat") or car:FindFirstChildWhichIsA("Seat", true)
-        if seat and seat.Occupant and seat.Occupant.Parent ~= LocalPlayer.Character then
+        -- 🛑 UNIVERSAL FAILSAFE: Checks for Destroyed, Stuck, or Hijacked
+        local seat = car and (car:FindFirstChildOfClass("VehicleSeat") or car:FindFirstChildWhichIsA("Seat", true))
+        local isHijacked = seat and seat.Occupant and seat.Occupant.Parent ~= LocalPlayer.Character
+        local isDestroyed = not car or not car.Parent or not base or not base.Parent
+        local isStuck = base and (base.Anchored or base.Position.Y < -50) -- Anchored or fell in void
+        
+        if isDestroyed or isHijacked or isStuck then
             vehIsRespawning = true
             task.spawn(function()
                 local GetRemote = game:GetService("ReplicatedStorage"):FindFirstChild("Remotes") and game:GetService("ReplicatedStorage").Remotes:FindFirstChild("Get")
                 local GlobalGet = getgenv().Get or (getgenv().g and getgenv().g.Get)
                 
                 local function executeFastRespawn()
-                    if GlobalGet then
-                        pcall(function() GlobalGet("despawn_vehicle") end)
+                    -- Clean up old car if it still exists
+                    if not isDestroyed then
+                        if GlobalGet then pcall(function() GlobalGet("despawn_vehicle") end)
+                        elseif GetRemote then pcall(function() GetRemote:InvokeServer("despawn_vehicle") end) end
                         task.wait(0.1)
-                        pcall(function() GlobalGet("spawn_vehicle", carName) end)
-                    elseif GetRemote then
-                        pcall(function() GetRemote:InvokeServer("despawn_vehicle") end)
-                        task.wait(0.1)
-                        pcall(function() GetRemote:InvokeServer("spawn_vehicle", carName) end)
                     end
+                    
+                    -- Spawn new car
+                    if GlobalGet then pcall(function() GlobalGet("spawn_vehicle", carName) end)
+                    elseif GetRemote then pcall(function() GetRemote:InvokeServer("spawn_vehicle", carName) end) end
                     
                     -- Fast-Poll to instantly grab the car the millisecond it spawns
                     local vehiclesFolder = workspace:FindFirstChild("Vehicles")
@@ -2070,13 +2088,14 @@ function startVehAttack()
                         end
                     end
                     
+                    -- Lock & Attach Trailer instantly
                     if newCar then
                         if GlobalGet then
                             pcall(function() GlobalGet("lock_vehicle", newCar) end)
-                            pcall(function() GlobalGet("add_trailer", newCar, "WaterSkies") end)
+                            pcall(function() GlobalGet("add_trailer", newCar, "Trailer") end)
                         elseif GetRemote then
                             pcall(function() GetRemote:InvokeServer("lock_vehicle", newCar) end)
-                            pcall(function() GetRemote:InvokeServer("add_trailer", newCar, "WaterSkies") end)
+                            pcall(function() GetRemote:InvokeServer("add_trailer", newCar, "Trailer") end)
                         end
                     end
                 end
