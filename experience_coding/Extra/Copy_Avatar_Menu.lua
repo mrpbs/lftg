@@ -3948,7 +3948,7 @@ FetchServersBtn.MouseButton1Click:Connect(function()
         FetchServersBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
     end)
 end)
--- ========== 🎯 FAST PLAYER SERVER SNIPER (WITH STOP BUTTON & ZERO LOCALS) ==========
+-- ========== 🎯 FAST PLAYER SERVER SNIPER (HASH-MATCHING & ZERO LOCALS) ==========
 sniperSearching = false
 
 SniperFrame = Instance.new("Frame")
@@ -3989,7 +3989,6 @@ SniperInput.ClearTextOnFocus = false
 SniperInput.Parent = SniperContent
 Instance.new("UICorner", SniperInput).CornerRadius = UDim.new(0, 6)
 
--- Side-by-Side Hunt and Stop Buttons
 SniperBtn = Instance.new("TextButton")
 SniperBtn.Size = UDim2.new(0.5, -12, 0, 35)
 SniperBtn.Position = UDim2.new(0, 10, 0, 48)
@@ -4080,6 +4079,9 @@ SniperBtn.MouseButton1Click:Connect(function()
         local HttpService = game:GetService("HttpService")
         local thumbRes = game:HttpGet("https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds="..tId.."&size=150x150&format=Png&isCircular=false")
         local tImageUrl = HttpService:JSONDecode(thumbRes).data[1].imageUrl
+        
+        -- 🔥 CORE FIX: Extract the 32-character unique MD5 Hash of the avatar to bypass CDN routing differences
+        local tImageHash = string.match(tImageUrl, "([a-f0-9]{32})") or tImageUrl
 
         local cursor = ""
         local foundServer = nil
@@ -4129,7 +4131,9 @@ SniperBtn.MouseButton1Click:Connect(function()
                         local batchData = HttpService:JSONDecode(reqResult.Body)
                         if batchData.data then
                             for _, pData in ipairs(batchData.data) do
-                                if pData.imageUrl == tImageUrl then
+                                -- 🔥 CORE FIX: Compare the underlying image hash, not the changing URL
+                                local pImageHash = pData.imageUrl and string.match(pData.imageUrl, "([a-f0-9]{32})") or pData.imageUrl
+                                if pImageHash == tImageHash and pImageHash ~= nil then
                                     foundServer = tokenToServerMap[pData.requestId]
                                     return true
                                 end
@@ -4175,7 +4179,14 @@ SniperBtn.MouseButton1Click:Connect(function()
         if foundServer then
             SniperStatus.Text = "Target found! Teleporting..."
             SniperBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
-            game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, foundServer, game:GetService("Players").LocalPlayer)
+            
+            -- If you hunt yourself, it stops you from teleporting to the same server you are already in
+            if foundServer == game.JobId then
+                SniperStatus.Text = "Target is in your current server!"
+                SniperBtn.BackgroundColor3 = Color3.fromRGB(200, 150, 50)
+            else
+                game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, foundServer, game:GetService("Players").LocalPlayer)
+            end
         elseif not sniperSearching then
             SniperStatus.Text = "Hunt stopped."
         else
