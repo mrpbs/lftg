@@ -1540,6 +1540,19 @@ VehAuraBtn.Text = "🌀 Veh Aura (Orbit): OFF"
 VehAuraBtn.BorderSizePixel = 0
 VehAuraBtn.Parent = FlyContainer
 Instance.new("UICorner", VehAuraBtn).CornerRadius = UDim.new(0, 6)
+-- 8. Vehicle Aura Attack Button (NEW!)
+local VehAttackBtn = Instance.new("TextButton")
+VehAttackBtn.Size = UDim2.new(1, -10, 0, 35)
+VehAttackBtn.Position = UDim2.new(0, 5, 0, 260) -- Placed below Orbit
+VehAttackBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+VehAttackBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+VehAttackBtn.Font = Enum.Font.SourceSansBold
+VehAttackBtn.TextSize = 15
+VehAttackBtn.Text = "⚔️ Veh Aura (Attack): OFF"
+VehAttackBtn.BorderSizePixel = 0
+VehAttackBtn.Parent = FlyContainer
+Instance.new("UICorner", VehAttackBtn).CornerRadius = UDim.new(0, 6)
+
 
 -- ==========================================
 -- UTILITY & CAMERA LOGIC
@@ -1939,6 +1952,146 @@ VehAuraBtn.MouseButton1Click:Connect(function()
         stopVehAura()
     end
 end)
+-- ==========================================
+-- VEHICLE AURA (ATTACK LOGIC)
+-- ==========================================
+local vehAttackEnabled = false
+local vehAttackLoop = nil
+local vAttackCollisions = {}
+local originalAuraProps = {}
+
+function stopVehAttack()
+    vehAttackEnabled = false
+    VehAttackBtn.Text = "⚔️ Veh Aura (Attack): OFF"
+    VehAttackBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+
+    if vehAttackLoop then vehAttackLoop:Disconnect() vehAttackLoop = nil end
+
+    for part, state in pairs(vAttackCollisions) do
+        if part and part.Parent then part.CanCollide = state end
+    end
+    for part, props in pairs(originalAuraProps) do
+        if part and part.Parent then part.CustomPhysicalProperties = props end
+    end
+    table.clear(vAttackCollisions)
+    table.clear(originalAuraProps)
+
+    local car = getMyVehicle()
+    if car then
+        local base = car:FindFirstChild("Base") or car.PrimaryPart
+        if base then
+            local bg = base:FindFirstChild("VehAttackGyro")
+            local bv = base:FindFirstChild("VehAttackVelocity")
+            if bg then bg:Destroy() end
+            if bv then bv:Destroy() end
+        end
+    end
+end
+
+function startVehAttack()
+    if vehFlyEnabled then stopVehFly() end 
+    if vehAuraEnabled then stopVehAura() end
+    
+    local car = getMyVehicle()
+    if not car then 
+        stopVehAttack() 
+        VehAttackBtn.Text = "No Vehicle Found!" 
+        task.wait(1.5) 
+        VehAttackBtn.Text = "⚔️ Veh Aura (Attack): OFF" 
+        return 
+    end
+    
+    local base = car:FindFirstChild("Base") or car.PrimaryPart
+    if not base then stopVehAttack() return end
+
+    table.clear(vAttackCollisions)
+    table.clear(originalAuraProps)
+    for _, v in ipairs(car:GetDescendants()) do
+        if v:IsA("BasePart") then
+            vAttackCollisions[v] = v.CanCollide
+            originalAuraProps[v] = v.CustomPhysicalProperties
+            v.CanCollide = false
+            v.CustomPhysicalProperties = PhysicalProperties.new(100, 0, 0, 100, 100) -- Max density for flinging
+        end
+    end
+
+    local bg = Instance.new("BodyGyro", base)
+    bg.Name = "VehAttackGyro"
+    bg.P = 3e4
+    bg.MaxTorque = Vector3.new(9e9, 9e9, 9e9) 
+
+    local bv = Instance.new("BodyVelocity", base)
+    bv.Name = "VehAttackVelocity"
+    bv.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+
+    vehAttackLoop = RunService.Heartbeat:Connect(function()
+        local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if not car or not base.Parent or not hrp then stopVehAttack() return end
+        
+        local target = nil
+        local closestDist = 50 -- Strict 50 radius limit
+        
+        -- Find closest non-whitelisted target inside 50 studs
+        for _, p in ipairs(Players:GetPlayers()) do
+            if p ~= LocalPlayer and not massWhitelist[p.Name] and p.Character then
+                local tRoot = p.Character:FindFirstChild("HumanoidRootPart")
+                if tRoot then
+                    local dist = (tRoot.Position - hrp.Position).Magnitude
+                    if dist < closestDist then
+                        closestDist = dist
+                        target = tRoot
+                    end
+                end
+            end
+        end
+
+        if target then
+            -- ATTACK MODE: Chase and Fling
+            local moveDir = (target.Position - base.Position)
+            if moveDir.Magnitude < 5 then
+                -- Uppercut when close
+                base.Velocity = Vector3.new(math.random(-5000, 5000), 50000, math.random(-5000, 5000))
+                base.RotVelocity = Vector3.new(50000, 50000, 50000)
+            else
+                -- Chase fast
+                bv.Velocity = moveDir.Unit * 150
+                bg.CFrame = CFrame.new(base.Position, target.Position)
+            end
+        else
+            -- IDLE MODE: Fly randomly around you to look innocent, but stay strictly within 40 studs
+            local t = tick() * 0.5
+            local randomX = math.noise(t, 0, 0) * 35
+            local randomY = (math.noise(0, t, 0) * 15) + 15
+            local randomZ = math.noise(0, 0, t) * 35
+            
+            local idlePos = hrp.Position + Vector3.new(randomX, randomY, randomZ)
+            local moveDir = (idlePos - base.Position)
+            
+            bv.Velocity = moveDir * 3
+            if bv.Velocity.Magnitude > 0.1 then
+                bg.CFrame = CFrame.new(base.Position, base.Position + bv.Velocity)
+            end
+        end
+        
+        -- SAFETY FAILSAFE: Force the car back if it somehow passes 45 studs
+        if (base.Position - hrp.Position).Magnitude > 45 then
+            base.CFrame = hrp.CFrame * CFrame.new(0, 10, 0)
+            base.Velocity = Vector3.zero
+        end
+    end)
+end
+
+VehAttackBtn.MouseButton1Click:Connect(function()
+    vehAttackEnabled = not vehAttackEnabled
+    if vehAttackEnabled then
+        VehAttackBtn.Text = "⚔️ Veh Aura (Attack): ON"
+        VehAttackBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+        startVehAttack()
+    else
+        stopVehAttack()
+    end
+end)
+
 
 -- ==========================================
 -- SMART HOLD LOGIC CONNECTION
@@ -1947,7 +2100,7 @@ applySmartHold(
     FlyBtn,        
     FlyContainer,  
     40,            
-    265,           -- 🔥 INCREASED FROM 225 TO 265 TO FIT VEH AURA BUTTON
+    305,           -- 🔥 INCREASED FROM 225 TO 265 TO FIT VEH AURA BUTTON
     0.5,           
     function()
         localFlyEnabled = not localFlyEnabled
