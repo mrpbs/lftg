@@ -1444,11 +1444,12 @@ local function startView(targetPlayer)
     end)
 end
 
--- ==============================================================
--- ✈️ SMART FLY TOOL (Local + RC Drone Vehicle Fly)
+-- -- ==============================================================
+-- ✈️ SMART FLY TOOL (Local + RC Drone + Veh Aura)
 -- ==============================================================
 local localFlyEnabled = false
 local vehFlyEnabled = false
+local vehAuraEnabled = false
 local vehViewEnabled = false
 local plrFrozen = false
 local localFlySpeed = 2 -- SHARED SPEED VARIABLE
@@ -1456,9 +1457,11 @@ local localFlySpeed = 2 -- SHARED SPEED VARIABLE
 -- Physics Trackers
 local flyLoop = nil
 local vFlyLoop = nil
+local vehAuraLoop = nil
 local flyKeys = {f=0, b=0, l=0, r=0, q=0, e=0}
 local flyInputs = {}
 local vFlyCollisions = {}
+local vAuraCollisions = {}
 
 -- 1. Main Container
 local FlyContainer = Instance.new("Frame")
@@ -1481,7 +1484,7 @@ FlyBtn.Parent = FlyContainer
 Instance.new("UICorner", FlyBtn).CornerRadius = UDim.new(0, 8)
 
 -- 3. The Shared Speed Slider
-local SpeedSlider = createSlider(FlyContainer, "⚡ Shared Fly Speed", 1, 10, 2, function(value)
+local SpeedSlider = createSlider(FlyContainer, "⚡ Shared Fly/Orbit Speed", 1, 10, 2, function(value)
     localFlySpeed = value
 end)
 SpeedSlider.Position = UDim2.new(0, 0, 0, 45)
@@ -1525,6 +1528,19 @@ FreezeBtn.BorderSizePixel = 0
 FreezeBtn.Parent = FlyContainer
 Instance.new("UICorner", FreezeBtn).CornerRadius = UDim.new(0, 6)
 
+-- 7. Vehicle Aura Button (NEW!)
+local VehAuraBtn = Instance.new("TextButton")
+VehAuraBtn.Size = UDim2.new(1, -10, 0, 35)
+VehAuraBtn.Position = UDim2.new(0, 5, 0, 220)
+VehAuraBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+VehAuraBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+VehAuraBtn.Font = Enum.Font.SourceSansBold
+VehAuraBtn.TextSize = 15
+VehAuraBtn.Text = "🌀 Veh Aura (Orbit): OFF"
+VehAuraBtn.BorderSizePixel = 0
+VehAuraBtn.Parent = FlyContainer
+Instance.new("UICorner", VehAuraBtn).CornerRadius = UDim.new(0, 6)
+
 -- ==========================================
 -- UTILITY & CAMERA LOGIC
 -- ==========================================
@@ -1539,7 +1555,6 @@ local function getMyVehicle()
 end
 
 local function resetDroneTools()
-    -- Reset Camera
     if vehViewEnabled then
         vehViewEnabled = false
         VehViewBtn.Text = "🎥 Vehicle View: OFF"
@@ -1547,7 +1562,6 @@ local function resetDroneTools()
         local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
         if hum then workspace.CurrentCamera.CameraSubject = hum end
     end
-    -- Reset Player Freeze
     if plrFrozen then
         plrFrozen = false
         FreezeBtn.Text = "🗿 Stone Player: OFF"
@@ -1631,8 +1645,6 @@ local function stopLocalFly()
 end
 
 local function startLocalFly()
-    if vehFlyEnabled then stopVehFly() end 
-    
     local char = LocalPlayer.Character
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
     local hum = char and char:FindFirstChildOfClass("Humanoid")
@@ -1711,9 +1723,8 @@ local function stopVehFly()
     table.clear(flyInputs)
     flyKeys = {f=0, b=0, l=0, r=0, q=0, e=0}
 
-    resetDroneTools() -- Shut down camera view and stone player
+    resetDroneTools() 
 
-    -- Restore Collisions
     for part, state in pairs(vFlyCollisions) do
         if part and part.Parent then part.CanCollide = state end
     end
@@ -1732,7 +1743,7 @@ local function stopVehFly()
 end
 
 local function startVehFly()
-    if localFlyEnabled then stopLocalFly() end 
+    if vehAuraEnabled then stopVehAura() end 
     
     local car = getMyVehicle()
     if not car then stopVehFly() VehFlyBtn.Text = "No Vehicle Found!" task.wait(1.5) VehFlyBtn.Text = "🚗 Vehicle Fly: OFF" return end
@@ -1740,7 +1751,6 @@ local function startVehFly()
     local base = car:FindFirstChild("Base") or car.PrimaryPart
     if not base then stopVehFly() return end
 
-    -- Save & Disable Collisions
     table.clear(vFlyCollisions)
     for _, v in ipairs(car:GetDescendants()) do
         if v:IsA("BasePart") then
@@ -1770,7 +1780,6 @@ local function startVehFly()
         local yaw = math.atan2(-look.X, -look.Z)
         bg.CFrame = CFrame.new(base.Position) * CFrame.Angles(0, yaw, 0)
 
-        -- Calculate desired velocity
         local targetVelocity = Vector3.zero
         if UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled then
             local success, controlModule = pcall(function() return require(LocalPlayer.PlayerScripts:WaitForChild("PlayerModule"):WaitForChild("ControlModule")) end)
@@ -1787,18 +1796,13 @@ local function startVehFly()
             targetVelocity = (cam.CFrame.LookVector * forwardMag + cam.CFrame.RightVector * rightMag + Vector3.new(0, upMag, 0)) * (localFlySpeed * 50)
         end
         
-        -- ⭐ ANTI-STUCK BOUNDARY LIMITER (400 Studs)
         local myRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
         if myRoot then
             local distFromPlayer = (base.Position - myRoot.Position).Magnitude
             if distFromPlayer > 400 then
-                -- Find the direction vector pointing FROM the player TO the car
                 local vectorAwayFromPlayer = (base.Position - myRoot.Position).Unit
-                -- Check if the car's intended velocity is pushing it further outward
                 local outwardForce = targetVelocity:Dot(vectorAwayFromPlayer)
-                
                 if outwardForce > 0 then
-                    -- Cancel out only the speed pushing it away, allow it to fly sideways or back towards you
                     targetVelocity = targetVelocity - (vectorAwayFromPlayer * outwardForce)
                 end
             end
@@ -1838,15 +1842,113 @@ VehFlyBtn.MouseButton1Click:Connect(function()
 end)
 
 -- ==========================================
+-- VEHICLE AURA PHYSICS (ORBIT LOGIC)
+-- ==========================================
+function stopVehAura()
+    vehAuraEnabled = false
+    VehAuraBtn.Text = "🌀 Veh Aura (Orbit): OFF"
+    VehAuraBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+
+    if vehAuraLoop then vehAuraLoop:Disconnect() vehAuraLoop = nil end
+
+    for part, state in pairs(vAuraCollisions) do
+        if part and part.Parent then part.CanCollide = state end
+    end
+    table.clear(vAuraCollisions)
+
+    local car = getMyVehicle()
+    if car then
+        local base = car:FindFirstChild("Base") or car.PrimaryPart
+        if base then
+            local bg = base:FindFirstChild("VehAuraGyro")
+            local bv = base:FindFirstChild("VehAuraVelocity")
+            if bg then bg:Destroy() end
+            if bv then bv:Destroy() end
+        end
+    end
+end
+
+function startVehAura()
+    if vehFlyEnabled then stopVehFly() end 
+    
+    local car = getMyVehicle()
+    if not car then 
+        stopVehAura() 
+        VehAuraBtn.Text = "No Vehicle Found!" 
+        task.wait(1.5) 
+        VehAuraBtn.Text = "🌀 Veh Aura (Orbit): OFF" 
+        return 
+    end
+    
+    local base = car:FindFirstChild("Base") or car.PrimaryPart
+    if not base then stopVehAura() return end
+
+    table.clear(vAuraCollisions)
+    for _, v in ipairs(car:GetDescendants()) do
+        if v:IsA("BasePart") then
+            vAuraCollisions[v] = v.CanCollide
+            v.CanCollide = false
+        end
+    end
+
+    local bg = Instance.new("BodyGyro", base)
+    bg.Name = "VehAuraGyro"
+    bg.P = 3e4
+    bg.D = 1e3
+    bg.MaxTorque = Vector3.new(9e9, 9e9, 9e9) 
+    bg.CFrame = base.CFrame
+
+    local bv = Instance.new("BodyVelocity", base)
+    bv.Name = "VehAuraVelocity"
+    bv.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+    bv.Velocity = Vector3.zero
+
+    vehAuraLoop = RunService.Heartbeat:Connect(function()
+        local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if not car or not base.Parent or not hrp then stopVehAura() return end
+        
+        base.AssemblyAngularVelocity = Vector3.zero
+        
+        -- Orbit Math: Speed slider controls how fast it spins around you
+        local speedMod = localFlySpeed * 0.5
+        local angle = tick() * speedMod
+        local radius = 25 -- 25 studs away from player
+        
+        -- Height bobbing effect for style
+        local heightOffset = 6 + math.sin(tick() * 2) * 3 
+        local orbitPos = hrp.Position + Vector3.new(math.cos(angle) * radius, heightOffset, math.sin(angle) * radius)
+        
+        -- Smoothly push car towards the orbit position
+        local moveDir = (orbitPos - base.Position)
+        bv.Velocity = moveDir * 5
+        
+        -- Make the car face the direction it's orbiting
+        if bv.Velocity.Magnitude > 0.1 then
+            bg.CFrame = CFrame.new(base.Position, base.Position + bv.Velocity)
+        end
+    end)
+end
+
+VehAuraBtn.MouseButton1Click:Connect(function()
+    vehAuraEnabled = not vehAuraEnabled
+    if vehAuraEnabled then
+        VehAuraBtn.Text = "🌀 Veh Aura (Orbit): ON"
+        VehAuraBtn.BackgroundColor3 = Color3.fromRGB(150, 50, 200)
+        startVehAura()
+    else
+        stopVehAura()
+    end
+end)
+
+-- ==========================================
 -- SMART HOLD LOGIC CONNECTION
 -- ==========================================
 applySmartHold(
-    FlyBtn,        -- The button to click/hold
-    FlyContainer,  -- The frame to expand/shrink
-    40,            -- Normal collapsed height
-    225,           -- Expanded height (to fit 4 buttons + 1 slider)
-    0.5,           -- Hold duration
-    
+    FlyBtn,        
+    FlyContainer,  
+    40,            
+    265,           -- 🔥 INCREASED FROM 225 TO 265 TO FIT VEH AURA BUTTON
+    0.5,           
     function()
         localFlyEnabled = not localFlyEnabled
         if localFlyEnabled then
@@ -1857,7 +1959,6 @@ applySmartHold(
             stopLocalFly()
         end
     end,
-    
     function(isExpanded)
         if isExpanded then
             FlyBtn.Text = localFlyEnabled and "✈️ Local Fly: ON [▲ Options]" or "✈️ Local Fly: OFF [▲ Options]"
@@ -1866,6 +1967,7 @@ applySmartHold(
         end
     end
 )
+
 -- ========== AVATAR SCALER TOOL (Collapsible) ==========
 local ScalerFrame = Instance.new("Frame")
 ScalerFrame.Size = UDim2.new(1, -5, 0, 30) -- Starts collapsed
@@ -3946,256 +4048,6 @@ FetchServersBtn.MouseButton1Click:Connect(function()
         task.wait(2.5)
         FetchServersBtn.Text = "Fetch Filtered Servers"
         FetchServersBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
-    end)
-end)
--- ========== 🎯 FAST PLAYER SERVER SNIPER (HASH-MATCHING & ZERO LOCALS) ==========
-sniperSearching = false
-
-SniperFrame = Instance.new("Frame")
-SniperFrame.Size = UDim2.new(1, -5, 0, 30)
-SniperFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 38)
-SniperFrame.BorderSizePixel = 0
-SniperFrame.ClipsDescendants = true
-SniperFrame.Parent = ToolsScroll
-
-SniperToggleBtn = Instance.new("TextButton")
-SniperToggleBtn.Size = UDim2.new(1, 0, 0, 30)
-SniperToggleBtn.Text = "  🎯 Fast Player Server Sniper [ ▼ ]"
-SniperToggleBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
-SniperToggleBtn.Font = Enum.Font.SourceSansBold
-SniperToggleBtn.TextSize = 14
-SniperToggleBtn.TextXAlignment = Enum.TextXAlignment.Left
-SniperToggleBtn.BackgroundColor3 = Color3.fromRGB(25, 25, 32)
-SniperToggleBtn.BorderSizePixel = 0
-SniperToggleBtn.Parent = SniperFrame
-
-SniperContent = Instance.new("Frame")
-SniperContent.Size = UDim2.new(1, 0, 1, -30)
-SniperContent.Position = UDim2.new(0, 0, 0, 30)
-SniperContent.BackgroundTransparency = 1
-SniperContent.Visible = false
-SniperContent.Parent = SniperFrame
-
-SniperInput = Instance.new("TextBox")
-SniperInput.Size = UDim2.new(1, -20, 0, 32)
-SniperInput.Position = UDim2.new(0, 10, 0, 10)
-SniperInput.PlaceholderText = "Target Username (e.g. Builderman)"
-SniperInput.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
-SniperInput.TextColor3 = Color3.fromRGB(255, 255, 255)
-SniperInput.Font = Enum.Font.SourceSansBold
-SniperInput.TextSize = 13
-SniperInput.Text = ""
-SniperInput.ClearTextOnFocus = false
-SniperInput.Parent = SniperContent
-Instance.new("UICorner", SniperInput).CornerRadius = UDim.new(0, 6)
-
-SniperBtn = Instance.new("TextButton")
-SniperBtn.Size = UDim2.new(0.5, -12, 0, 35)
-SniperBtn.Position = UDim2.new(0, 10, 0, 48)
-SniperBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
-SniperBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-SniperBtn.Font = Enum.Font.SourceSansBold
-SniperBtn.TextSize = 14
-SniperBtn.Text = "Hunt Player"
-SniperBtn.BorderSizePixel = 0
-SniperBtn.Parent = SniperContent
-Instance.new("UICorner", SniperBtn).CornerRadius = UDim.new(0, 6)
-
-SniperStopBtn = Instance.new("TextButton")
-SniperStopBtn.Size = UDim2.new(0.5, -12, 0, 35)
-SniperStopBtn.Position = UDim2.new(0.5, 2, 0, 48)
-SniperStopBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-SniperStopBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-SniperStopBtn.Font = Enum.Font.SourceSansBold
-SniperStopBtn.TextSize = 14
-SniperStopBtn.Text = "Stop"
-SniperStopBtn.BorderSizePixel = 0
-SniperStopBtn.Parent = SniperContent
-Instance.new("UICorner", SniperStopBtn).CornerRadius = UDim.new(0, 6)
-
-SniperStatus = Instance.new("TextLabel")
-SniperStatus.Size = UDim2.new(1, -20, 0, 25)
-SniperStatus.Position = UDim2.new(0, 10, 0, 88)
-SniperStatus.BackgroundTransparency = 1
-SniperStatus.Text = "Status: Idle"
-SniperStatus.TextColor3 = Color3.fromRGB(150, 150, 150)
-SniperStatus.Font = Enum.Font.SourceSansBold
-SniperStatus.TextSize = 12
-SniperStatus.TextWrapped = true
-SniperStatus.Parent = SniperContent
-
-sniperExpanded = false
-SniperToggleBtn.MouseButton1Click:Connect(function()
-    sniperExpanded = not sniperExpanded
-    if sniperExpanded then
-        SniperFrame.Size = UDim2.new(1, -5, 0, 150)
-        SniperContent.Visible = true
-        SniperToggleBtn.Text = "  🎯 Fast Player Server Sniper [ ▲ ]"
-    else
-        SniperFrame.Size = UDim2.new(1, -5, 0, 30)
-        SniperContent.Visible = false
-        SniperToggleBtn.Text = "  🎯 Fast Player Server Sniper [ ▼ ]"
-    end
-end)
-
-SniperStopBtn.MouseButton1Click:Connect(function()
-    if sniperSearching then
-        sniperSearching = false
-        SniperStatus.Text = "Status: Cancelled by user."
-        SniperBtn.Text = "Hunt Player"
-        SniperBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
-    end
-end)
-
-SniperBtn.MouseButton1Click:Connect(function()
-    if sniperSearching then return end
-    
-    local rawName = SniperInput.Text:gsub("^@", ""):gsub("%s+", "")
-    if rawName == "" then return end
-    
-    local req = request or http_request or (syn and syn.request)
-    if not req then
-        SniperStatus.Text = "Error: Executor missing HTTP request support."
-        return
-    end
-
-    sniperSearching = true
-    SniperBtn.Text = "Hunting..."
-    SniperBtn.BackgroundColor3 = Color3.fromRGB(200, 150, 50)
-    SniperStatus.Text = "Fetching avatar profile..."
-    
-    task.spawn(function()
-        local tId = nil
-        pcall(function() tId = game:GetService("Players"):GetUserIdFromNameAsync(rawName) end)
-        
-        if not tId then
-            SniperStatus.Text = "Error: Invalid Username!"
-            SniperBtn.Text = "Hunt Player"
-            SniperBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
-            sniperSearching = false
-            return
-        end
-
-        local HttpService = game:GetService("HttpService")
-        local thumbRes = game:HttpGet("https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds="..tId.."&size=150x150&format=Png&isCircular=false")
-        local tImageUrl = HttpService:JSONDecode(thumbRes).data[1].imageUrl
-        
-        -- 🔥 CORE FIX: Extract the 32-character unique MD5 Hash of the avatar to bypass CDN routing differences
-        local tImageHash = string.match(tImageUrl, "([a-f0-9]{32})") or tImageUrl
-
-        local cursor = ""
-        local foundServer = nil
-        local serversChecked = 0
-
-        while cursor ~= nil and not foundServer and sniperSearching do
-            local serverUrl = "https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?limit=100"
-            if cursor ~= "" then serverUrl = serverUrl .. "&cursor=" .. cursor end
-
-            local srvSuccess, srvResult = pcall(function() return game:HttpGet(serverUrl) end)
-            if not srvSuccess then
-                SniperStatus.Text = "Rate limited. Waiting 2s..."
-                task.wait(2)
-                continue
-            end
-
-            local srvData = HttpService:JSONDecode(srvResult)
-            cursor = srvData.nextPageCursor
-
-            if srvData.data then
-                -- Sort closest servers (lowest ping) first; break ties with player count descending
-                table.sort(srvData.data, function(a, b)
-                    local pingA = tonumber(a.ping) or 9999
-                    local pingB = tonumber(b.ping) or 9999
-                    if pingA ~= pingB then
-                        return pingA < pingB
-                    end
-                    return (tonumber(a.playing) or 0) > (tonumber(b.playing) or 0)
-                end)
-
-                local batchTokens = {}
-                local tokenToServerMap = {}
-                
-                local function flushBatch()
-                    if #batchTokens == 0 or not sniperSearching then return false end
-                    
-                    local reqSuccess, reqResult = pcall(function()
-                        return req({
-                            Url = "https://thumbnails.roblox.com/v1/batch",
-                            Method = "POST",
-                            Headers = { ["Content-Type"] = "application/json", ["Accept"] = "application/json" },
-                            Body = HttpService:JSONEncode(batchTokens)
-                        })
-                    end)
-
-                    if reqSuccess and reqResult and reqResult.Body then
-                        local batchData = HttpService:JSONDecode(reqResult.Body)
-                        if batchData.data then
-                            for _, pData in ipairs(batchData.data) do
-                                -- 🔥 CORE FIX: Compare the underlying image hash, not the changing URL
-                                local pImageHash = pData.imageUrl and string.match(pData.imageUrl, "([a-f0-9]{32})") or pData.imageUrl
-                                if pImageHash == tImageHash and pImageHash ~= nil then
-                                    foundServer = tokenToServerMap[pData.requestId]
-                                    return true
-                                end
-                            end
-                        end
-                    end
-                    table.clear(batchTokens)
-                    table.clear(tokenToServerMap)
-                    task.wait(0.05)
-                    return false
-                end
-
-                for _, srv in ipairs(srvData.data) do
-                    if not sniperSearching or foundServer then break end
-                    serversChecked = serversChecked + 1
-                    
-                    if serversChecked % 5 == 0 then
-                        local pDisplay = srv.ping and (tostring(srv.ping) .. "ms") or "nearby"
-                        SniperStatus.Text = "Scanned " .. serversChecked .. " servers (Ping: " .. pDisplay .. ")..."
-                    end
-
-                    if srv.playerTokens then
-                        for _, token in ipairs(srv.playerTokens) do
-                            table.insert(batchTokens, {
-                                requestId = token, targetId = 0, token = token,
-                                type = "AvatarHeadShot", size = "150x150", format = "png", isCircular = false
-                            })
-                            tokenToServerMap[token] = srv.id
-                            
-                            if #batchTokens >= 100 then
-                                if flushBatch() then break end
-                            end
-                        end
-                    end
-                end
-                
-                if not foundServer and #batchTokens > 0 and sniperSearching then
-                    flushBatch()
-                end
-            end
-        end
-
-        if foundServer then
-            SniperStatus.Text = "Target found! Teleporting..."
-            SniperBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
-            
-            -- If you hunt yourself, it stops you from teleporting to the same server you are already in
-            if foundServer == game.JobId then
-                SniperStatus.Text = "Target is in your current server!"
-                SniperBtn.BackgroundColor3 = Color3.fromRGB(200, 150, 50)
-            else
-                game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, foundServer, game:GetService("Players").LocalPlayer)
-            end
-        elseif not sniperSearching then
-            SniperStatus.Text = "Hunt stopped."
-        else
-            SniperStatus.Text = "Player not found in public servers."
-        end
-
-        sniperSearching = false
-        SniperBtn.Text = "Hunt Player"
-        SniperBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
     end)
 end)
 
